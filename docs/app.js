@@ -44,10 +44,14 @@
 
   // ---------- tipping-point chart ----------
   // items: [{abbr, ev, share}] for every state and district. Sorted most Democratic first.
-  function snake(el, readEl, items, label) {
+  function tippingOf(items) {
     const rows = items.filter(i => i.ev > 0).slice().sort((a, b) => b.share - a.share);
     let cum = 0, tp = null;
     rows.forEach(r => { r.before = cum; cum += r.ev; r.after = cum; if (!tp && cum >= 270) tp = r; });
+    return { rows, tp };
+  }
+  function snake(el, readEl, items, label) {
+    const { rows, tp } = tippingOf(items);
     const demEV = rows.filter(r => r.share > 50).reduce((a, r) => a + r.ev, 0);
     el.innerHTML = rows.map(r => `<div class="seg${r === tp ? ' tp' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${shareColor(r.share)}" tabindex="0" aria-label="${esc(byAbbr[r.abbr].name)} ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`).join('') +
       `<div class="mark270" style="left:${270 / 538 * 100}%"></div>`;
@@ -79,26 +83,39 @@
     el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Distribution of Democratic electoral votes; median ${median}">${o}</svg><p class="small" style="margin-top:6px">Democratic electoral votes. Blue bars are Democratic wins, red are Republican wins.</p>`;
   }
 
-  // ---------- geographic map ----------
+  // ---------- map: state outlines or a hexagon grid ----------
+  let mapMode = 'geo';
+  const HEX = {
+    AK: [0.5, 0], ME: [11.5, 0], VT: [10, 1], NH: [11, 1],
+    WA: [1.5, 2], MT: [2.5, 2], ND: [3.5, 2], MN: [4.5, 2], WI: [5.5, 2], MI: [7.5, 2], NY: [9.5, 2], MA: [10.5, 2], RI: [11.5, 2],
+    ID: [2, 3], WY: [3, 3], SD: [4, 3], IA: [5, 3], IL: [6, 3], IN: [7, 3], OH: [8, 3], PA: [9, 3], NJ: [10, 3], CT: [11, 3],
+    OR: [1.5, 4], NV: [2.5, 4], CO: [3.5, 4], NE: [4.5, 4], MO: [5.5, 4], KY: [6.5, 4], WV: [7.5, 4], VA: [8.5, 4], MD: [9.5, 4], DE: [10.5, 4],
+    CA: [2, 5], UT: [3, 5], NM: [4, 5], KS: [5, 5], AR: [6, 5], TN: [7, 5], NC: [8, 5], SC: [9, 5], DC: [10, 5],
+    AZ: [3.5, 6], OK: [4.5, 6], LA: [5.5, 6], MS: [6.5, 6], AL: [7.5, 6], GA: [8.5, 6],
+    HI: [1, 7], TX: [5, 7], FL: [9, 7],
+  };
+  const hexD = (cx, cy, r) => 'M' + [0, 1, 2, 3, 4, 5].map(k => { const t = Math.PI / 180 * (60 * k - 90); return (cx + r * Math.cos(t)).toFixed(1) + ',' + (cy + r * Math.sin(t)).toFixed(1); }).join('L') + 'Z';
+
   function drawUS(svg, { fill, onPick, onHover, selected }) {
-    const W = 1075, H = 610;
+    const W = 1075, H = 610, hex = mapMode === 'hex';
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-    let o = '';
-    for (const [a, s] of Object.entries(SHAPES)) o += `<path class="st" data-a="${a}" d="${s.d}" fill="${fill(a)}" tabindex="0" aria-label="${byAbbr[a].name}"></path>`;
-    for (const [a, s] of Object.entries(SHAPES)) {
-      if (SMALL.includes(a)) continue;
-      const [dx, dy] = LABEL_NUDGE[a] || [0, 0];
-      o += `<text class="lbl" x="${s.c[0] + dx}" y="${s.c[1] + dy + 3}">${a}</text>`;
+    const shape = {}, at = {};
+    for (const a of Object.keys(SHAPES)) {
+      if (hex) { const [c, r] = HEX[a]; at[a] = [96 + c * 69.3, 76 + r * 60]; shape[a] = hexD(at[a][0], at[a][1], 39); }
+      else { const [dx, dy] = LABEL_NUDGE[a] || [0, 0]; at[a] = [SHAPES[a].c[0] + dx, SHAPES[a].c[1] + dy]; shape[a] = SHAPES[a].d; }
     }
-    const bx = 1005, bw = 54, bh = 21;
-    SMALL.forEach((a, i) => {
+    let o = '';
+    for (const a of Object.keys(SHAPES)) o += `<path class="st" data-a="${a}" d="${shape[a]}" fill="${fill(a)}" tabindex="0" aria-label="${byAbbr[a].name}"></path>`;
+    for (const a of Object.keys(SHAPES)) if (hex || !SMALL.includes(a)) o += `<text class="lbl${hex ? ' big' : ''}" x="${at[a][0]}" y="${at[a][1] + (hex ? 5 : 3)}">${a}</text>`;
+    const bx = 1005, bw = 54, bh = 21, dy0 = hex ? 232 : 392;
+    if (!hex) SMALL.forEach((a, i) => {
       const y = 118 + i * 27, c = SHAPES[a].c;
       o += `<line class="leader" x1="${c[0]}" y1="${c[1]}" x2="${bx}" y2="${y + bh / 2}"></line>`;
       o += `<g class="box" data-a="${a}" tabindex="0" aria-label="${byAbbr[a].name}"><rect x="${bx}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${fill(a)}"></rect><text x="${bx + bw / 2}" y="${y + 14.5}">${a}</text></g>`;
     });
-    o += `<text class="grp" x="${bx}" y="384">Districts</text>`;
+    o += `<text class="grp" x="${bx}" y="${dy0 - 8}">Districts</text>`;
     DISTRICTS.forEach((a, i) => {
-      const y = 392 + i * 27;
+      const y = dy0 + i * 27;
       o += `<g class="box" data-a="${a}" tabindex="0" aria-label="${byAbbr[a].name}"><rect x="${bx}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${fill(a)}"></rect><text x="${bx + bw / 2}" y="${y + 14.5}">${dname(a)}</text></g>`;
     });
     o += '<path class="sel" d=""></path>';
@@ -106,7 +123,7 @@
     const sel = svg.querySelector('.sel');
     const mark = a => {
       svg.querySelectorAll('g.box').forEach(g => g.classList.toggle('on', g.dataset.a === a));
-      sel.setAttribute('d', SHAPES[a] ? SHAPES[a].d : '');
+      sel.setAttribute('d', shape[a] || '');
     };
     svg.querySelectorAll('[data-a]').forEach(el => {
       const a = el.dataset.a;
@@ -120,12 +137,55 @@
     return { mark, recolor: f => svg.querySelectorAll('[data-a]').forEach(el => { const t = el.tagName === 'g' ? el.querySelector('rect') : el; t.setAttribute('fill', f(el.dataset.a)); }) };
   }
 
+  // ---------- balance beam: tips toward whoever wins more simulations ----------
+  const BEAM = ['#4f8de0', '#6083dc', '#717ad7', '#8270d3', '#976bc1', '#af6ba0', '#c66a80', '#de6a5f'];
+  function beamSVG() {
+    let h = '';
+    for (let i = 0; i < 8; i++) h += `<path d="${hexD(62 + i * 68, 96, 32)}" fill="${BEAM[i]}"></path>`;
+    for (let i = 0; i < 7; i++) h += `<path d="${hexD(96 + i * 68, 153, 32)}" fill="${mix(BEAM[i], BEAM[i + 1], 0.5)}"></path>`;
+    return `<svg viewBox="0 0 600 300" aria-hidden="true"><g class="beam-arm">${h}</g><path d="M300,190 L258,288 L342,288 Z" fill="#f0a35e"></path></svg>`;
+  }
+
+  // ---------- 100 simulated elections as hexagons ----------
+  function waffle(el, pDem, pTie) {
+    const nD = Math.round(100 * pDem), nT = Math.round(100 * pTie);
+    let o = '';
+    for (let i = 0; i < 100; i++) {
+      const c = Math.floor(i / 5), r = i % 5;
+      o += `<path d="${hexD(12 + c * 16.2 + (r % 2 ? 8.1 : 0), 12 + r * 14, 8.6)}" fill="${i < nD ? '#4f8de0' : i < nD + nT ? '#8b6bd1' : '#d8665b'}"></path>`;
+    }
+    el.innerHTML = `<svg viewBox="0 0 344 80" role="img" aria-label="${nD} of 100 simulated elections go to the Democrat">${o}</svg>`;
+  }
+
+  // ---------- ratings board ----------
+  const BOARD = [['SD', 'Solid D'], ['LD', 'Likely D'], ['TD', 'Lean D'], ['TOSS', 'Toss-up'], ['TR', 'Lean R'], ['LR', 'Likely R'], ['SR', 'Solid R']];
+  function board(el, states, onPick) {
+    el.innerHTML = BOARD.map(([k, label]) => {
+      const rows = states.filter(s => s.rating === k).sort((a, b) => b.demShare - a.demShare);
+      const chips = rows.map(s => `<button type="button" data-a="${s.abbr}" style="background:${shareColor(s.demShare)}" title="${esc(byAbbr[s.abbr].name)}: ${fmt(s.demShare)} Democratic, ${s.ev} EV">${dname(s.abbr)}</button>`).join('');
+      return `<div class="col ${k}"><div class="hd"><b>${label}</b><span class="num">${rows.reduce((a, s) => a + s.ev, 0)} EV</span></div><div class="chips">${chips || '<span class="none">None</span>'}</div></div>`;
+    }).join('');
+    el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => onPick(b.dataset.a)));
+  }
+
+  // ---------- numbers that count up ----------
+  const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function countTo(el, to, show) {
+    const from = el.dataset.v === undefined ? 0.5 : +el.dataset.v;
+    el.dataset.v = to;
+    if (still || from === to) { el.textContent = show(to); return; }
+    const t0 = performance.now();
+    const step = t => { const k = Math.min(1, (t - t0) / 700), e = 1 - Math.pow(1 - k, 3); el.textContent = show(from + (to - from) * e); if (k < 1) requestAnimationFrame(step); };
+    el.textContent = show(from);
+    requestAnimationFrame(step);
+  }
+
   // ---------- dates ----------
   const FORECAST_DATE = new Date('2028-07-30T00:00:00-04:00');
   const ELECTION_DATE = new Date('2028-11-07T00:00:00-05:00');
-  const daysTo = d => Math.max(0, Math.ceil((d - new Date()) / 86400000));
+  const daysTo = d => Math.max(0, Math.floor((d - new Date()) / 86400000));
   const monthName = ym => new Date(ym + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  const niceDate = iso => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const niceDate = iso => new Date(iso.length === 10 ? iso + 'T12:00:00' : iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   // ================= HOME =================
   function renderHome() {
@@ -136,15 +196,15 @@
     if (N && !N.fixture_run) {
       el.className = 'strip';
       el.innerHTML = strip({ f: N.summary.demPopular }, 40, 60);
-      rd.innerHTML = `If held today <b class="a-ink">${fmt(N.summary.demPopular)}</b><br>Democrat wins ${Math.round(100 * N.summary.pDemWin)}% of simulations<br><a href="#forecast-2028">Try any matchup</a>`;
+      rd.innerHTML = `Nowcast <b class="a-ink">${fmt(N.summary.demPopular)}</b><br>Democrat wins ${pct(N.summary.pDemWin)} of simulations<br><a href="#nowcast">Pick the tickets</a>`;
     } else {
       el.innerHTML = `<div class="pending">Real forecast publishes July 30, 2028</div>`;
-      rd.innerHTML = `${daysTo(FORECAST_DATE)} days to go<br><a href="#forecast-2028">See 2028 today</a>`;
+      rd.innerHTML = `${daysTo(FORECAST_DATE)} days to go<br><a href="#nowcast">See the 2028 Nowcast</a>`;
     }
     const views = {
       fc: [R.map(r => ({ abbr: r.abbr, ev: r.ev, share: r.fc })), '2024 forecast'],
       actual: [R.map(r => ({ abbr: r.abbr, ev: r.ev, share: r.share })), '2024 result'],
-      today: N ? [N.states.map(s => ({ abbr: s.abbr, ev: s.ev, share: s.demShare })), '2028 if held today'] : null,
+      today: N ? [N.states.map(s => ({ abbr: s.abbr, ev: s.ev, share: s.demShare })), '2028 Nowcast'] : null,
     };
     const tabs = document.querySelectorAll('[data-snake]');
     const show = k => { const v = views[k] || views.fc; tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.snake === k)); snake(document.getElementById('snake-home'), document.getElementById('snake-home-read'), v[0], v[1]); };
@@ -224,6 +284,8 @@
     });
   }
 
+  const draw24 = () => drawUS(document.getElementById('map-2024'), { fill: fill24, selected: pinned24, onPick: pick24, onHover: a => { insp24(a || pinned24); map24.mark(a || pinned24); } });
+
   function render2024() {
     const st = R.filter(r => r.abbr.length === 2);
     const mae = st.reduce((s, r) => s + Math.abs(err(r)), 0) / st.length;
@@ -236,7 +298,7 @@
       [`${inside}/${R.length}`, 'Results inside the 90% range'],
     ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
 
-    map24 = drawUS(document.getElementById('map-2024'), { fill: fill24, selected: null, onPick: pick24, onHover: a => { insp24(a || pinned24); map24.mark(a || pinned24); } });
+    map24 = draw24();
     ramp(document.getElementById('ramp-2024'), 'share');
     insp24(null);
     snake24();
@@ -259,107 +321,120 @@
     rows24();
   }
 
-  // ================= 2028: if held today + matchup builder =================
+  // ================= 2028 Nowcast =================
   let layer28 = 'tracker', pinned28 = null, map28, cur = null;   // cur = current simulation result
   const ROLES = { 'dem-p': ['D', 'Democratic nominee'], 'dem-vp': ['D', 'Running mate'], 'rep-p': ['R', 'Republican nominee'], 'rep-vp': ['R', 'Running mate'] };
   const TICKET_KEY = { 'dem-p': ['dem', 'president'], 'dem-vp': ['dem', 'vp'], 'rep-p': ['rep', 'president'], 'rep-vp': ['rep', 'vp'] };
   const norm = s => (s || '').toLowerCase().replace(/[^a-z]/g, '');
+  const pct = p => p > 0.995 ? '>99%' : p < 0.005 ? '<1%' : Math.round(100 * p) + '%';
 
-  function official(role) { const [side, k] = TICKET_KEY[role]; return (N.tickets[side] || {})[k] || null; }
+  // A confirmed nominee or running mate, read from Wikipedia by the daily run. Confirmed names are locked.
+  function official(role) { const [side, k] = TICKET_KEY[role]; const o = (N.tickets[side] || {})[k]; return o && o.name ? o : null; }
 
   function buildPick(box) {
-    const role = box.dataset.role, [party, label] = ROLES[role];
-    const off = official(role);
-    const people = N.scenario.candidates.filter(c => c.party === party).slice().sort((a, b) => a.name.localeCompare(b.name));
-    let opts = `<option value="">No one yet</option>`;
-    if (off && off.name) opts += `<option value="__official">${esc(off.name)}${off.state ? ' (' + off.state + ')' : ''}, official</option>`;
-    opts += `<optgroup label="Possible candidates">` + people.map(c => `<option value="${esc(c.name)}">${esc(c.name)} (${c.state})</option>`).join('') + `</optgroup>`;
-    opts += `<option value="__custom">Someone else…</option>`;
+    const role = box.dataset.role, [party, label] = ROLES[role], off = official(role);
+    box.classList.toggle('locked', !!off);
+    if (off) {
+      box.innerHTML = `<span class="lab">${label}</span><div class="lockrow"><b>${esc(off.name)}</b>${off.state ? `<span>${off.state}</span>` : ''}<span class="lock">Confirmed</span></div>`;
+      return;
+    }
+    const people = N.scenario.candidates.filter(c => c.party === party).slice().sort((a, b) => (b.primary || 0) - (a.primary || 0) || a.name.localeCompare(b.name));
+    const polled = role.endsWith('-p');
+    const opts = `<option value="">Not chosen yet</option><optgroup label="Possible candidates">` +
+      people.map(c => `<option value="${esc(c.name)}">${esc(c.name)} (${c.state})${polled && c.primary ? `, ${Math.round(c.primary)}% in primary polls` : ''}</option>`).join('') +
+      `</optgroup><option value="__custom">Someone else…</option>`;
     box.innerHTML = `<label for="sel-${role}">${label}</label><select id="sel-${role}">${opts}</select>
-      <div class="custom" hidden><input id="nm-${role}" type="text" placeholder="Name" aria-label="${label} name"><select id="st-${role}" aria-label="${label} home state">${STATE_LIST.map(([a, n]) => `<option value="${a}">${a}</option>`).join('')}</select></div>`;
+      <div class="custom" hidden><input id="nm-${role}" type="text" placeholder="Name" aria-label="${label} name"><select id="st-${role}" aria-label="${label} home state">${STATE_LIST.map(([a]) => `<option value="${a}">${a}</option>`).join('')}</select></div>`;
     const sel = box.querySelector('select'), custom = box.querySelector('.custom');
-    sel.value = off && off.name ? '__official' : '';
     sel.addEventListener('change', () => { custom.hidden = sel.value !== '__custom'; if (!custom.hidden) box.querySelector('input').focus(); schedule(); });
     box.querySelector('input').addEventListener('input', () => schedule());
     box.querySelector('#st-' + role).addEventListener('change', () => schedule());
   }
 
   function readPick(role) {
+    const off = official(role);
+    if (off) return { name: off.name, state: off.state, locked: true };
     const v = document.getElementById('sel-' + role).value;
     if (!v) return null;
-    if (v === '__official') { const o = official(role); return { name: o.name, state: o.state }; }
-    if (v === '__custom') return { name: document.getElementById('nm-' + role).value.trim() || 'Custom candidate', state: document.getElementById('st-' + role).value };
+    if (v === '__custom') return { name: document.getElementById('nm-' + role).value.trim() || 'Your pick', state: document.getElementById('st-' + role).value };
     const c = N.scenario.candidates.find(x => x.name === v);
     return { name: c.name, state: c.state };
   }
 
-  function runScenario(n = 10000) {
+  // The Nowcast: today's live approval and state economies, with the chosen (or confirmed) tickets.
+  function runScenario() {
     const S = N.scenario, sign = S.sign, C = S.constant;
     const picks = Object.fromEntries(Object.keys(ROLES).map(r => [r, readPick(r)]));
-    const dA = +document.getElementById('sl-appr').value, dE = +document.getElementById('sl-econ').value;
     const vpNom = ['dem-p', 'rep-p'].find(r => picks[r] && norm(picks[r].name) === norm(N.sitting_vp));
     const vpShift = vpNom && N.vp.gap != null ? N.vp.gap : 0;
     const code = (st, d, r) => (st && st === d ? 1 : 0) - (st && st === r ? 1 : 0);
     const st = r => picks[r] && picks[r].state;
+    const mid = S.econVariants[Math.floor(S.econVariants.length / 2)];
     const states = S.states.map(s => ({
       abbr: s.abbr, ev: s.ev, pop: s.pop,
       inputs: {
-        lagDev: s.lagDev, approval: sign * (s.approve + dA + vpShift - C), econ: 0,
+        lagDev: s.lagDev, approval: sign * (s.approve + vpShift - C), econ: mid[s.abbr],
         home: code(s.abbr, st('dem-p'), st('rep-p')), homeLag: code(s.abbr, S.homeLag.dem, S.homeLag.rep),
         vpHome: code(s.abbr, st('dem-vp'), st('rep-vp')), anderson: 0, perot: 0,
       },
     }));
-    const econVariants = S.econVariants.map(v => Object.fromEntries(Object.entries(v).map(([k, x]) => [k, x + sign * dE])));
-    states.forEach(s => { s.inputs.econ = econVariants[Math.floor(econVariants.length / 2)][s.abbr]; });
-    cur = window.SPASE.simulate({ states, districts: S.districts, n, seed: 2028, econVariants });
-    cur.picks = picks; cur.vpNom = vpNom; cur.vpShift = vpShift; cur.dA = dA; cur.dE = dE;
+    cur = window.SPASE.simulate({ states, districts: S.districts, n: 10000, seed: 2028, econVariants: S.econVariants });
+    cur.picks = picks; cur.vpNom = vpNom; cur.vpShift = vpShift;
     cur.byAbbr = Object.fromEntries(cur.states.map(s => [s.abbr, s]));
     showResults();
   }
 
   let timer = null;
-  function schedule(quick) {
-    quick = quick === true;
-    document.getElementById('out-appr').textContent = fmt(N.approval.approve + +document.getElementById('sl-appr').value);
-    const e = +document.getElementById('sl-econ').value;
-    document.getElementById('out-econ').textContent = e === 0 ? 'as measured' : `${e > 0 ? '+' : '−'}${Math.abs(e).toFixed(2)} pts/month`;
-    document.getElementById('results-2028').classList.add('busy');
+  function schedule() {
+    const out = ['hero-28', 'results-2028'].map(id => document.getElementById(id));
+    out.forEach(el => el.classList.add('busy'));
     clearTimeout(timer);
-    timer = setTimeout(() => { runScenario(quick ? 1500 : 10000); document.getElementById('results-2028').classList.remove('busy'); }, quick ? 30 : 120);
+    timer = setTimeout(() => { runScenario(); out.forEach(el => el.classList.remove('busy')); }, 60);
   }
 
   function effectsList() {
     const p = cur.picks, out = [];
-    const who = r => p[r] ? `${esc(p[r].name)} (${p[r].state})` : null;
-    if (!p['dem-p'] && !p['rep-p'] && !p['dem-vp'] && !p['rep-vp']) out.push(`<b>No tickets chosen.</b> Home-state bonuses switch on once you pick candidates, or automatically when the conventions choose them.`);
-    if (p['dem-p']) out.push(`<b>Home state:</b> ${who('dem-p')} adds about 2.5 points for the Democrat in ${byAbbr[p['dem-p'].state].name}.`);
-    if (p['rep-p']) out.push(`<b>Home state:</b> ${who('rep-p')} adds about 2.5 points for the Republican in ${byAbbr[p['rep-p'].state].name}.`);
-    if (p['dem-vp']) out.push(`<b>Running mate:</b> ${who('dem-vp')} adds about 1.9 points for the Democrat in ${byAbbr[p['dem-vp'].state].name}.`);
-    if (p['rep-vp']) out.push(`<b>Running mate:</b> ${who('rep-vp')} adds about 1.9 points for the Republican in ${byAbbr[p['rep-vp'].state].name}.`);
-    if (p['dem-p'] && p['rep-p'] && p['dem-p'].state === p['rep-p'].state) out.push(`Both nominees are from ${byAbbr[p['dem-p'].state].name}, so their home-state bonuses cancel out.`);
+    const who = r => `${esc(p[r].name)} (${p[r].state})`;
+    const has = r => p[r] && p[r].state;
+    if (!Object.keys(ROLES).some(r => p[r])) out.push(`<b>No tickets chosen.</b> Home-state bonuses switch on once you pick candidates, and lock in automatically when the conventions choose them.`);
+    if (has('dem-p')) out.push(`<b>Home state:</b> ${who('dem-p')} adds about 2.5 points for the Democrat in ${byAbbr[p['dem-p'].state].name}.`);
+    if (has('rep-p')) out.push(`<b>Home state:</b> ${who('rep-p')} adds about 2.5 points for the Republican in ${byAbbr[p['rep-p'].state].name}.`);
+    if (has('dem-vp')) out.push(`<b>Running mate:</b> ${who('dem-vp')} adds about 1.9 points for the Democrat in ${byAbbr[p['dem-vp'].state].name}.`);
+    if (has('rep-vp')) out.push(`<b>Running mate:</b> ${who('rep-vp')} adds about 1.9 points for the Republican in ${byAbbr[p['rep-vp'].state].name}.`);
+    if (has('dem-p') && has('rep-p') && p['dem-p'].state === p['rep-p'].state) out.push(`Both nominees are from ${byAbbr[p['dem-p'].state].name}, so their home-state bonuses cancel out.`);
     out.push(`<b>2024 home states fade:</b> Harris's California and Trump's Florida each give back about 3.5 points of their 2024 boost.`);
+    const net = N.vp.kind === 'favorability' ? 'net favorability' : 'net approval';
     if (cur.vpNom) out.push(N.vp.gap != null
-      ? `<b>Vice-president adjustment on:</b> ${esc(N.sitting_vp)} is the sitting vice president, so state approval shifts by ${sgn(N.vp.gap, 1)} points, his net favorability minus Trump's (${esc(N.vp.basis)}).`
-      : `<b>Vice-president adjustment:</b> ${esc(N.sitting_vp)} is the sitting vice president, but there are no recent favorability polls to measure the gap.`);
+      ? `<b>Vice-president adjustment on:</b> ${esc(N.sitting_vp)} is the sitting vice president, so state approval shifts by ${sgn(N.vp.gap, 1)} points, his ${net} minus Trump's (${esc(N.vp.basis)}).`
+      : `<b>Vice-president adjustment:</b> ${esc(N.sitting_vp)} is the sitting vice president, but there are no recent polls of him to measure the gap.`);
     else out.push(`<b>Vice-president adjustment off:</b> it applies only if the sitting vice president, ${esc(N.sitting_vp)}, is a nominee${N.vp.gap != null ? ` (it would shift approval by ${sgn(N.vp.gap, 1)} points today)` : ''}.`);
-    if (cur.dA) out.push(`<b>What if:</b> Trump approval set to ${fmt(N.approval.approve + cur.dA)} instead of today's ${fmt(N.approval.approve)}.`);
-    if (cur.dE) out.push(`<b>What if:</b> every state's economy grows ${cur.dE > 0 ? 'faster' : 'slower'} by ${Math.abs(cur.dE).toFixed(2)} points a month.`);
     document.getElementById('effects').innerHTML = out.map(x => `<li>${x}</li>`).join('');
   }
 
   function showResults() {
-    const s = cur, rep = 1 - s.pDemWin - s.pTie;
+    const s = cur;
+    // Whole numbers out of 100, so the two big figures, the hexagons and the caption always agree.
+    const nD = Math.round(100 * s.pDemWin), nT = Math.round(100 * s.pTie), rep = (100 - nD - nT) / 100;
     let cum = 0, median = 0;
     for (let i = 0; i < s.evHistogram.length; i++) { cum += s.evHistogram[i]; if (cum >= 0.5) { median = i; break; } }
-    const lead = s.pDemWin >= rep ? 'd-ink' : 'r-ink';
+    const items = s.states.map(x => ({ abbr: x.abbr, ev: x.ev, share: x.demShare }));
+    const tp = tippingOf(items).tp;
+    countTo(document.getElementById('bm-dem'), s.pDemWin, pct);
+    countTo(document.getElementById('bm-rep'), rep, pct);
+    document.querySelector('#beam .beam-arm').style.transform = `rotate(${(-12 * (s.pDemWin - rep)).toFixed(1)}deg)`;
+    waffle(document.getElementById('waffle-28'), s.pDemWin, s.pTie);
+    document.getElementById('waffle-cap').textContent = `Out of 100 simulated elections held today, the Democrat wins ${nD} and the Republican wins ${100 - nD - nT}${nT ? `, with ${nT} tied` : ''}. A simulation is one possible outcome given how far off the model has been in the past.`;
     document.getElementById('figs-2028').innerHTML = [
-      [`${Math.round(100 * s.pDemWin)}%`, 'Democrat wins', 'd-ink'],
-      [`${Math.round(100 * rep)}%`, 'Republican wins', 'r-ink'],
-      [fmt(s.demPopular), 'Democratic two-party vote', lead],
-      [`${median}`, 'Median Democratic electoral votes', lead],
-    ].map(([v, l, c]) => `<div><span class="v ${c}">${v}</span><span class="l">${l}</span></div>`).join('');
-    snake(document.getElementById('snake-2028'), document.getElementById('snake-2028-read'),
-      s.states.map(x => ({ abbr: x.abbr, ev: x.ev, share: x.demShare })), 'If held today');
+      [fmt(s.demPopular), 'Democratic share of the two-party vote'],
+      [`${median}`, 'Median Democratic electoral votes, of 538'],
+      [esc(byAbbr[tp.abbr].name.replace(' District', '')), `Tipping-point state, ${fmt(tp.share)} Democratic`],
+    ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
+    snake(document.getElementById('snake-2028'), document.getElementById('snake-2028-read'), items, '2028 Nowcast');
+    board(document.getElementById('board-28'), s.states, a => {
+      setLayer28('tracker');
+      if (pinned28 !== a) pick28(a);
+      document.getElementById('map-2028').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
     histogram(document.getElementById('hist-2028'), s.evHistogram);
     if (map28) map28.recolor(fill28);
     insp28(pinned28);
@@ -369,10 +444,6 @@
   function insp28(a) {
     const el = document.getElementById('insp-2028');
     const natShare = 100 * NAT.dem / (NAT.dem + NAT.rep);
-    if (layer28 === 'official') {
-      el.innerHTML = `<span class="tag">Real forecast</span><h3>Not yet published</h3><p class="small">The real 2028 forecast uses the nominees, approval surveys from June and July 2028 and economic data through June 2028. It publishes July 30, 2028, ${daysTo(FORECAST_DATE)} days from now. Everything on this page until then is "if the election were held today."</p>`;
-      return;
-    }
     if (layer28 === 'lean') {
       const r = a ? byAbbr[a] : null;
       el.innerHTML = r ? `<span class="tag">${dname(a)} · ${r.ev} electoral vote${r.ev > 1 ? 's' : ''}</span><h3>${r.name}</h3>
@@ -381,14 +452,14 @@
         : `<span class="tag">The one input already known</span><h3>2024 lean</h3><p class="small">Each state's Democratic share in 2024 relative to the nation (${fmt(natShare, 2)}). The model carries 82% of this lean into 2028.</p>`;
       return;
     }
-    if (!cur) { el.innerHTML = `<span class="tag">If held today</span><h3>Waiting for data</h3><p class="small">This fills in after the first daily data run.</p>`; return; }
+    if (!cur) { el.innerHTML = `<span class="tag">2028 Nowcast</span><h3>Waiting for data</h3><p class="small">This fills in after the first daily data run.</p>`; return; }
     const s = a ? cur.byAbbr[a] : null;
     if (!s) {
-      el.innerHTML = `<span class="tag">If held today${N.fixture_run ? '<span class="test-flag">TEST DATA</span>' : ''}</span><h3>National picture</h3>
+      el.innerHTML = `<span class="tag">2028 Nowcast${N.fixture_run ? '<span class="test-flag">TEST DATA</span>' : ''}</span><h3>National picture</h3>
         <dl class="kv">
           <div><dt>Democratic two-party vote</dt><dd class="d-ink">${fmt(cur.demPopular, 2)}</dd></div>
-          <div><dt>Democratic win chance</dt><dd>${Math.round(100 * cur.pDemWin)}%</dd></div>
-          <div><dt>Trump approval</dt><dd>${fmt(N.approval.approve + cur.dA)}</dd></div>
+          <div><dt>Democrat wins</dt><dd>${pct(cur.pDemWin)} of simulations</dd></div>
+          <div><dt>Trump approval</dt><dd>${fmt(N.approval.approve)}</dd></div>
           <div><dt>Economy data through</dt><dd>${monthName(N.economy.through)}</dd></div>
         </dl>
         <div class="strip">${strip({ f: cur.demPopular })}</div>
@@ -398,56 +469,69 @@
     const r = byAbbr[a], base = N.scenario.states.find(x => x.abbr === a);
     el.innerHTML = `<span class="tag">${dname(a)} · ${r.ev} electoral vote${r.ev > 1 ? 's' : ''}</span><h3>${r.name}</h3>
       <dl class="kv">
-        <div><dt>D share if held today</dt><dd class="d-ink">${fmt(s.demShare, 2)}</dd></div>
+        <div><dt>Nowcast D share</dt><dd class="d-ink">${fmt(s.demShare, 2)}</dd></div>
         <div><dt>2024 D share</dt><dd>${fmt(r.share, 2)}</dd></div>
-        <div><dt>Democratic win chance</dt><dd>${Math.round(100 * s.pDem)}%</dd></div>
+        <div><dt>Democrat wins</dt><dd>${pct(s.pDem)} of simulations</dd></div>
         <div><dt>Rating</dt><dd>${RATING[s.rating] || s.rating}</dd></div>
-        ${base ? `<div><dt>Trump approval (est.)</dt><dd>${fmt(base.approve + cur.dA)}</dd></div>` : ''}
+        ${base ? `<div><dt>Trump approval (est.)</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
       </dl>
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
-      <div class="strip-legend"><span><i class="f"></i>If held today</span><span><i class="a"></i>2024 result</span></div>`;
+      <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>`;
   }
   function fill28(a) {
-    const natShare = 100 * NAT.dem / (NAT.dem + NAT.rep);
-    if (layer28 === 'official') return greyColor();
-    if (layer28 === 'lean') return shareColor(50 + (byAbbr[a].share - natShare));
+    if (layer28 === 'lean') return shareColor(50 + (byAbbr[a].share - 100 * NAT.dem / (NAT.dem + NAT.rep)));
     const s = cur && cur.byAbbr[a];
     return s ? shareColor(s.demShare) : greyColor();
   }
   function pick28(a) { pinned28 = a === pinned28 ? null : a; map28.mark(pinned28); insp28(pinned28); }
+  const draw28 = () => drawUS(document.getElementById('map-2028'), { fill: fill28, selected: pinned28, onPick: pick28, onHover: a => { insp28(a || pinned28); map28.mark(a || pinned28); } });
+
+  // Map layers. "Real forecast" shows a countdown, not a map, until July 30, 2028.
+  function setLayer28(l) {
+    layer28 = l;
+    document.querySelectorAll('[data-layer28]').forEach(x => x.setAttribute('aria-selected', x.dataset.layer28 === l));
+    document.getElementById('desk-28').hidden = l === 'official';
+    document.getElementById('official-28').hidden = l !== 'official';
+    if (l !== 'official') { map28.recolor(fill28); insp28(pinned28); }
+  }
+  function tickCountdown() {
+    const ms = Math.max(0, FORECAST_DATE - new Date());
+    const parts = [[Math.floor(ms / 864e5), 'days'], [Math.floor(ms % 864e5 / 36e5), 'hours'], [Math.floor(ms % 36e5 / 6e4), 'minutes'], [Math.floor(ms % 6e4 / 1e3), 'seconds']];
+    document.getElementById('cd-28').innerHTML = parts.map(([v, l], i) => `<div><span class="v num">${i ? String(v).padStart(2, '0') : v}</span><span class="l">${l}</span></div>`).join('');
+  }
 
   function render2028() {
-    document.getElementById('d-forecast').textContent = daysTo(FORECAST_DATE);
-    document.getElementById('d-election').textContent = daysTo(ELECTION_DATE);
-    map28 = drawUS(document.getElementById('map-2028'), { fill: fill28, selected: null, onPick: pick28, onHover: a => { insp28(a || pinned28); map28.mark(a || pinned28); } });
-    const setRamp = () => ramp(document.getElementById('ramp-2028'), layer28 === 'official' ? 'none' : 'share');
-    setRamp();
-    document.querySelectorAll('[data-layer28]').forEach(b => b.addEventListener('click', () => {
-      layer28 = b.dataset.layer28;
-      document.querySelectorAll('[data-layer28]').forEach(x => x.setAttribute('aria-selected', x === b));
-      map28.recolor(fill28); setRamp(); insp28(pinned28);
-    }));
+    const days = daysTo(FORECAST_DATE);
+    document.getElementById('d-forecast').textContent = days;
+    document.getElementById('cd-days').textContent = days;
+    tickCountdown(); setInterval(tickCountdown, 1000);
+    document.getElementById('beam').innerHTML = beamSVG();
+    map28 = draw28();
+    ramp(document.getElementById('ramp-2028'), 'share');
+    document.querySelectorAll('[data-layer28]').forEach(b => b.addEventListener('click', () => setLayer28(b.dataset.layer28)));
+    document.getElementById('btn-to-nowcast').addEventListener('click', () => setLayer28('tracker'));
     if (!N) {
-      ['builder', 'tracker-detail'].forEach(id => { document.getElementById(id).hidden = true; });
+      ['hero-28', 'builder', 'results-detail', 'tracker-detail'].forEach(id => { document.getElementById(id).hidden = true; });
       document.getElementById('live-pill').textContent = 'Waiting for the first data run';
-      layer28 = 'official'; map28.recolor(fill28); insp28(null); return;
+      setLayer28('official'); return;
     }
     document.getElementById('live-pill').textContent = `Live · updated ${niceDate(N.generated_at)}`;
-    document.getElementById('stamp-2028').textContent = `Polls through ${niceDate(N.approval.window[1])} · economy through ${monthName(N.economy.through)}`;
-    document.querySelectorAll('.pick').forEach(buildPick);
-    ['sl-appr', 'sl-econ'].forEach(id => {
-      const el = document.getElementById(id);
-      el.addEventListener('input', () => schedule(true));   // quick pass while dragging
-      el.addEventListener('change', () => schedule());      // full 70,000 on release
-    });
-    document.getElementById('btn-reset').addEventListener('click', () => {
-      document.getElementById('sl-appr').value = 0; document.getElementById('sl-econ').value = 0;
-      document.querySelectorAll('.pick').forEach(buildPick); schedule();
-    });
+    document.getElementById('live-inputs').innerHTML = `<b>Live data, not adjustable:</b> Trump approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])}, and state economies through ${monthName(N.economy.through)}.`;
+    const picks = [...document.querySelectorAll('.pick')];
+    picks.forEach(buildPick);
+    const locked = Object.keys(ROLES).filter(official).length;
+    document.getElementById('builder-h').textContent = locked === 4 ? 'The tickets are set' : 'Pick the tickets';
+    document.getElementById('builder-p').textContent = locked === 4
+      ? 'Both tickets are confirmed, so the Nowcast uses them and they can no longer be changed.'
+      : 'The nominees are not known yet. Choose who you think will be on each ticket to see what their home states do to the map. Each nominee and running mate locks in automatically once confirmed.';
+    const reset = document.getElementById('btn-reset');
+    reset.hidden = locked === 4;
+    reset.addEventListener('click', () => { picks.forEach(buildPick); schedule(); });
     const t = N.tickets, set = ['dem', 'rep'].filter(s => t[s] && t[s].president).length;
-    document.getElementById('need-tickets').textContent = set ? `Detected ${set === 2 ? 'both tickets' : 'one ticket'}` : 'Watching, none yet';
-    document.getElementById('need-vp').textContent = N.vp.applied ? `On, ${sgn(N.vp.gap, 1)} pts` : 'Off until a VP is nominated';
+    document.getElementById('need-tickets').textContent = set ? `Confirmed: ${set === 2 ? 'both nominees' : 'one nominee'}` : 'Watching, none yet';
+    document.getElementById('need-vp').textContent = N.vp.applied ? `On, ${sgn(N.vp.gap, 1)} pts` : N.vp.gap != null ? `Standing by, ${sgn(N.vp.gap, 1)} pts` : 'No recent polls of the vice president';
     document.getElementById('need-econ').textContent = `Daily, through ${monthName(N.economy.through)}`;
+    document.getElementById('need-cands').textContent = `Daily, ${N.scenario.candidates.filter(c => c.primary).length} names in primary polls`;
     document.getElementById('polls-2028').innerHTML = N.approval.polls.map(p =>
       `<tr><td>${p.url ? `<a href="${esc(p.url)}">${esc(p.pollster)}</a>` : esc(p.pollster)}</td><td class="num">${p.date}</td><td class="n">${p.approve}</td><td class="n">${p.disapprove}</td></tr>`).join('');
     const H = window.NOWCAST_HISTORY || [];
@@ -459,23 +543,32 @@
       const pts = H.map((h, i) => `${x(i)},${y(h.pDemWin)}`).join(' ');
       o += `<polygon points="${x(0)},${y(0)} ${pts} ${x(H.length - 1)},${y(0)}" fill="rgba(240,163,94,.1)"></polygon><polyline points="${pts}" fill="none" stroke="#f0a35e" stroke-width="2"></polyline>`;
       o += `<circle cx="${x(H.length - 1)}" cy="${y(H[H.length - 1].pDemWin)}" r="4" fill="#f0a35e"></circle><text x="${l}" y="${Ht - 6}">${H[0].date}</text><text x="${W - r}" y="${Ht - 6}" text-anchor="end">${H[H.length - 1].date}</text>`;
-      document.getElementById('trend-2028').innerHTML = `<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="Democratic win chance over time">${o}</svg>`;
+      document.getElementById('trend-2028').innerHTML = `<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="Share of simulations the Democrat wins, over time">${o}</svg>`;
     }
     schedule();
   }
 
+  // Map style switch (state outlines or hexagons), shared by both maps.
+  document.querySelectorAll('[data-mapmode]').forEach(b => b.addEventListener('click', () => {
+    mapMode = b.dataset.mapmode;
+    document.querySelectorAll('[data-mapmode]').forEach(x => x.setAttribute('aria-pressed', x.dataset.mapmode === mapMode));
+    if (map24) map24 = draw24();
+    if (map28) map28 = draw28();
+  }));
+
   // ================= routing =================
-  const VIEWS = ['home', 'results-2024', 'forecast-2028', 'method'];
+  const VIEWS = ['home', 'nowcast', 'results-2024', 'method'];
   const done = {};
   function route() {
-    const h = location.hash.replace('#', '');
+    let h = location.hash.replace('#', '');
+    if (h === 'forecast-2028') h = 'nowcast';   // old address
     const v = VIEWS.includes(h) ? h : 'home';
     VIEWS.forEach(n => document.getElementById('view-' + n).hidden = n !== v);
     document.querySelectorAll('nav a').forEach(a => a.dataset.view === v ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
     if (!done[v]) {
       if (v === 'home') renderHome();
       if (v === 'results-2024') render2024();
-      if (v === 'forecast-2028') render2028();
+      if (v === 'nowcast') render2028();
       done[v] = true;
     }
     window.scrollTo(0, 0);
