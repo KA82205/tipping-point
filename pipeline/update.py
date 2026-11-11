@@ -73,7 +73,8 @@ def main():
 
     if args.fixtures:
         fred = lambda sid, key, start: json.load(open(os.path.join(args.fixtures, f"{sid}.json")))  # noqa: E731
-        polls = json.load(open(os.path.join(args.fixtures, "votehub.json")))["polls"]
+        vh = json.load(open(os.path.join(args.fixtures, "votehub.json")))
+        polls = vh["polls"] if isinstance(vh, dict) else vh
         pr_path = os.path.join(args.fixtures, "pollresults.json")
         pr_raw = json.load(open(pr_path))["results"] if os.path.exists(pr_path) else []
         cache = None
@@ -146,6 +147,8 @@ def main():
         f.write("window.NOWCAST_HISTORY = " + json.dumps(hist) + ";\n")
 
     s = payload["summary"]
+    n_pr = sum(1 for p in national_polls if p.get("source") == "pollresults")
+    print(f"Polls: {len(polls)} from VoteHub, {n_pr} more national from PollResults, {len(state_polls)} state polls")
     print(f"{today} [{mode}] approval {nat['approve']:.1f}% ({nat['pollsters']} pollsters), "
           f"economy through {econ_last}; Dem win {s['pDemWin']:.1%}, Dem popular {s['demPopular']:.2f}%, "
           f"point EV {dem_ev_point}")
