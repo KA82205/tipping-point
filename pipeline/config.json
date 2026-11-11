@@ -20,15 +20,18 @@
     "dem_vp_home": null,
     "rep_vp_home": null,
     "dem_president_home_lag": "CA",
-    "rep_president_home_lag": "FL"
+    "rep_president_home_lag": "FL",
+    "primary_window_days": 120,
+    "primary_min_pct": 3,
+    "_primary_note": "Possible candidates in the ticket picker are ordered by their average in national 2028 primary polls (PollResults.org) over the last primary_window_days. Anyone at primary_min_pct or more who is not in candidates.json is added automatically."
   },
 
   "vp_adjustment": {
-    "_comment": "auto: applied when the sitting vice president (read from Wikipedia) is a nominee, using VoteHub favorability (VP net minus president net). Set mode to manual and fill vp_net/president_net to override.",
+    "_comment": "auto: applied when the sitting vice president (read from Wikipedia) is a nominee. Uses VoteHub job-approval polls of the vice president (VP net minus president net), or favorability if there are none in the window. Set mode to manual and fill vp_net/president_net to override.",
     "mode": "auto",
     "vp_net": null,
     "president_net": null,
-    "trailing_days": 60
+    "trailing_days": 120
   },
 
   "economy": {
@@ -47,7 +50,9 @@
     "national_source": "votehub",
     "votehub_url": "https://api.votehub.com/polls?poll_type=approval&subject=donald-trump",
     "votehub_fav_url": "https://api.votehub.com/polls?poll_type=favorability&subject={slug}",
+    "votehub_subject_approval_url": "https://api.votehub.com/polls?poll_type=approval&subject={slug}",
     "pollresults_url": "https://api.pollresults.org/v1.0/politics/results/approval",
+    "pollresults_president_url": "https://api.pollresults.org/v1.0/politics/results/president",
     "_pollresults_note": "PollResults.org (NYT poll data, CC BY 4.0, non-commercial). Merged into the national average; its state polls feed state_source state_polls. If its format changes, the run logs a warning and continues with VoteHub only.",
     "nowcast_window_days": 30,
     "state_source": "state_polls",
