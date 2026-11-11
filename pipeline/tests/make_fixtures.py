@@ -27,16 +27,18 @@ for i, name in enumerate(["Pollster A", "Pollster B", "Pollster C", "Pollster D"
                       "answers": [{"choice": "Approve", "pct": round(ap)}, {"choice": "Disapprove", "pct": round(96 - ap)}]})
 polls.append({"pollster": "Campaign Internal", "end_date": "2026-11-05", "sample_size": "500", "internal": True,
               "partisan": "R", "answers": [{"choice": "Approve", "pct": 70}, {"choice": "Disapprove", "pct": 28}]})
-json.dump({"polls": polls}, open(os.path.join(out, "votehub.json"), "w"))
+json.dump(polls, open(os.path.join(out, "votehub.json"), "w"))
 print("fixtures written to", out)
 
-# PollResults-style records (guessed shape: poll -> questions -> answers). NOT real data.
+# PollResults.org records in its real format (camelCase, M/D/YY dates, yes/no answers). NOT real data.
 pr = [
-    {"pollster": "Pollster F", "url": None, "questions": [{"end_date": "2026-11-06", "sample_size": 1200, "population": "a",
-      "answers": [{"choice": "Approve", "pct": 39}, {"choice": "Disapprove", "pct": 57}]}]},
-    {"pollster": "Pollster A", "end_date": "2026-11-03", "questions": [{"answers": [{"answer": "Approve", "pct": 41}, {"answer": "Disapprove", "pct": 55}]}]},
-    {"pollster": "State Poll Co", "state": "PA", "questions": [{"end_date": "2026-11-01", "sample_size": 900,
-      "answers": [{"choice": "Approve", "pct": 36}, {"choice": "Disapprove", "pct": 60}]}]},
+    {"pollster": "Pollster F", "state": "US", "endDate": "11/6/26", "internal": "", "partisan": "", "url": "",
+     "questions": [{"sampleSize": 1200, "population": "rv", "answers": [{"politician": "Donald Trump", "yes": 40, "no": 57}]},
+                   {"sampleSize": 1500, "population": "a", "answers": [{"politician": "Donald Trump", "yes": 38, "no": 59}]}]},
+    {"pollster": "Pollster A", "state": "US", "endDate": "11/3/26",
+     "questions": [{"sampleSize": 900, "population": "rv", "answers": [{"politician": "Donald Trump", "yes": 41, "no": 55}]}]},
+    {"pollster": "State Poll Co", "state": "PA", "endDate": "11/1/26",
+     "questions": [{"sampleSize": 900, "population": "rv", "answers": [{"politician": "Donald Trump", "yes": 36, "no": 60}]}]},
     {"pollster": "Odd Format", "foo": "bar"},
 ]
 json.dump({"results": pr}, open(os.path.join(out, "pollresults.json"), "w"))
