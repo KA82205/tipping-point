@@ -459,7 +459,7 @@
         <dl class="kv">
           <div><dt>Democratic two-party vote</dt><dd class="d-ink">${fmt(cur.demPopular, 2)}</dd></div>
           <div><dt>Democrat wins</dt><dd>${pct(cur.pDemWin)} of simulations</dd></div>
-          <div><dt>Trump approval</dt><dd>${fmt(N.approval.approve)}</dd></div>
+          <div><dt>Trump approval (national avg)</dt><dd>${fmt(N.approval.approve)}</dd></div>
           <div><dt>Economy data through</dt><dd>${monthName(N.economy.through)}</dd></div>
         </dl>
         <div class="strip">${strip({ f: cur.demPopular })}</div>
@@ -473,7 +473,7 @@
         <div><dt>2024 D share</dt><dd>${fmt(r.share, 2)}</dd></div>
         <div><dt>Democrat wins</dt><dd>${pct(s.pDem)} of simulations</dd></div>
         <div><dt>Rating</dt><dd>${RATING[s.rating] || s.rating}</dd></div>
-        ${base ? `<div><dt>Trump approval (est.)</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
+        ${base ? `<div><dt>Trump approval in state</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
       </dl>
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>`;
@@ -516,7 +516,7 @@
       setLayer28('official'); return;
     }
     document.getElementById('live-pill').textContent = `Live · updated ${niceDate(N.generated_at)}`;
-    document.getElementById('live-inputs').innerHTML = `<b>Live data, not adjustable:</b> Trump approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])}, and state economies through ${monthName(N.economy.through)}.`;
+    document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> State approval from Morris’s explorer · national average ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])} · state economies through ${monthName(N.economy.through)}. Only the tickets can be changed above.`;
     const picks = [...document.querySelectorAll('.pick')];
     picks.forEach(buildPick);
     const locked = Object.keys(ROLES).filter(official).length;
