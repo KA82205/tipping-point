@@ -9,11 +9,12 @@
     "incumbent_party": "R",
     "term_start_month": "2025-01",
     "economy_end_month": "2028-06",
-    "approval_window": ["2028-06-01", "2028-07-30"]
+    "approval_window": ["2028-06-01", "2028-07-30"],
+    "wiki_article": "2028 United States presidential election"
   },
 
   "candidates": {
-    "_comment": "Two-letter state codes, or null until known. home_lag = the previous election's nominees (2024: Harris CA, Trump FL).",
+    "_comment": "Nominees, running mates and their home states are detected automatically (pipeline/candidates.py). Fill any of the four *_home fields only to override detection. home_lag = the previous election's nominees (2024: Harris CA, Trump FL).",
     "dem_president_home": null,
     "rep_president_home": null,
     "dem_vp_home": null,
@@ -23,10 +24,11 @@
   },
 
   "vp_adjustment": {
-    "_comment": "Applies only if the sitting VP is a nominee. Net = approve - disapprove. Example for 2028 if JD Vance is the nominee: {\"enabled\": true, \"vp_net\": -10, \"president_net\": -20}.",
-    "enabled": false,
+    "_comment": "auto: applied when the sitting vice president (read from Wikipedia) is a nominee, using VoteHub favorability (VP net minus president net). Set mode to manual and fill vp_net/president_net to override.",
+    "mode": "auto",
     "vp_net": null,
-    "president_net": null
+    "president_net": null,
+    "trailing_days": 60
   },
 
   "economy": {
@@ -44,6 +46,7 @@
     "_constant_note": "ASSUMPTION: subtracted from state approval before signing. The paper fits this value but does not report it; Table A-3's range is consistent with roughly 50.",
     "national_source": "votehub",
     "votehub_url": "https://api.votehub.com/polls?poll_type=approval&subject=donald-trump",
+    "votehub_fav_url": "https://api.votehub.com/polls?poll_type=favorability&subject={slug}",
     "pollresults_url": "https://api.pollresults.org/v1.0/politics/results/approval",
     "_pollresults_note": "PollResults.org (NYT poll data, CC BY 4.0, non-commercial). Merged into the national average; its state polls feed state_source state_polls. If its format changes, the run logs a warning and continues with VoteHub only.",
     "nowcast_window_days": 30,
