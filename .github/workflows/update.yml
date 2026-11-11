@@ -37,8 +37,10 @@ jobs:
           cd pipeline && npm install --no-save us-atlas@3.0.1 topojson-client@3.1.0 && cd ..
           node pipeline/build_map.js
 
-      - name: Check the economy formula against the paper (Table A-2)
-        run: python pipeline/tests/test_economy.py
+      - name: Run tests (economy formula, nominee detection)
+        run: |
+          python pipeline/tests/test_economy.py
+          python pipeline/tests/test_candidates.py
 
       - name: Fetch latest polls and economic data, run the model
         id: update
