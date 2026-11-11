@@ -6,8 +6,9 @@
 Every input is gathered automatically:
     economy      FRED (Philadelphia Fed state coincident indexes)
     approval     VoteHub + PollResults.org national polls; state polls when they exist
-    candidates   Wikipedia (nominees, running mates, home states, sitting VP)
-    VP gap       VoteHub favorability of the sitting VP and the president
+    candidates   Wikipedia (nominees, running mates, home states, sitting VP);
+                 PollResults.org 2028 primary polls (who is being polled, and how they stand)
+    VP gap       VoteHub approval of the sitting VP and the president (favorability as fallback)
 
 Writes:
     docs/nowcast.js      window.NOWCAST, read by the site (incl. inputs for the matchup builder)
@@ -99,6 +100,10 @@ def main():
 
         def fav(subject_slug):
             return fx_json(f"fav_{subject_slug}.json", [])
+
+        def appr(subject_slug):
+            return fx_json(f"appr_{subject_slug}.json", [])
+        pres_raw = (fx_json("pollresults_president.json", {}) or {}).get("results", [])
         cache = None
     else:
         key = os.environ.get("FRED_API_KEY")
@@ -113,12 +118,21 @@ def main():
             pr_raw = []
         wiki = None
 
-        def fav(subject_slug):
-            try:
-                return approval.fetch_votehub(cfg["approval"]["votehub_fav_url"].format(slug=subject_slug))
-            except Exception as e:
-                print(f"WARNING: favorability fetch for {subject_slug} failed ({e})")
-                return []
+        def _subject(kind, key):
+            def get(subject_slug):
+                try:
+                    return approval.fetch_votehub(cfg["approval"][key].format(slug=subject_slug))
+                except Exception as e:
+                    print(f"WARNING: {kind} fetch for {subject_slug} failed ({e})")
+                    return []
+            return get
+        fav = _subject("favorability", "votehub_fav_url")
+        appr = _subject("approval", "votehub_subject_approval_url")
+        try:
+            pres_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_president_url"], max_pages=4)
+        except Exception as e:  # only used to order the candidate list
+            print(f"WARNING: PollResults 2028 primary polls fetch failed ({e})")
+            pres_raw = []
         os.makedirs(cache, exist_ok=True)
         json.dump({"polls": polls}, open(os.path.join(cache, "votehub.json"), "w"))
         json.dump({"results": pr_raw}, open(os.path.join(cache, "pollresults.json"), "w"))
@@ -138,18 +152,34 @@ def main():
     for n in detected["notes"]:
         print("WARNING:", n)
 
-    # VP gap: (sitting VP net favorability) - (president net favorability)
+    # Possible candidates, ordered by 2028 primary polling; new names are added automatically.
+    cc = cfg["candidates"]
+    p_lo = today - dt.timedelta(days=cc.get("primary_window_days", 120))
+    standing = candidates.primary_standing(pres_raw, p_lo, today, approval._iso)
+    registry = candidates.merge_registry(registry, standing, fetch=wiki, min_pct=cc.get("primary_min_pct", 3),
+                                         exclude=[cfg["election"]["incumbent_president"]])
+
+    # VP gap: (sitting VP net approval) - (president net approval); favorability if no approval polls
     vpc = cfg["vp_adjustment"]
     sitting_vp = detected.get("sitting_vp") or "JD Vance"
     if mode == "official":
         g_lo, g_hi = w_lo, w_hi
     else:
         g_lo, g_hi = today - dt.timedelta(days=vpc.get("trailing_days", 60)), today
+    gap_kind = None
     if vpc.get("mode") == "manual" and vpc.get("vp_net") is not None:
-        gap, gap_basis = vpc["vp_net"] - vpc["president_net"], "manual values in config.json"
+        gap, gap_basis, gap_kind = vpc["vp_net"] - vpc["president_net"], "manual values in config.json", "approval"
     else:
-        gap, gap_basis = candidates.vp_gap(fav(slug(sitting_vp)), fav(slug(cfg["election"]["incumbent_president"])),
-                                           g_lo, g_hi, approval._iso)
+        vp_slug, pres_slug = slug(sitting_vp), slug(cfg["election"]["incumbent_president"])
+        sources = {"approval": (appr(vp_slug), national_polls), "favorability": (fav(vp_slug), fav(pres_slug))}
+        gap, gap_basis = None, "no approval or favorability polls of the vice president in the window"
+        # Prefer job approval, but only with 3 or more polls of the vice president; then favorability;
+        # then whatever there is.
+        for kind, need in (("approval", 3), ("favorability", 3), ("approval", 1), ("favorability", 1)):
+            g, basis = candidates.vp_gap(*sources[kind], g_lo, g_hi, approval._iso, kind, min_vp=need)
+            if g is not None:
+                gap, gap_basis, gap_kind = g, basis, kind
+                break
     applied = (vp_is_nominee or vpc.get("mode") == "manual") and gap is not None
     vp_shift = gap if applied else 0.0
 
@@ -178,7 +208,7 @@ def main():
         "economy": {"through": econ_last, "delta": cfg["economy"]["delta"]},
         "tickets": tickets,
         "sitting_vp": sitting_vp,
-        "vp": {"gap": None if gap is None else round(gap, 2), "basis": gap_basis, "applied": applied,
+        "vp": {"gap": None if gap is None else round(gap, 2), "kind": gap_kind, "basis": gap_basis, "applied": applied,
                "window": [g_lo.isoformat(), g_hi.isoformat()]},
         "summary": {"pDemWin": res["pDemWin"], "pTie": res["pTie"], "demPopular": res["demPopular"],
                     "demEvPoint": dem_ev_point, "simulations": res["simulations"]},
@@ -204,8 +234,9 @@ def main():
     hist_path = os.path.join(HERE, "history.json")
     hist = json.load(open(hist_path)) if os.path.exists(hist_path) else []
     if not fx:
-        hist = [h for h in hist if h["date"] != today.isoformat()]
-        hist.append({"date": today.isoformat(), "pDemWin": round(res["pDemWin"], 4),
+        # v2: model error shared across states. Earlier days used a different method and are dropped.
+        hist = [h for h in hist if h.get("v") == 2 and h["date"] != today.isoformat()]
+        hist.append({"v": 2, "date": today.isoformat(), "pDemWin": round(res["pDemWin"], 4),
                      "demPopular": round(res["demPopular"], 2), "approve": round(nat["approve"], 1),
                      "econThrough": econ_last})
         hist.sort(key=lambda h: h["date"])
@@ -217,7 +248,9 @@ def main():
     n_pr = sum(1 for p in national_polls if p.get("source") == "pollresults")
     who = {side: (tickets[side].get("president", {}).get("name"), tickets[side].get("vp", {}).get("name")) for side in tickets}
     print(f"Polls: {len(polls)} from VoteHub, {n_pr} more national from PollResults, {len(state_polls)} state polls")
-    print(f"Tickets: {who}; sitting VP {sitting_vp}; VP gap {gap} ({gap_basis}), applied={applied}")
+    print(f"Tickets: {who}; sitting VP {sitting_vp}; VP gap {gap} ({gap_kind}: {gap_basis}), applied={applied}")
+    lead = {p: [(r["name"], r["pct"]) for r in rows[:3]] for p, rows in standing.items()}
+    print(f"2028 primary polls: {len(pres_raw)} records; leaders {lead}; {sum(1 for c in registry if c.get('auto'))} candidates added")
     print(f"{today} [{mode}] approval {nat['approve']:.1f}% ({nat['pollsters']} pollsters), "
           f"economy through {econ_last}; Dem win {s['pDemWin']:.1%}, Dem popular {s['demPopular']:.2f}%, "
           f"point EV {dem_ev_point}")
