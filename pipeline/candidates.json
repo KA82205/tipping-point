@@ -19,6 +19,7 @@
     {"name": "Elise Stefanik", "party": "R", "state": "NY"},
     {"name": "Rand Paul", "party": "R", "state": "KY"},
     {"name": "Tulsi Gabbard", "party": "R", "state": "HI"},
+    {"name": "Robert F. Kennedy Jr.", "party": "R", "state": "CA", "aliases": ["Robert F. Kennedy", "RFK Jr."]},
     {"name": "Gavin Newsom", "party": "D", "state": "CA"},
     {"name": "Josh Shapiro", "party": "D", "state": "PA"},
     {"name": "Gretchen Whitmer", "party": "D", "state": "MI"},
