@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tipping Point</title>
-<meta name="description" content="Presidential election forecasts from the fundamentals: the Enns et al. state approval and state economy model, its 2024 record, and a live 2028 tracker.">
+<meta name="description" content="Presidential election forecasts from the fundamentals: the Enns et al. state approval and state economy model, its 2024 record, and a live 2028 Nowcast.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,8 +21,8 @@
     </a>
     <nav aria-label="Main">
       <a href="#" data-view="home">Overview</a>
+      <a href="#nowcast" data-view="nowcast">2028 Nowcast</a>
       <a href="#results-2024" data-view="results-2024">2024 scorecard</a>
-      <a href="#forecast-2028" data-view="forecast-2028">2028 today</a>
       <a href="#method" data-view="method">Method</a>
     </nav>
   </div>
@@ -36,7 +36,7 @@
       <h1>Presidential forecasts from the fundamentals, published 100 days out.</h1>
       <p class="lede">A personal project built on Peter K. Enns's State Presidential Approval/State Economy Model. It reads state-level approval of the president, each state's economy and its voting history, with no horse-race polls. In 2024 the model put all 56 states and districts on the right side, from data collected in July.</p>
       <div class="btns">
-        <a class="btn primary" href="#forecast-2028">Build a 2028 matchup</a>
+        <a class="btn primary" href="#nowcast">See the 2028 Nowcast</a>
         <a class="btn" href="#results-2024">Open the 2024 scorecard</a>
       </div>
     </div>
@@ -49,23 +49,23 @@
         <div class="read" id="hero-2024-read"></div>
       </div>
       <div class="big-row">
-        <div class="yr">2028<small>If held today</small></div>
+        <div class="yr">2028<small>Nowcast</small></div>
         <div id="hero-2028"></div>
         <div class="read" id="hero-2028-read"></div>
       </div>
-      <div class="strip-legend"><span><i class="f"></i>Forecast or model estimate</span><span><i class="a"></i>Result</span><span>Democratic share of the two-party national vote</span></div>
+      <div class="strip-legend"><span><i class="f"></i>Forecast or Nowcast</span><span><i class="a"></i>Result</span><span>Democratic share of the two-party national vote</span></div>
     </div>
   </section>
 
   <section class="stack-lg">
     <div class="stack" style="gap:6px">
       <h2>The tipping point</h2>
-      <p class="lede">Every state lined up from most Democratic to most Republican, sized by electoral votes. The state that carries a candidate past 270 is the tipping point. Hover a state; switch between the 2024 forecast, the 2024 result and 2028 today.</p>
+      <p class="lede">Every state lined up from most Democratic to most Republican, sized by electoral votes. The state that carries a candidate past 270 is the tipping point. Hover a state; switch between the 2024 forecast, the 2024 result and the 2028 Nowcast.</p>
     </div>
     <div class="tabs" role="tablist" aria-label="Tipping point view">
       <button class="tab" role="tab" data-snake="fc" aria-selected="true">2024 forecast</button>
       <button class="tab" role="tab" data-snake="actual" aria-selected="false">2024 result</button>
-      <button class="tab" role="tab" data-snake="today" aria-selected="false">2028 if held today</button>
+      <button class="tab" role="tab" data-snake="today" aria-selected="false">2028 Nowcast</button>
     </div>
     <div class="snake-card"><div class="snake" id="snake-home"></div><p class="snake-read" id="snake-home-read"></p></div>
   </section>
@@ -79,7 +79,7 @@
       </div>
       <div class="stack">
         <p><strong>The 2024 scorecard</strong> compares the authors' published July 2024 forecast with the certified results, state by state. The forecast numbers are read from the paper's own charts.</p>
-        <p><strong>2028 today</strong> runs the same equation every morning on the latest Trump approval polls and state economic data, and lets you try any matchup. It shows what the model says if the election were held today. It is not the forecast, which needs the nominees and June–July 2028 surveys and is due July 30, 2028.</p>
+        <p><strong>The 2028 Nowcast</strong> runs the same equation every morning on the latest Trump approval polls and state economic data, and lets you pick who you think will be on each ticket. It shows what the model says if the election were held today. It is not the forecast, which needs the nominees and June–July 2028 surveys and is due July 30, 2028.</p>
         <p class="small">Everything updates automatically: polls, state economies, and the nominees, running mates and home states once the conventions pick them. Data: FRED (Philadelphia Fed state coincident indexes), VoteHub and PollResults.org (poll data, CC BY 4.0), Wikipedia, certified 2024 returns.</p>
       </div>
     </div>
@@ -127,7 +127,7 @@
       <div class="desk">
         <div class="map-panel">
           <svg class="usmap" id="map-2024" role="img" aria-label="Map of 2024 forecast and results by state"></svg>
-          <div class="map-foot"><div class="ramp" id="ramp-2024"></div><span class="small">Click a state to pin it</span></div>
+          <div class="map-foot"><div class="ramp" id="ramp-2024"></div><div class="switch" role="group" aria-label="Map style"><button type="button" data-mapmode="geo" aria-pressed="true">Map</button><button type="button" data-mapmode="hex" aria-pressed="false">Hexagons</button></div></div>
         </div>
         <aside class="inspector" id="insp-2024" aria-live="polite"></aside>
       </div>
@@ -160,24 +160,29 @@
   </section>
 </div>
 
-<!-- ================= 2028 ================= -->
-<div id="view-forecast-2028" class="wrap" hidden>
+<!-- ================= 2028 NOWCAST ================= -->
+<div id="view-nowcast" class="wrap" hidden>
   <section class="stack-lg" style="padding-top:44px">
     <div class="stack">
       <span class="live" id="live-pill">Live</span>
-      <h1 style="font-size:clamp(34px,4.6vw,56px)">2028: if the election were held today</h1>
-      <p class="lede">The model, run every morning on today's Trump approval polls and state economies. <strong class="warn">This is not the forecast.</strong> The real forecast needs the nominees and June–July 2028 surveys, and publishes July 30, 2028.</p>
+      <h1 style="font-size:clamp(34px,4.6vw,56px)">2028 Nowcast</h1>
+      <p class="lede">What the model says if the election were held today, from today's Trump approval polls and state economies. <strong class="warn">This is not the forecast.</strong> The real forecast publishes July 30, 2028, in <span id="d-forecast"></span> days.</p>
     </div>
-    <div class="count">
-      <div><span class="v" id="d-forecast"></span><span class="l">days until the real forecast</span></div>
-      <div><span class="v" id="d-election"></span><span class="l">days until Election Day, November 7, 2028</span></div>
+    <div class="stack" id="hero-28">
+      <div class="beam-card">
+        <div class="beam-side d"><span class="big" id="bm-dem"></span><span class="l">Democrat wins</span></div>
+        <div class="beam" id="beam"></div>
+        <div class="beam-side r"><span class="big" id="bm-rep"></span><span class="l">Republican wins</span></div>
+        <div class="waffle"><div id="waffle-28"></div><p class="small" id="waffle-cap"></p></div>
+      </div>
+      <div class="figs figs-3" id="figs-2028"></div>
     </div>
   </section>
 
   <section class="stack-lg" id="builder">
     <div class="stack" style="gap:6px">
-      <h2>Build a matchup</h2>
-      <p class="lede">Pick any ticket to see what home-state bonuses and the vice-president adjustment would do. When the conventions choose the real nominees, they load here automatically.</p>
+      <h2 id="builder-h">Pick the tickets</h2>
+      <p class="lede" id="builder-p"></p>
     </div>
     <div class="tickets">
       <div class="ticket dem">
@@ -190,41 +195,51 @@
         <div class="pick" data-role="rep-p"></div>
         <div class="pick" data-role="rep-vp"></div>
       </div>
-      <div class="ticket knobs">
-        <h3>What if</h3>
-        <label class="knob" for="sl-appr"><span>Trump approval <output id="out-appr"></output></span><input type="range" id="sl-appr" min="-15" max="15" step="0.5" value="0"></label>
-        <label class="knob" for="sl-econ"><span>State economies <output id="out-econ"></output></span><input type="range" id="sl-econ" min="-0.4" max="0.4" step="0.02" value="0"></label>
-        <button class="btn" id="btn-reset" type="button">Reset to today</button>
-      </div>
     </div>
     <ul class="effects" id="effects" aria-live="polite"></ul>
+    <div class="btns" style="align-items:center"><button class="btn" id="btn-reset" type="button">Clear picks</button><p class="small" id="live-inputs"></p></div>
   </section>
 
   <section class="stack-lg" id="results-2028">
-    <div class="figs" id="figs-2028"></div>
-    <div class="snake-card"><div class="snake" id="snake-2028"></div><p class="snake-read" id="snake-2028-read"></p></div>
     <div class="stack">
       <div class="tabs" role="tablist" aria-label="Map layer">
-        <button class="tab" role="tab" data-layer28="tracker" aria-selected="true">If held today</button>
+        <button class="tab" role="tab" data-layer28="tracker" aria-selected="true">2028 Nowcast</button>
         <button class="tab" role="tab" data-layer28="lean" aria-selected="false">2024 lean</button>
         <button class="tab" role="tab" data-layer28="official" aria-selected="false">Real forecast</button>
       </div>
-      <div class="desk">
+      <div class="desk" id="desk-28">
         <div class="map-panel">
-          <svg class="usmap" id="map-2028" role="img" aria-label="Map of the 2028 if-held-today estimate"></svg>
-          <div class="map-foot"><div class="ramp" id="ramp-2028"></div><span class="small" id="stamp-2028"></span></div>
+          <svg class="usmap" id="map-2028" role="img" aria-label="Map of the 2028 Nowcast by state"></svg>
+          <div class="map-foot"><div class="ramp" id="ramp-2028"></div><div class="switch" role="group" aria-label="Map style"><button type="button" data-mapmode="geo" aria-pressed="true">Map</button><button type="button" data-mapmode="hex" aria-pressed="false">Hexagons</button></div></div>
         </div>
         <aside class="inspector" id="insp-2028" aria-live="polite"></aside>
       </div>
+      <div class="official" id="official-28" hidden>
+        <h3>The official prediction will be made in <span id="cd-days"></span> days</h3>
+        <div class="cd" id="cd-28" aria-hidden="true"></div>
+        <p>The real 2028 forecast publishes July 30, 2028, 100 days before the election, once the nominees are known and the June–July approval surveys are in. In the meantime, view the Nowcast to see what the election might look like if it were held today.</p>
+        <button class="btn primary" id="btn-to-nowcast" type="button">View the Nowcast</button>
+      </div>
     </div>
-    <div class="cols2">
+    <div class="stack-lg" id="results-detail">
       <div class="stack">
-        <h3>Electoral votes across 70,000 simulations</h3>
-        <div class="trend" id="hist-2028"></div>
+        <h3>The path to 270</h3>
+        <div class="snake-card"><div class="snake" id="snake-2028"></div><p class="snake-read" id="snake-2028-read"></p></div>
       </div>
       <div class="stack">
-        <h3>Democratic win chance, day by day</h3>
-        <div class="trend" id="trend-2028"><p class="small">The line starts after two daily runs.</p></div>
+        <h3>Where every state stands</h3>
+        <div class="board" id="board-28"></div>
+        <p class="small">Solid means a party wins the state in more than 98 of 100 simulations, Likely more than 75, Lean more than 55. Pick a state to see it on the map.</p>
+      </div>
+      <div class="cols2">
+        <div class="stack">
+          <h3>Electoral votes across 70,000 simulations</h3>
+          <div class="trend" id="hist-2028"></div>
+        </div>
+        <div class="stack">
+          <h3>Democrat's share of simulations, day by day</h3>
+          <div class="trend" id="trend-2028"><p class="small">The line starts after two daily runs.</p></div>
+        </div>
       </div>
     </div>
   </section>
@@ -240,9 +255,10 @@
         <h3>What updates on its own</h3>
         <div class="needs needs-1">
           <div><span class="s ok" id="need-econ">Daily</span><h3>State economies</h3><p>Philadelphia Fed coincident indexes via FRED, through June 2028.</p></div>
-          <div><span class="s ok">Daily</span><h3>Trump approval</h3><p>National poll average. Each state is shifted by its 2024 margin, plus any state polls. The real forecast will need state estimates from June–July 2028 surveys.</p></div>
-          <div><span class="s ok" id="need-tickets">Watching</span><h3>Nominees and home states</h3><p>Read from Wikipedia every morning; home-state bonuses switch on as soon as the tickets are set.</p></div>
-          <div><span class="s ok" id="need-vp">Daily</span><h3>Vice-president adjustment</h3><p>If the sitting vice president is a nominee, approval shifts by his net favorability minus the president's.</p></div>
+          <div><span class="s ok">Daily</span><h3>Trump approval</h3><p>National poll average. Each state is shifted by its 2024 margin, plus any state polls. State-by-state survey estimates will replace this once a source grants permission.</p></div>
+          <div><span class="s ok" id="need-tickets">Watching</span><h3>Nominees and home states</h3><p>Read from Wikipedia every morning. Each nominee and running mate locks in as soon as they are confirmed, and the home-state bonuses switch on.</p></div>
+          <div><span class="s ok" id="need-cands">Daily</span><h3>Possible candidates</h3><p>Ordered by national 2028 primary polls from PollResults.org. Anyone new who polls at 3% or more is added.</p></div>
+          <div><span class="s ok" id="need-vp">Daily</span><h3>Vice-president adjustment</h3><p>If the sitting vice president is a nominee, approval shifts by his net job approval minus the president's.</p></div>
         </div>
       </div>
     </div>
@@ -273,6 +289,7 @@
     <div>
       <h2 style="margin-bottom:14px">Uncertainty</h2>
       <p>Each forecast runs 10,000 draws of the coefficients, adds model error with a standard deviation equal to the model's root mean square error, and repeats across seven values of the economic weighting parameter: 70,000 simulations.</p>
+      <p>Most of that error is shared by every state in a simulation, so when the model misses, it tends to miss the whole map in the same direction. Run on the paper's own 2024 state forecasts, this reproduces its published odds: Trump in 73 of 100 simulations.</p>
       <p>Maine and Nebraska districts take the statewide forecast plus each district's gap from its state in the previous election.</p>
     </div>
     <div>
@@ -284,9 +301,9 @@
 
   <section class="cols2">
     <div>
-      <h2 style="margin-bottom:14px">Data behind 2028 today</h2>
+      <h2 style="margin-bottom:14px">Data behind the Nowcast</h2>
       <p>State economies come from the Philadelphia Fed State Coincident Indexes via FRED. Trump's national approval is an average of public polls from VoteHub and PollResults.org. Until state-level estimates are available, each state's approval is the national average shifted by its 2024 Trump margin, pulled toward any state polls.</p>
-      <p>Nominees, running mates and their home states are read from Wikipedia each morning. The vice-president adjustment uses favorability, as the authors did for 1988, because no free source asks about vice-presidential approval.</p>
+      <p>Nominees, running mates and their home states are read from Wikipedia each morning. The vice-president adjustment uses job-approval polls of the vice president from VoteHub, or favorability when there are none, as the authors did for 1988. The list of possible candidates follows national 2028 primary polls from PollResults.org.</p>
       <p>A few settings the paper does not publish, such as the approval baseline and the economic weighting parameter, use values consistent with it and will be checked against the replication data.</p>
     </div>
     <div>
