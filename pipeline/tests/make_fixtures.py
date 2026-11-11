@@ -42,3 +42,13 @@ pr = [
     {"pollster": "Odd Format", "foo": "bar"},
 ]
 json.dump({"results": pr}, open(os.path.join(out, "pollresults.json"), "w"))
+
+# Wikipedia lead sections and VoteHub favorability, for the candidate/VP steps. NOT real data.
+open(os.path.join(out, "wiki_2028-united-states-presidential-election.txt"), "w").write(
+    "{{Infobox election\n| nominee1 = \n| party1 = Republican Party (United States)\n| home_state1 = \n"
+    "| running_mate1 = \n| nominee2 = \n| party2 = Democratic Party (United States)\n}}")
+open(os.path.join(out, "wiki_vice-president-of-the-united-states.txt"), "w").write("| incumbent = [[JD Vance]]\n")
+fav = lambda f, u: [{"pollster": p, "end_date": "2026-11-0" + str(i + 1), "answers": [  # noqa: E731
+    {"choice": "Favorable", "pct": f}, {"choice": "Unfavorable", "pct": u}]} for i, p in enumerate("ABCD")]
+json.dump(fav(38, 50), open(os.path.join(out, "fav_jd-vance.json"), "w"))
+json.dump(fav(40, 56), open(os.path.join(out, "fav_donald-trump.json"), "w"))
