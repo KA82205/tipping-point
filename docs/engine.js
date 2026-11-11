@@ -34,6 +34,13 @@
     perot:    { b: -0.60, se: 0.06 },
   };
   const RMSE = 3.46;          // standard error of the estimate
+  // How the model error is split. The paper adds one error draw per simulation, so most of the
+  // miss is shared by every state. A shared part of 3.1 points plus a state-specific part of
+  // 1.54 (together 3.46) reproduces the paper's published 2024 results: Harris wins 27% of
+  // simulations, ties about 1 in 500, and the spread of Figure 1. Fully independent state
+  // errors would give Harris 12% and are far too confident about the national outcome.
+  const SHARED_SD = 3.1;
+  const STATE_SD = Math.sqrt(RMSE * RMSE - SHARED_SD * SHARED_SD);
   const VARS = Object.keys(COEFS).filter(k => k !== 'constant');
 
   // Rating thresholds from Figure 2 (share of simulations won).
@@ -74,7 +81,8 @@
    *
    * Parameter draws are independent normals from the Table 1 SEs. The paper's
    * CLARIFY draws use the full covariance matrix, which needs the replication data.
-   * One model-error draw per state per simulation, as described in the paper.
+   * Model error: one draw per simulation shared by every state, plus a smaller
+   * state-specific draw (see SHARED_SD above).
    */
   function simulate({ states, districts = [], n = 10000, seed = 2028, econVariants = null }) {
     const rand = mulberry32(seed);
@@ -95,12 +103,13 @@
       for (let it = 0; it < n; it++) {
         const b0 = COEFS.constant.b + COEFS.constant.se * normal(rand);
         for (let j = 0; j < nV; j++) b[j] = COEFS[VARS[j]].b + COEFS[VARS[j]].se * normal(rand);
+        const shared = SHARED_SD * normal(rand);
         let ev = 0, pop = 0;
         for (let i = 0; i < nS; i++) {
           const row = X[i];
-          let y = b0;
+          let y = b0 + shared;
           for (let j = 0; j < nV; j++) y += b[j] * row[j];
-          y += RMSE * normal(rand);
+          y += STATE_SD * normal(rand);
           share[i] = y;
           pop += y * (states[i].pop || 1);
           if (y > 50) { ev += states[i].ev; wins[states[i].abbr]++; }
@@ -131,7 +140,7 @@
     };
   }
 
-  const api = { COEFS, RMSE, predict, simulate, rate };
+  const api = { COEFS, RMSE, SHARED_SD, STATE_SD, predict, simulate, rate };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.SPASE = api;
 })(typeof window !== 'undefined' ? window : globalThis);
