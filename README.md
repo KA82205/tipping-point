@@ -1,10 +1,11 @@
-# 100 Days Out
+# Tipping Point
 
-A US presidential election forecast site built on the State Presidential Approval/State
+A personal, non-commercial US presidential election forecast site built on the State Presidential Approval/State
 Economy Model (Enns, Colner, Kumar & Lagodny, *PS: Political Science & Politics*, 2024,
 doi:10.1017/S1049096524000994, CC BY-NC 4.0).
 
-- `docs/` is the website (plain HTML/CSS/JS, no build step). `docs/engine.js` is the model.
+- `docs/` is the website (plain HTML/CSS/JS, no build step). `docs/engine.js` is the model; the
+  2028 page reruns it in the browser for the matchup builder.
 - `pipeline/` fetches data every day, builds the model inputs and writes `docs/nowcast.js`.
 - `.github/workflows/update.yml` runs the pipeline daily and commits the new data.
 
@@ -25,6 +26,7 @@ python pipeline/update.py                       # live data
 python pipeline/tests/make_fixtures.py          # fake data for an offline test...
 python pipeline/update.py --fixtures pipeline/tests/fixtures   # ...shown with a TEST DATA flag
 python pipeline/tests/test_economy.py           # reproduces the paper's Table A-2
+python pipeline/tests/test_candidates.py        # nominee detection on real Wikipedia text
 ```
 Build `docs/data.js` and `docs/us-states.js` first (see the workflow), then open
 `docs/index.html`. Delete `docs/nowcast.js` after a fixture run.
@@ -37,7 +39,8 @@ Build `docs/data.js` and `docs/us-states.js` first (see the workflow), then open
 | National Trump approval | VoteHub Polling API and PollResults.org (both CC BY 4.0), merged and averaged here | Yes, daily |
 | State approval | See below | Partly |
 | 2024 state lean, district offsets | Certified 2024 results (`pipeline/results_2024.json`) | Fixed |
-| Nominee and running-mate home states | `pipeline/config.json` | Edit by hand |
+| Nominees, running mates, home states, sitting VP | Wikipedia infobox (`pipeline/candidates.py`), with `pipeline/candidates.json` as fallback; `config.json` overrides | Yes, daily |
+| Vice-president adjustment | VoteHub favorability of the sitting VP and the president | Yes, daily |
 
 **State approval.** The paper estimates it with MRP on survey microdata (Gallup, AP-NORC,
 Verasight and others, June–July of the election year). No free feed publishes state MRP
@@ -78,8 +81,8 @@ The replication archive (Harvard Dataverse, doi:10.7910/DVN/PBGFOF) would settle
 Until 1 June 2028 the tracker uses a trailing 30-day poll window and weights the latest
 quarter of economic data as if it were the election year's second quarter. From 1 June 2028
 the poll window switches to June 1–July 30, matching the paper. For the official 30 July
-forecast, fill in the nominees in `config.json`, set the VP adjustment if it applies, and
-supply MRP state approval through the `csv` source.
+forecast, nominees, running mates, home states and the VP adjustment fill in automatically
+once Wikipedia lists the tickets; supply MRP state approval through the `csv` source.
 
 Gallup, one of the paper's 2024 sources, has stopped publishing presidential approval;
 plan the 2028 MRP survey sources early.
