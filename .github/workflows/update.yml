@@ -41,6 +41,7 @@ jobs:
         run: python pipeline/tests/test_economy.py
 
       - name: Fetch latest polls and economic data, run the model
+        id: update
         continue-on-error: true
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
@@ -50,7 +51,9 @@ jobs:
         run: |
           git config user.name "forecast-bot"
           git config user.email "forecast-bot@users.noreply.github.com"
-          git add -f docs/nowcast.js docs/history.js pipeline/history.json pipeline/cache docs/data.js docs/us-states.js pipeline/results_2024.json 2>/dev/null || true
+          for p in docs/nowcast.js docs/history.js pipeline/history.json pipeline/cache docs/data.js docs/us-states.js pipeline/results_2024.json; do
+            if [ -e "$p" ]; then git add -f "$p"; fi
+          done
           if git diff --cached --quiet; then echo "No changes"; else git commit -m "Data update $(date -u +%Y-%m-%d)" && git push; fi
 
       - uses: actions/configure-pages@v5
@@ -59,3 +62,9 @@ jobs:
           path: docs
       - id: deploy
         uses: actions/deploy-pages@v4
+
+      - name: Flag a failed data update
+        if: steps.update.outcome == 'failure'
+        run: |
+          echo "::error::The data update step failed; the site was deployed with the previous data. Open the 'Fetch latest polls' step above for details."
+          exit 1
