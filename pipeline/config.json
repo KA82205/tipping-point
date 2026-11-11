@@ -31,7 +31,9 @@
     "mode": "auto",
     "vp_net": null,
     "president_net": null,
-    "trailing_days": 120
+    "trailing_days": 120,
+    "full_weight_polls": 20,
+    "_full_weight_note": "ASSUMPTION, not in the paper: the gap is scaled by (polls of the vice president / full_weight_polls), capped at 1, so a handful of polls cannot swing the result. Set to 0 to always use the full gap."
   },
 
   "economy": {
