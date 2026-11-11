@@ -1,0 +1,61 @@
+name: Update data and deploy site
+
+on:
+  schedule:
+    - cron: "17 14 * * *"   # daily, 9:17 AM Eastern (standard time)
+  workflow_dispatch: {}      # "Run workflow" button in the Actions tab
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: update-and-deploy
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build 2024 data and map shapes
+        run: |
+          python pipeline/make_2024_data.py
+          cd pipeline && npm install --no-save us-atlas@3.0.1 topojson-client@3.1.0 && cd ..
+          node pipeline/build_map.js
+
+      - name: Check the economy formula against the paper (Table A-2)
+        run: python pipeline/tests/test_economy.py
+
+      - name: Fetch latest polls and economic data, run the model
+        continue-on-error: true
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python pipeline/update.py
+
+      - name: Save new data to the repository
+        run: |
+          git config user.name "forecast-bot"
+          git config user.email "forecast-bot@users.noreply.github.com"
+          git add -f docs/nowcast.js docs/history.js pipeline/history.json pipeline/cache docs/data.js docs/us-states.js pipeline/results_2024.json 2>/dev/null || true
+          if git diff --cached --quiet; then echo "No changes"; else git commit -m "Data update $(date -u +%Y-%m-%d)" && git push; fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deploy
+        uses: actions/deploy-pages@v4
