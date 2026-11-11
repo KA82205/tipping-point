@@ -52,10 +52,14 @@ def refresh_morris_state_approval(csv_path):
             print(f"WARNING: Morris data fetch only returned {len(pairs)} states; keeping previous CSV")
             return False
         import csv as _csv
-        # Add DC (not in Morris data; use a low estimate consistent with nearby MD/VA)
         state_map = {abbr: float(appr) for abbr, appr in pairs}
         if "DC" not in state_map:
-            state_map["DC"] = round(0.5 * (state_map.get("MD", 29.8) + state_map.get("VA", 33.7)), 1)
+            # Not in the source. Keep the value already in the CSV (an assumed 15.0 to begin with).
+            state_map["DC"] = 15.0
+            if os.path.exists(csv_path):
+                for row in _csv.DictReader(open(csv_path)):
+                    if row.get("state") == "DC":
+                        state_map["DC"] = float(row["approve"])
         with open(csv_path, "w", newline="") as f:
             w = _csv.writer(f)
             w.writerow(["state", "approve"])
@@ -73,6 +77,12 @@ def home_code(st, dem, rep):
     return (1 if st == dem else 0) - (1 if st == rep else 0)
 
 
+def home_lag_weights(cfg):
+    """Share of the previous nominees' home-state fade that is applied (the paper uses 1)."""
+    c = cfg["candidates"]
+    return {"dem": c.get("dem_president_home_lag_weight", 1), "rep": c.get("rep_president_home_lag_weight", 1)}
+
+
 def build_inputs(cfg, econ_by_delta, approve_by_state, results, codes, vp_shift):
     el, a = cfg["election"], cfg["approval"]
     states = {k: v for k, v in results.items() if len(k) == 2}
@@ -80,6 +90,7 @@ def build_inputs(cfg, econ_by_delta, approve_by_state, results, codes, vp_shift)
     nat = sum(v["share"] * v["votes"] for v in states.values()) / tot
     sign = 1.0 if el["incumbent_party"] == "D" else -1.0
     main = econ_by_delta[cfg["economy"]["delta"]]
+    lag_w = home_lag_weights(cfg)
     out = []
     for st, v in states.items():
         out.append({
@@ -89,7 +100,8 @@ def build_inputs(cfg, econ_by_delta, approve_by_state, results, codes, vp_shift)
                 "approval": sign * (approve_by_state[st] + vp_shift - a["constant"]),
                 "econ": main[st],
                 "home": home_code(st, codes["dem_president_home"], codes["rep_president_home"]),
-                "homeLag": home_code(st, codes["dem_president_home_lag"], codes["rep_president_home_lag"]),
+                "homeLag": (lag_w["dem"] if st == codes["dem_president_home_lag"] else 0)
+                           - (lag_w["rep"] if st == codes["rep_president_home_lag"] else 0),
                 "vpHome": home_code(st, codes["dem_vp_home"], codes["rep_vp_home"]),
                 "anderson": 0, "perot": 0,
             },
@@ -277,6 +289,7 @@ def main():
         "scenario": {
             "constant": cfg["approval"]["constant"], "sign": sign,
             "homeLag": {"dem": codes["dem_president_home_lag"], "rep": codes["rep_president_home_lag"]},
+            "homeLagWeight": home_lag_weights(cfg),
             "states": [{"abbr": s["abbr"], "ev": s["ev"], "pop": s["pop"], "lagDev": r4(s["inputs"]["lagDev"]),
                         "approve": r4(s["approve"])} for s in states],
             "econVariants": [{k: r4(v) for k, v in econ[d].items()} for d in cfg["economy"]["delta_grid"]],
