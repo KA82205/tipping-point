@@ -70,7 +70,36 @@ def test_vp_gap():
     pr = [mk(p, 40, 56, "2026-11-01") for p in "ABC"]
     g, basis = candidates.vp_gap(vp, pr, dt.date(2026, 10, 1), dt.date(2026, 11, 11), iso)
     assert abs(g - 6) < 1e-9 and "both" in basis
+    ap = lambda who, a, d: {"pollster": who, "end_date": "2026-11-01", "answers": [{"choice": "Approve", "pct": a}, {"choice": "Disapprove", "pct": d}]}  # noqa: E731
+    g, basis = candidates.vp_gap([ap(p, 40, 48) for p in "ABC"], [ap(p, 37, 59) for p in "ABC"],
+                                 dt.date(2026, 10, 1), dt.date(2026, 11, 11), iso, "approval")
+    assert abs(g - 14) < 1e-9
+    assert candidates.vp_gap(vp, pr, dt.date(2026, 10, 1), dt.date(2026, 11, 11), iso, "approval")[0] is None
+
+
+def test_primary_standing():
+    import datetime as dt
+    import approval
+    poll = lambda who, sub, rows, day="11/2/26", state="US": {"pollster": who, "state": state, "endDate": day, "questions": [  # noqa: E731
+        {"stage": "primary", "subpopulation": sub, "answers": [{"candidateName": n, "pct": v} for n, v in rows]},
+        {"stage": "general", "answers": [{"candidateName": "JD Vance", "pct": 45}, {"candidateName": "Gavin Newsom", "pct": 47}]}]}
+    raw = [poll("A", "d", [("Gavin Newsom", 24), ("Pete Buttigieg", 14), ("Undecided", 30)]),
+           poll("B", "d", [("Gavin Newsom", 20), ("Pete Buttigieg", 16), ("New Person", 9)]),
+           poll("A", "d", [("Gavin Newsom", 90), ("Pete Buttigieg", 1)], day="9/1/26"),      # older poll by the same pollster
+           poll("C", "d", [("Gavin Newsom", 99), ("Pete Buttigieg", 1)], state="NH"),         # state poll, ignored
+           poll("A", "r", [("J.D. Vance", 50), ("Marco Rubio", 10), ("Donald Trump", 30)])]
+    s = candidates.primary_standing(raw, dt.date(2026, 8, 1), dt.date(2026, 11, 11), approval._iso)
+    assert [(r["name"], r["pct"]) for r in s["D"]] == [("Gavin Newsom", 22.0), ("Pete Buttigieg", 15.0), ("New Person", 9.0)], s
+    assert s["R"][0] == {"name": "J.D. Vance", "pct": 50.0, "polls": 1}
+    reg = [{"name": "JD Vance", "party": "R", "state": "OH", "aliases": ["J. D. Vance"]}, {"name": "Gavin Newsom", "party": "D", "state": "CA"}]
+    wiki = lambda title: "| state = [[Vermont]]" if title == "New Person" else ""  # noqa: E731
+    out = candidates.merge_registry(reg, s, fetch=wiki, exclude=["Donald Trump"])
+    by = {c["name"]: c for c in out}
+    assert by["JD Vance"]["primary"] == 50.0 and by["Gavin Newsom"]["primary"] == 22.0
+    assert by["New Person"]["state"] == "VT" and by["New Person"]["auto"] is True
+    assert "Donald Trump" not in by and "Pete Buttigieg" not in by and "Marco Rubio" not in by  # no home state found
+    assert "primary" not in reg[0]  # the input list is not modified
 
 
 if __name__ == "__main__":
-    test_filled_infobox(); test_vp_is_nominee(); test_empty_infobox_and_lookup(); test_vp_gap(); print("ok")
+    test_filled_infobox(); test_vp_is_nominee(); test_empty_infobox_and_lookup(); test_vp_gap(); test_primary_standing(); print("ok")
