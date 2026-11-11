@@ -1,0 +1,58 @@
+{
+  "_comment": "Settings for the 2028 cycle. Values marked ASSUMPTION are not published in the paper; replace them once the replication data is in hand.",
+
+  "election": {
+    "year": 2028,
+    "election_day": "2028-11-07",
+    "forecast_day": "2028-07-30",
+    "incumbent_president": "Donald Trump",
+    "incumbent_party": "R",
+    "term_start_month": "2025-01",
+    "economy_end_month": "2028-06",
+    "approval_window": ["2028-06-01", "2028-07-30"]
+  },
+
+  "candidates": {
+    "_comment": "Two-letter state codes, or null until known. home_lag = the previous election's nominees (2024: Harris CA, Trump FL).",
+    "dem_president_home": null,
+    "rep_president_home": null,
+    "dem_vp_home": null,
+    "rep_vp_home": null,
+    "dem_president_home_lag": "CA",
+    "rep_president_home_lag": "FL"
+  },
+
+  "vp_adjustment": {
+    "_comment": "Applies only if the sitting VP is a nominee. Net = approve - disapprove. Example for 2028 if JD Vance is the nominee: {\"enabled\": true, \"vp_net\": -10, \"president_net\": -20}.",
+    "enabled": false,
+    "vp_net": null,
+    "president_net": null
+  },
+
+  "economy": {
+    "fred_series_template": "{state}PHCI",
+    "delta": 0.55,
+    "delta_grid": [0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70],
+    "_delta_note": "ASSUMPTION: 0.55 is the paper's California illustration; the 2024 forecast used the median of the fitted 2008-2016 values, which is not published. Grid step is also an assumption.",
+    "signed_by_incumbent_party": true,
+    "_signed_note": "ASSUMPTION: like approval, economic growth is multiplied by -1 under a Republican president so higher values always favor the Democrat.",
+    "dc_from": ["MD", "VA"]
+  },
+
+  "approval": {
+    "constant": 50,
+    "_constant_note": "ASSUMPTION: subtracted from state approval before signing. The paper fits this value but does not report it; Table A-3's range is consistent with roughly 50.",
+    "national_source": "votehub",
+    "votehub_url": "https://api.votehub.com/polls?poll_type=approval&subject=donald-trump",
+    "pollresults_url": "https://api.pollresults.org/v1.0/politics/results/approval",
+    "_pollresults_note": "PollResults.org (NYT poll data, CC BY 4.0, non-commercial). Merged into the national average; its state polls feed state_source state_polls. If its format changes, the run logs a warning and continues with VoteHub only.",
+    "nowcast_window_days": 30,
+    "state_source": "state_polls",
+    "state_prior_n": 1500,
+    "state_poll_extra_days": 60,
+    "_state_source_note": "state_polls (default): vote_swing, pulled toward any state approval polls from the window plus 60 days. vote_swing: state = national + k * (Trump 2024 two-party share in state - national). csv: read pipeline/state_approval.csv (columns state,approve) from Civiqs, Morning Consult or your own MRP; the CSV's state differences are kept and re-centered on the national average.",
+    "vote_swing_k": 1.0
+  },
+
+  "simulation": { "n_per_delta": 10000, "seed": 2028 }
+}
