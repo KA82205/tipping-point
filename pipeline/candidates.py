@@ -9,9 +9,12 @@ is read from their own article's infobox, then from pipeline/candidates.json.
 The sitting vice president comes from the "Vice President of the United States" infobox.
 
 VP adjustment (paper, Appendix 6): when the sitting VP is a nominee, state approval of the
-president is shifted by (VP net rating - president net rating). No free source asks about
-vice-presidential *approval*, so this uses favorability from the VoteHub API, as the paper
-did for 1988 when no approval question existed.
+president is shifted by (VP net rating - president net rating). VoteHub carries job-approval
+polls of the vice president, which is what the paper used for 2000 and 2024; if none fall in
+the window, favorability is used instead, as the paper did for 1988.
+
+Possible candidates: PollResults.org's 2028 primary polls say who is being polled and how
+they stand. That orders the choices in the site's ticket picker and adds anyone new.
 
 Anything set in config.json "candidates" (non-null) overrides what is detected.
 """
@@ -160,9 +163,12 @@ def resolve(cfg, detected):
     return codes, tickets, vp_is_nominee
 
 
-def vp_gap(fav_vp, fav_pres, start, end, iso):
-    """Average (VP net - president net) favorability. Pairs polls from the same pollster and
-    end date when possible; otherwise compares the two averages over the window."""
+def vp_gap(vp_polls, pres_polls, start, end, iso, kind="favorability", min_vp=1):
+    """Average (VP net - president net) rating, from approval or favorability polls. Pairs polls
+    from the same pollster and end date when possible; otherwise compares the two averages,
+    as long as at least min_vp polls of the vice president are in the window."""
+    pos, neg = ("approve", "disapprove") if kind == "approval" else ("fav", "unfav")
+
     def nets(polls):
         rows = {}
         for p in polls or []:
@@ -173,20 +179,92 @@ def vp_gap(fav_vp, fav_pres, start, end, iso):
                 continue
             if not (start <= day <= end) or p.get("internal") or p.get("partisan"):
                 continue
-            fav = unf = None
+            up = down = None
             for a in p.get("answers", []):
                 ch = str(a.get("choice", "")).lower()
-                if ch.startswith("fav"):
-                    fav = float(a["pct"])
-                elif ch.startswith("unfav"):
-                    unf = float(a["pct"])
-            if fav is not None and unf is not None:
-                rows[(str(p.get("pollster", "")).lower(), d)] = fav - unf
+                if ch.startswith(pos) and a.get("pct") is not None:
+                    up = float(a["pct"])
+                elif ch.startswith(neg) and a.get("pct") is not None:
+                    down = float(a["pct"])
+            if up is not None and down is not None:
+                rows[(str(p.get("pollster", "")).lower(), d)] = up - down
         return rows
-    a, b = nets(fav_vp), nets(fav_pres)
+    a, b = nets(vp_polls), nets(pres_polls)
     paired = [a[k] - b[k] for k in a if k in b]
     if len(paired) >= 3:
         return sum(paired) / len(paired), f"{len(paired)} polls that asked about both"
-    if a and b:
+    if a and b and len(a) >= min_vp:
         return sum(a.values()) / len(a) - sum(b.values()) / len(b), f"averages of {len(a)} and {len(b)} polls"
-    return None, "no favorability polls in the window"
+    return None, f"no {kind} polls in the window"
+
+
+NOT_A_PERSON = ("undecided", "other", "someone else", "none", "not sure", "don't know", "dont know", "refused",
+                "would not vote", "no one", "unsure")
+
+
+def primary_standing(raw, start, end, iso):
+    """National 2028 primary polling from PollResults.org records.
+    Each pollster's latest poll in the window, per party; a candidate's figure is the average
+    over the polls that included them. Returns {"D": [{name, pct, polls}], "R": [...]}."""
+    latest = {}
+    for res in raw or []:
+        if str(res.get("state") or "").upper() not in ("US", "USA", "NATIONAL", "") or res.get("internal"):
+            continue
+        try:
+            day = dt.date.fromisoformat(iso(res.get("endDate") or res.get("end_date")))
+        except ValueError:
+            continue
+        if not (start <= day <= end):
+            continue
+        for q in res.get("questions") or []:
+            if str(q.get("stage") or "").lower() != "primary":
+                continue
+            answers = [a for a in q.get("answers") or [] if a.get("candidateName") and a.get("pct") is not None]
+            sub = str(q.get("subpopulation") or "").lower()
+            party = "D" if sub.startswith("d") else "R" if sub.startswith("r") else None
+            if not party and answers:
+                tags = [str(a.get("party") or "").upper()[:1] for a in answers]
+                party = max(("D", "R"), key=tags.count) if tags.count("D") != tags.count("R") else None
+            if not party or len(answers) < 2:
+                continue
+            key = (party, str(res.get("pollster") or "").lower())
+            if key not in latest or day > latest[key][0] or (day == latest[key][0] and len(answers) > len(latest[key][1])):
+                latest[key] = (day, answers)
+    out = {}
+    for party in ("D", "R"):
+        polls = [v[1] for k, v in latest.items() if k[0] == party]
+        tally = {}
+        for answers in polls:
+            for a in answers:
+                name = str(a["candidateName"]).strip()
+                if any(w in name.lower() for w in NOT_A_PERSON):
+                    continue
+                t = tally.setdefault(_norm(name), {"name": name, "sum": 0.0, "polls": 0})
+                t["sum"] += float(a["pct"]); t["polls"] += 1
+        need = 2 if len(polls) >= 3 else 1
+        rows = [{"name": t["name"], "pct": round(t["sum"] / t["polls"], 1), "polls": t["polls"]}
+                for t in tally.values() if t["polls"] >= need]
+        out[party] = sorted(rows, key=lambda r: -r["pct"])
+    return out
+
+
+def merge_registry(registry, standing, fetch=None, min_pct=3.0, max_new=8, exclude=()):
+    """Attach primary-poll standing to the candidate list, and add anyone polling at min_pct or
+    more who is not on it yet (home state from their Wikipedia infobox; skipped if not found)."""
+    out = [dict(c) for c in registry]
+    skip = {_norm(x) for x in exclude}
+    for party, rows in (standing or {}).items():
+        added = 0
+        for r in rows:
+            key = _norm(r["name"])
+            hit = next((c for c in out if c["party"] == party and
+                        key in [_norm(c["name"])] + [_norm(a) for a in c.get("aliases", [])]), None)
+            if hit:
+                hit["primary"], hit["primary_polls"] = r["pct"], r["polls"]
+            elif key not in skip and r["pct"] >= min_pct and added < max_new:
+                st, _src = home_state_of(r["name"], [], fetch)
+                if st:
+                    out.append({"name": r["name"], "party": party, "state": st, "primary": r["pct"],
+                                "primary_polls": r["polls"], "auto": True})
+                    added += 1
+    return out
