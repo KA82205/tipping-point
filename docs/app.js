@@ -364,6 +364,7 @@
   // The Nowcast: today's live approval and state economies, with the chosen (or confirmed) tickets.
   function runScenario() {
     const S = N.scenario, sign = S.sign, C = S.constant;
+    const LAGW = S.homeLagWeight || { dem: 1, rep: 1 };
     const picks = Object.fromEntries(Object.keys(ROLES).map(r => [r, readPick(r)]));
     const vpNom = ['dem-p', 'rep-p'].find(r => picks[r] && norm(picks[r].name) === norm(N.sitting_vp));
     const vpShift = vpNom && N.vp.gap != null ? N.vp.gap : 0;
@@ -374,7 +375,7 @@
       abbr: s.abbr, ev: s.ev, pop: s.pop,
       inputs: {
         lagDev: s.lagDev, approval: sign * (s.approve + vpShift - C), econ: mid[s.abbr],
-        home: code(s.abbr, st('dem-p'), st('rep-p')), homeLag: code(s.abbr, S.homeLag.dem, S.homeLag.rep),
+        home: code(s.abbr, st('dem-p'), st('rep-p')), homeLag: (s.abbr === S.homeLag.dem ? LAGW.dem : 0) - (s.abbr === S.homeLag.rep ? LAGW.rep : 0),
         vpHome: code(s.abbr, st('dem-vp'), st('rep-vp')), anderson: 0, perot: 0,
       },
     }));
@@ -402,7 +403,8 @@
     if (has('dem-vp')) out.push(`<b>Running mate:</b> ${who('dem-vp')} adds about 1.9 points for the Democrat in ${byAbbr[p['dem-vp'].state].name}.`);
     if (has('rep-vp')) out.push(`<b>Running mate:</b> ${who('rep-vp')} adds about 1.9 points for the Republican in ${byAbbr[p['rep-vp'].state].name}.`);
     if (has('dem-p') && has('rep-p') && p['dem-p'].state === p['rep-p'].state) out.push(`Both nominees are from ${byAbbr[p['dem-p'].state].name}, so their home-state bonuses cancel out.`);
-    out.push(`<b>2024 home states fade:</b> Harris's California and Trump's Florida each give back about 3.5 points of their 2024 boost.`);
+    const lw = N.scenario.homeLagWeight || { dem: 1, rep: 1 };
+    out.push(`<b>2024 home states fade:</b> Harris's California gives back about ${(3.49 * lw.dem).toFixed(1)} points of its 2024 boost and Trump's Florida about ${(3.49 * lw.rep).toFixed(1)}${lw.rep < 1 ? ', less than the paper\'s 3.5 (see Method)' : ''}.`);
     const net = N.vp.kind === 'favorability' ? 'net favorability' : 'net approval';
     if (cur.vpNom) out.push(N.vp.gap != null
       ? `<b>Vice-president adjustment on:</b> ${esc(N.sitting_vp)} is the sitting vice president, so state approval shifts by ${sgn(N.vp.gap, 1)} points, his ${net} minus Trump's (${esc(N.vp.basis)}).`
@@ -475,7 +477,7 @@
         <div><dt>Rating</dt><dd>${RATING[s.rating] || s.rating}</dd></div>
         ${base ? `<div><dt>Trump approval in state</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
       </dl>
-      ${a === N.scenario.homeLag.rep ? `<p class="hint">Includes 3.5 points toward the Democrat: the model assumes the 2024 Republican nominee's home-state boost here fades. If this state's 2024 shift was lasting, the nowcast is too favorable to the Democrat.</p>` : a === N.scenario.homeLag.dem ? `<p class="hint">Includes 3.5 points toward the Republican: the model assumes the 2024 Democratic nominee's home-state boost here fades.</p>` : ''}
+      ${a === N.scenario.homeLag.rep ? `<p class="hint">Includes ${(3.49 * (N.scenario.homeLagWeight || { rep: 1 }).rep).toFixed(1)} points toward the Democrat: the 2024 Republican nominee's home-state boost here is assumed to fade. The paper's model would add 3.5; see Method for why this site uses less.</p>` : a === N.scenario.homeLag.dem ? `<p class="hint">Includes ${(3.49 * (N.scenario.homeLagWeight || { dem: 1 }).dem).toFixed(1)} points toward the Republican: the 2024 Democratic nominee's home-state boost here is assumed to fade.</p>` : ''}
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>`;
   }
