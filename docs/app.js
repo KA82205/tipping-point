@@ -175,7 +175,7 @@
     el.dataset.v = to;
     if (still || from === to) { el.textContent = show(to); return; }
     const t0 = performance.now();
-    const step = t => { const k = Math.min(1, (t - t0) / 700), e = 1 - Math.pow(1 - k, 3); el.textContent = show(from + (to - from) * e); if (k < 1) requestAnimationFrame(step); };
+    const step = t => { const k = Math.max(0, Math.min(1, (t - t0) / 700)), e = 1 - Math.pow(1 - k, 3); el.textContent = show(from + (to - from) * e); if (k < 1) requestAnimationFrame(step); };
     el.textContent = show(from);
     requestAnimationFrame(step);
   }
