@@ -173,12 +173,18 @@ def main():
         vp_slug, pres_slug = slug(sitting_vp), slug(cfg["election"]["incumbent_president"])
         sources = {"approval": (appr(vp_slug), national_polls), "favorability": (fav(vp_slug), fav(pres_slug))}
         gap, gap_basis = None, "no approval or favorability polls of the vice president in the window"
-        # Prefer job approval, but only with 3 or more polls of the vice president; then favorability;
-        # then whatever there is.
-        for kind, need in (("approval", 3), ("favorability", 3), ("approval", 1), ("favorability", 1)):
-            g, basis = candidates.vp_gap(*sources[kind], g_lo, g_hi, approval._iso, kind, min_vp=need)
+        # Prefer job approval with 3 or more polls of the vice president, looking further back if
+        # the usual window is thin; then favorability the same way; then whatever there is.
+        spans = [vpc.get("trailing_days", 120), 240, 365]
+        tries = [(k, d, 3) for k in ("approval", "favorability") for d in spans]
+        tries += [("approval", spans[-1], 1), ("favorability", spans[-1], 1)]
+        for kind, days, need in tries:
+            usual = days == spans[0]
+            lo = g_lo if usual else today - dt.timedelta(days=days)
+            g, basis = candidates.vp_gap(*sources[kind], lo, g_hi, approval._iso, kind, min_vp=need)
             if g is not None:
-                gap, gap_basis, gap_kind = g, basis, kind
+                gap, gap_kind, g_lo = g, kind, lo
+                gap_basis = basis if usual else f"{basis} from the last {days} days"
                 break
     applied = (vp_is_nominee or vpc.get("mode") == "manual") and gap is not None
     vp_shift = gap if applied else 0.0
