@@ -21,6 +21,9 @@
     "rep_vp_home": null,
     "dem_president_home_lag": "CA",
     "rep_president_home_lag": "FL",
+    "dem_president_home_lag_weight": 1,
+    "rep_president_home_lag_weight": 0.5,
+    "_home_lag_weight_note": "DEPARTURE from the paper, which always uses 1. Share of the previous nominee's home-state fade (-3.49) that is applied. Trump's Florida is set to 0.5: he ran from Florida in both 2020 and 2024, the state kept moving right between those elections, and the 2026 governor's race stayed Republican without him on the ballot, so part of its 2024 margin looks lasting. Set to 1 to restore the paper's rule.",
     "primary_window_days": 120,
     "primary_min_pct": 3,
     "_primary_note": "Possible candidates in the ticket picker are ordered by their average in national 2028 primary polls (PollResults.org) over the last primary_window_days. Anyone at primary_min_pct or more who is not in candidates.json is added automatically."
