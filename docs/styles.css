@@ -221,3 +221,47 @@ footer { border-top: 1px solid var(--line); padding: 28px 0 48px; font-size: 13p
 footer p { max-width: none; margin: 4px 0; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---------- Tipping Point additions ---------- */
+.brand .logo { display: inline-flex; width: 46px; }
+.brand .logo svg { width: 100%; height: auto; display: block; }
+.warn { color: var(--accent); font-weight: 500; }
+.live { justify-self: start; display: inline-flex; align-items: center; gap: 8px; font: 500 12px/1 var(--font-mono); color: var(--ok); border: 1px solid rgba(111, 207, 154, .35); padding: 6px 10px; border-radius: 999px; }
+.live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+@media (prefers-reduced-motion: no-preference) { .live::before { animation: pulse 2s ease-in-out infinite; } @keyframes pulse { 50% { opacity: .3; } } }
+
+/* Tipping-point snake */
+.snake-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 18px 14px; display: grid; gap: 10px; }
+.snake { position: relative; display: flex; height: 54px; border-radius: 8px; overflow: visible; }
+.snake .seg { position: relative; height: 100%; border-right: 1px solid var(--panel); display: flex; align-items: center; justify-content: center; font: 500 10px var(--font-mono); color: rgba(240,244,250,.85); cursor: pointer; transition: transform .15s, filter .15s; min-width: 0; overflow: hidden; }
+.snake .seg:first-child { border-radius: 8px 0 0 8px; } .snake .seg:last-child { border-radius: 0 8px 8px 0; border-right: 0; }
+.snake .seg:hover, .snake .seg.tp { filter: brightness(1.3); }
+.snake .seg.tp { outline: 2px solid var(--accent); outline-offset: -2px; z-index: 2; }
+.snake .mark270 { position: absolute; top: -10px; bottom: -10px; width: 2px; background: var(--ink); z-index: 3; pointer-events: none; }
+.snake .mark270::after { content: "270"; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font: 500 11px var(--font-mono); color: var(--ink); }
+.snake-read { margin: 0; font-size: 14px; color: var(--muted); min-height: 1.6em; }
+.snake-read b { color: var(--ink); font-weight: 500; }
+
+/* Matchup builder */
+.tickets { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+@media (max-width: 980px) { .tickets { grid-template-columns: 1fr; } }
+.ticket { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; display: grid; gap: 14px; align-content: start; }
+.ticket h3 { font-size: 20px; }
+.ticket.dem { box-shadow: inset 0 3px 0 var(--dem); } .ticket.rep { box-shadow: inset 0 3px 0 var(--rep); } .ticket.knobs { box-shadow: inset 0 3px 0 var(--accent); }
+.pick { display: grid; gap: 6px; }
+.pick label { font-size: 13px; color: var(--muted); }
+.pick select, .pick input { font: 15px var(--font-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 12px; width: 100%; }
+.pick select:focus, .pick input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pick .custom { display: grid; grid-template-columns: 1fr 96px; gap: 8px; }
+.pick .hint { font-size: 12px; color: var(--faint); }
+.knob { display: grid; gap: 8px; font-size: 14px; color: var(--muted); }
+.knob span { display: flex; justify-content: space-between; gap: 8px; }
+.knob output { font-family: var(--font-mono); color: var(--ink); }
+.knob input[type=range] { width: 100%; accent-color: var(--accent); }
+.effects { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.effects li { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 14px; color: var(--muted); }
+.effects li b { color: var(--ink); font-weight: 500; }
+.figs .v.d-ink { color: var(--dem-ink); } .figs .v.r-ink { color: var(--rep-ink); }
+.figs .v { transition: color .2s; }
+.busy { opacity: .55; transition: opacity .15s; }
+.needs-1 { grid-template-columns: 1fr; }
