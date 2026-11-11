@@ -1,0 +1,4 @@
+pipeline/tests/fixtures/
+__pycache__/
+pipeline/node_modules/
+pipeline/package-lock.json
