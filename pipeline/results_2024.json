@@ -1,0 +1,338 @@
+{
+ "AL": {
+  "name": "Alabama",
+  "ev": 9,
+  "share": 34.56,
+  "votes": 2235028
+ },
+ "AK": {
+  "name": "Alaska",
+  "ev": 3,
+  "share": 43.15,
+  "votes": 324484
+ },
+ "AZ": {
+  "name": "Arizona",
+  "ev": 11,
+  "share": 47.21,
+  "votes": 3353102
+ },
+ "AR": {
+  "name": "Arkansas",
+  "ev": 6,
+  "share": 34.33,
+  "votes": 1156146
+ },
+ "CA": {
+  "name": "California",
+  "ev": 54,
+  "share": 60.4,
+  "votes": 15357876
+ },
+ "CO": {
+  "name": "Colorado",
+  "ev": 10,
+  "share": 55.65,
+  "votes": 3105600
+ },
+ "CT": {
+  "name": "Connecticut",
+  "ev": 7,
+  "share": 57.38,
+  "votes": 1728971
+ },
+ "DE": {
+  "name": "Delaware",
+  "ev": 3,
+  "share": 57.48,
+  "votes": 504109
+ },
+ "DC": {
+  "name": "District of Columbia",
+  "ev": 3,
+  "share": 93.31,
+  "votes": 315261
+ },
+ "FL": {
+  "name": "Florida",
+  "ev": 30,
+  "share": 43.39,
+  "votes": 10793163
+ },
+ "GA": {
+  "name": "Georgia",
+  "ev": 16,
+  "share": 48.9,
+  "votes": 5211134
+ },
+ "HI": {
+  "name": "Hawaii",
+  "ev": 4,
+  "share": 61.78,
+  "votes": 506705
+ },
+ "ID": {
+  "name": "Idaho",
+  "ev": 4,
+  "share": 31.24,
+  "votes": 880218
+ },
+ "IL": {
+  "name": "Illinois",
+  "ev": 19,
+  "share": 55.57,
+  "votes": 5511942
+ },
+ "IN": {
+  "name": "Indiana",
+  "ev": 11,
+  "share": 40.35,
+  "votes": 2883950
+ },
+ "IA": {
+  "name": "Iowa",
+  "ev": 6,
+  "share": 43.28,
+  "votes": 1634297
+ },
+ "KS": {
+  "name": "Kansas",
+  "ev": 6,
+  "share": 41.79,
+  "votes": 1303655
+ },
+ "KY": {
+  "name": "Kentucky",
+  "ev": 8,
+  "share": 34.49,
+  "votes": 2041537
+ },
+ "LA": {
+  "name": "Louisiana",
+  "ev": 8,
+  "share": 38.82,
+  "votes": 1975375
+ },
+ "ME": {
+  "name": "Maine",
+  "ev": 2,
+  "share": 53.54,
+  "votes": 813629
+ },
+ "ME1": {
+  "name": "Maine 1st District",
+  "ev": 1,
+  "share": 61.04,
+  "votes": 424077
+ },
+ "ME2": {
+  "name": "Maine 2nd District",
+  "ev": 1,
+  "share": 45.38,
+  "votes": 389552
+ },
+ "MD": {
+  "name": "Maryland",
+  "ev": 10,
+  "share": 64.75,
+  "votes": 2938127
+ },
+ "MA": {
+  "name": "Massachusetts",
+  "ev": 11,
+  "share": 62.96,
+  "votes": 3377821
+ },
+ "MI": {
+  "name": "Michigan",
+  "ev": 15,
+  "share": 49.28,
+  "votes": 5553169
+ },
+ "MN": {
+  "name": "Minnesota",
+  "ev": 10,
+  "share": 52.17,
+  "votes": 3176011
+ },
+ "MS": {
+  "name": "Mississippi",
+  "ev": 6,
+  "share": 38.43,
+  "votes": 1214412
+ },
+ "MO": {
+  "name": "Missouri",
+  "ev": 10,
+  "share": 40.66,
+  "votes": 2952585
+ },
+ "MT": {
+  "name": "Montana",
+  "ev": 4,
+  "share": 39.71,
+  "votes": 583985
+ },
+ "NE": {
+  "name": "Nebraska",
+  "ev": 2,
+  "share": 39.58,
+  "votes": 934811
+ },
+ "NE1": {
+  "name": "Nebraska 1st District",
+  "ev": 1,
+  "share": 43.39,
+  "votes": 313819
+ },
+ "NE2": {
+  "name": "Nebraska 2nd District",
+  "ev": 1,
+  "share": 52.34,
+  "votes": 312446
+ },
+ "NE3": {
+  "name": "Nebraska 3rd District",
+  "ev": 1,
+  "share": 22.78,
+  "votes": 308546
+ },
+ "NV": {
+  "name": "Nevada",
+  "ev": 6,
+  "share": 48.42,
+  "votes": 1456402
+ },
+ "NH": {
+  "name": "New Hampshire",
+  "ev": 4,
+  "share": 51.41,
+  "votes": 814011
+ },
+ "NJ": {
+  "name": "New Jersey",
+  "ev": 14,
+  "share": 53.01,
+  "votes": 4188928
+ },
+ "NM": {
+  "name": "New Mexico",
+  "ev": 5,
+  "share": 53.07,
+  "votes": 902193
+ },
+ "NY": {
+  "name": "New York",
+  "ev": 28,
+  "share": 56.34,
+  "votes": 8198094
+ },
+ "NC": {
+  "name": "North Carolina",
+  "ev": 16,
+  "share": 48.37,
+  "votes": 5613798
+ },
+ "ND": {
+  "name": "North Dakota",
+  "ev": 3,
+  "share": 31.3,
+  "votes": 358832
+ },
+ "OH": {
+  "name": "Ohio",
+  "ev": 17,
+  "share": 44.34,
+  "votes": 5713815
+ },
+ "OK": {
+  "name": "Oklahoma",
+  "ev": 7,
+  "share": 32.53,
+  "votes": 1535812
+ },
+ "OR": {
+  "name": "Oregon",
+  "ev": 8,
+  "share": 57.43,
+  "votes": 2160080
+ },
+ "PA": {
+  "name": "Pennsylvania",
+  "ev": 19,
+  "share": 49.14,
+  "votes": 6966350
+ },
+ "RI": {
+  "name": "Rhode Island",
+  "ev": 4,
+  "share": 57.08,
+  "votes": 499562
+ },
+ "SC": {
+  "name": "South Carolina",
+  "ev": 9,
+  "share": 40.94,
+  "votes": 2512199
+ },
+ "SD": {
+  "name": "South Dakota",
+  "ev": 3,
+  "share": 35.05,
+  "votes": 418940
+ },
+ "TN": {
+  "name": "Tennessee",
+  "ev": 11,
+  "share": 34.94,
+  "votes": 3023130
+ },
+ "TX": {
+  "name": "Texas",
+  "ev": 40,
+  "share": 43.06,
+  "votes": 11228847
+ },
+ "UT": {
+  "name": "Utah",
+  "ev": 6,
+  "share": 38.89,
+  "votes": 1446384
+ },
+ "VT": {
+  "name": "Vermont",
+  "ev": 3,
+  "share": 66.39,
+  "votes": 355186
+ },
+ "VA": {
+  "name": "Virginia",
+  "ev": 13,
+  "share": 52.95,
+  "votes": 4410480
+ },
+ "WA": {
+  "name": "Washington",
+  "ev": 12,
+  "share": 59.46,
+  "votes": 3776772
+ },
+ "WV": {
+  "name": "West Virginia",
+  "ev": 4,
+  "share": 28.66,
+  "votes": 747865
+ },
+ "WI": {
+  "name": "Wisconsin",
+  "ev": 10,
+  "share": 49.56,
+  "votes": 3365855
+ },
+ "WY": {
+  "name": "Wyoming",
+  "ev": 3,
+  "share": 26.52,
+  "votes": 262160
+ }
+}
