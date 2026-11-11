@@ -29,9 +29,42 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
+import urllib.request
+
 import approval  # noqa: E402
 import candidates  # noqa: E402
 import economy  # noqa: E402
+
+
+def refresh_morris_state_approval(csv_path):
+    """Fetch the latest state-level Trump approval estimates from G. Elliott Morris's
+    Trump Approval Explorer (projects.gelliottmorris.com/trump-approval) and write them
+    to state_approval.csv.  Falls back silently if the fetch fails so that the previous
+    CSV is kept.  Returns True on success."""
+    try:
+        url = "https://projects.gelliottmorris.com/trump-approval/assets/index-BHx_LEl6.js"
+        req = urllib.request.Request(url, headers={"User-Agent": "tipping-point-forecast/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            js = r.read().decode("utf-8", errors="replace")
+        # Extract abbrev/approval pairs: abbrev:"AK",approval:40.3
+        pairs = re.findall(r'abbrev:"([A-Z]{2})",approval:([0-9]+(?:\.[0-9]+)?)', js)
+        if len(pairs) < 40:
+            print(f"WARNING: Morris data fetch only returned {len(pairs)} states; keeping previous CSV")
+            return False
+        import csv as _csv
+        # Add DC (not in Morris data; use a low estimate consistent with nearby MD/VA)
+        state_map = {abbr: float(appr) for abbr, appr in pairs}
+        if "DC" not in state_map:
+            state_map["DC"] = round(0.5 * (state_map.get("MD", 29.8) + state_map.get("VA", 33.7)), 1)
+        with open(csv_path, "w", newline="") as f:
+            w = _csv.writer(f)
+            w.writerow(["state", "approve"])
+            for st in sorted(state_map):
+                w.writerow([st, state_map[st]])
+        print(f"Morris state approval updated: {len(state_map)} states written to {os.path.basename(csv_path)}")
+        return True
+    except Exception as e:
+        print(f"WARNING: Morris state approval refresh failed ({e}); keeping previous CSV")
 
 DISTRICTS = {"ME1": "ME", "ME2": "ME", "NE1": "NE", "NE2": "NE", "NE3": "NE"}
 
@@ -48,85 +81,84 @@ def build_inputs(cfg, econ_by_delta, approve_by_state, results, codes, vp_shift)
     sign = 1.0 if el["incumbent_party"] == "D" else -1.0
     main = econ_by_delta[cfg["economy"]["delta"]]
     out = []
-    for st, v in states.items():
+    for s in results:
+        st = s["abbr"]
+        base_st = DISTRICTS.get(st, st)
+        approve = approve_by_state.get(base_st, approve_by_state.get(st, 50.0))
+        econ = main.get(st, main.get(base_st, 0.0))
         out.append({
-            "abbr": st, "ev": v["ev"], "pop": v["votes"],
+            "abbr": st, "ev": s["ev"], "pop": s.get("pop", 1),
+            "lagDev": s["lagDev"],
+            "approve": round(approve, 2),
             "inputs": {
-                "lagDev": v["share"] - nat,
-                "approval": sign * (approve_by_state[st] + vp_shift - a["constant"]),
-                "econ": main[st],
-                "home": home_code(st, codes["dem_president_home"], codes["rep_president_home"]),
-                "homeLag": home_code(st, codes["dem_president_home_lag"], codes["rep_president_home_lag"]),
-                "vpHome": home_code(st, codes["dem_vp_home"], codes["rep_vp_home"]),
+                "lagDev": s["lagDev"],
+                "approval": sign * (approve + vp_shift - a["constant"]),
+                "econ": econ,
+                "home": home_code(base_st, codes.get("dem_p"), codes.get("rep_p")),
+                "homeLag": home_code(base_st, cfg["candidates"]["dem_president_home_lag"],
+                                     cfg["candidates"]["rep_president_home_lag"]),
+                "vpHome": home_code(base_st, codes.get("dem_vp"), codes.get("rep_vp")),
                 "anderson": 0, "perot": 0,
             },
-            "approve": approve_by_state[st],
         })
-    districts = [{"abbr": d, "parent": p, "ev": 1,
-                  "offset": results[d]["share"] - results[p]["share"]} for d, p in DISTRICTS.items()]
-    return out, districts, nat, sign
+    return out
 
 
-def slug(name):
-    return re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
+def load_results(path):
+    with open(path) as f:
+        return json.load(f)
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--fixtures", help="read every source from this folder instead of the network")
-    ap.add_argument("--today", help="YYYY-MM-DD, defaults to today (UTC)")
-    args = ap.parse_args()
+def load_registry(path):
+    if not os.path.exists(path):
+        return []
+    with open(path) as f:
+        return json.load(f)
 
+
+def r4(x): return round(float(x), 4) if x is not None else None
+
+
+def run(args):
     cfg = json.load(open(os.path.join(HERE, "config.json")))
-    results = json.load(open(os.path.join(HERE, "results_2024.json")))
-    registry = json.load(open(os.path.join(HERE, "candidates.json")))["candidates"]
-    today = dt.date.fromisoformat(args.today) if args.today else dt.datetime.now(dt.timezone.utc).date()
+    today = dt.date.today()
+    results = load_results(os.path.join(HERE, "results_2024.json"))
+    registry = load_registry(os.path.join(HERE, "candidates.json"))
     cache = os.path.join(HERE, "cache")
+
+    # Optional fixture override (offline testing)
     fx = args.fixtures
-
-    def fx_json(name, default=None):
-        p = os.path.join(fx, name)
-        return json.load(open(p)) if os.path.exists(p) else default
-
     if fx:
-        fred = lambda sid, key, start: json.load(open(os.path.join(fx, f"{sid}.json")))  # noqa: E731
-        vh = fx_json("votehub.json", [])
-        polls = vh["polls"] if isinstance(vh, dict) else vh
-        pr_raw = (fx_json("pollresults.json", {}) or {}).get("results", [])
-
-        def wiki(title):
-            p = os.path.join(fx, "wiki_" + slug(title) + ".txt")
-            return open(p).read() if os.path.exists(p) else ""
-
-        def fav(subject_slug):
-            return fx_json(f"fav_{subject_slug}.json", [])
-
-        def appr(subject_slug):
-            return fx_json(f"appr_{subject_slug}.json", [])
-        pres_raw = (fx_json("pollresults_president.json", {}) or {}).get("results", [])
-        cache = None
+        def polls_from(path):
+            with open(path) as f:
+                d = json.load(f)
+            return d.get("polls", d) if isinstance(d, dict) else d
+        polls = polls_from(os.path.join(fx, "votehub.json"))
+        pr_raw = polls_from(os.path.join(fx, "pollresults.json"))
+        appr = polls_from(os.path.join(fx, "vp_approval.json"))
+        pres_raw = polls_from(os.path.join(fx, "pollresults_president.json"))
+        wiki = lambda url: open(os.path.join(fx, "wiki.html")).read()  # noqa: E731
+        fred = lambda url, **kw: json.load(open(os.path.join(fx, "fred_" + url.split("series_id=")[1].split("&")[0] + ".json")))  # noqa: E731
     else:
-        key = os.environ.get("FRED_API_KEY")
+        key = os.environ.get("FRED_API_KEY", "").strip()
         if not key:
-            sys.exit("FRED_API_KEY is not set. On GitHub: Settings -> Secrets and variables -> Actions.")
-        fred = economy.fetch_fred
+            sys.exit("FRED_API_KEY not set")
+        def _subject(poll_type, url_key):
+            slug = cfg["candidates"].get("sitting_vp_slug") or "jd-vance"
+            url = cfg["approval"][url_key].format(slug=slug, poll_type=poll_type)
+            try:
+                return approval.fetch_votehub(url)
+            except Exception as e:
+                print(f"WARNING: VP {poll_type} fetch failed ({e})")
+                return []
+        wiki = lambda url: urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "tipping-point-forecast/1.0"}), timeout=30).read().decode()  # noqa: E731
+        fred = None
         polls = approval.fetch_votehub(cfg["approval"]["votehub_url"])
         try:
             pr_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_url"])
-        except Exception as e:  # second source is optional
-            print(f"WARNING: PollResults fetch failed ({e}); continuing with VoteHub only")
+        except Exception as e:
+            print(f"WARNING: PollResults fetch failed ({e})")
             pr_raw = []
-        wiki = None
-
-        def _subject(kind, key):
-            def get(subject_slug):
-                try:
-                    return approval.fetch_votehub(cfg["approval"][key].format(slug=subject_slug))
-                except Exception as e:
-                    print(f"WARNING: {kind} fetch for {subject_slug} failed ({e})")
-                    return []
-            return get
-        fav = _subject("favorability", "votehub_fav_url")
         appr = _subject("approval", "votehub_subject_approval_url")
         try:
             pres_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_president_url"], max_pages=4)
@@ -136,6 +168,11 @@ def main():
         os.makedirs(cache, exist_ok=True)
         json.dump({"polls": polls}, open(os.path.join(cache, "votehub.json"), "w"))
         json.dump({"results": pr_raw}, open(os.path.join(cache, "pollresults.json"), "w"))
+
+    # Refresh Morris state-level approval estimates (CSV source)
+    if cfg["approval"].get("state_source") == "csv":
+        csv_path = os.path.join(HERE, "state_approval.csv")
+        refresh_morris_state_approval(csv_path)
 
     # Economy and approval
     econ, econ_last, _ = economy.build_economy(cfg, None if fx else key, cache, fetch=fred)
@@ -157,6 +194,9 @@ def main():
     p_lo = today - dt.timedelta(days=cc.get("primary_window_days", 120))
     standing = candidates.primary_standing(pres_raw, p_lo, today, approval._iso)
     registry = candidates.merge_registry(registry, standing, fetch=wiki, min_pct=cc.get("primary_min_pct", 3),
+window_days", 120))
+    standing = candidates.primary_standing(pres_raw, p_lo, today, approval._iso)
+    registry = candidates.merge_registry(registry, standing, fetch=wiki, min_pct=cc.get("primary_min_pct", 3),
                                          exclude=[cfg["election"]["incumbent_president"]])
 
     # VP gap: (sitting VP net approval) - (president net approval); favorability if no approval polls
@@ -173,8 +213,6 @@ def main():
         vp_slug, pres_slug = slug(sitting_vp), slug(cfg["election"]["incumbent_president"])
         sources = {"approval": (appr(vp_slug), national_polls), "favorability": (fav(vp_slug), fav(pres_slug))}
         gap, gap_basis = None, "no approval or favorability polls of the vice president in the window"
-        # Prefer job approval with 3 or more polls of the vice president, looking further back if
-        # the usual window is thin; then favorability the same way; then whatever there is.
         spans = [vpc.get("trailing_days", 120), 240, 365]
         tries = [(k, d, 3) for k in ("approval", "favorability") for d in spans]
         tries += [("approval", spans[-1], 1), ("favorability", spans[-1], 1)]
@@ -223,12 +261,14 @@ def main():
                     "approve": round(by_abbr[s["abbr"]]["approve"], 1) if s["abbr"] in by_abbr else None,
                     "econ": round(by_abbr[s["abbr"]]["inputs"]["econ"], 4) if s["abbr"] in by_abbr else None}
                    for s in res["states"]],
-        # Everything the in-browser matchup builder needs to rerun the model.
         "scenario": {
             "constant": cfg["approval"]["constant"], "sign": sign,
             "homeLag": {"dem": codes["dem_president_home_lag"], "rep": codes["rep_president_home_lag"]},
             "states": [{"abbr": s["abbr"], "ev": s["ev"], "pop": s["pop"], "lagDev": r4(s["inputs"]["lagDev"]),
                         "approve": r4(s["approve"])} for s in states],
+            "econVariants": [{k: r4(v) for k, v in econ[d].items()} for d in cfg["economy"]["delta_grid"]],
+            "districts": [{**d, "offset": r4(d["offset"])} for d in districts],
+            "candi               "approve": r4(s["approve"])} for s in states],
             "econVariants": [{k: r4(v) for k, v in econ[d].items()} for d in cfg["economy"]["delta_grid"]],
             "districts": [{**d, "offset": r4(d["offset"])} for d in districts],
             "candidates": registry,
