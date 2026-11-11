@@ -85,21 +85,29 @@
     let demWins = 0, ties = 0, popSum = 0;
     const popTotal = states.reduce((a, s) => a + (s.pop || 1), 0);
 
+    // Inputs as plain arrays (one row per state, columns in VARS order) for speed.
+    const ie = VARS.indexOf('econ');
+    const base = states.map(s => VARS.map(v => s.inputs[v] || 0));
+    const nS = states.length, nV = VARS.length, b = new Float64Array(nV), share = new Float64Array(nS);
+    const dIdx = districts.map(d => states.findIndex(s => s.abbr === d.parent));
     for (const variant of variants) {
-      for (let i = 0; i < n; i++) {
-        const c = {};
-        for (const k in COEFS) c[k] = { b: COEFS[k].b + COEFS[k].se * normal(rand) };
+      const X = variant ? base.map((row, i) => { const r = row.slice(); r[ie] = variant[states[i].abbr]; return r; }) : base;
+      for (let it = 0; it < n; it++) {
+        const b0 = COEFS.constant.b + COEFS.constant.se * normal(rand);
+        for (let j = 0; j < nV; j++) b[j] = COEFS[VARS[j]].b + COEFS[VARS[j]].se * normal(rand);
         let ev = 0, pop = 0;
-        const share = {};
-        for (const s of states) {
-          const inp = variant ? { ...s.inputs, econ: variant[s.abbr] } : s.inputs;
-          const y = predict(inp, c) + RMSE * normal(rand);
-          share[s.abbr] = y;
-          pop += y * (s.pop || 1);
-          if (y > 50) { ev += s.ev; wins[s.abbr]++; }
+        for (let i = 0; i < nS; i++) {
+          const row = X[i];
+          let y = b0;
+          for (let j = 0; j < nV; j++) y += b[j] * row[j];
+          y += RMSE * normal(rand);
+          share[i] = y;
+          pop += y * (states[i].pop || 1);
+          if (y > 50) { ev += states[i].ev; wins[states[i].abbr]++; }
         }
-        for (const d of districts) {
-          if (share[d.parent] + d.offset > 50) { ev += d.ev; wins[d.abbr]++; }
+        for (let k = 0; k < districts.length; k++) {
+          const d = districts[k];
+          if (share[dIdx[k]] + d.offset > 50) { ev += d.ev; wins[d.abbr]++; }
         }
         evHist[ev]++;
         if (ev >= 270) demWins++; if (ev === 269) ties++;
