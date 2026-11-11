@@ -22,9 +22,23 @@ import urllib.request
 
 
 def fetch_votehub(url):
+    """VoteHub returns a plain list of polls (older docs show {"polls": [...]}); accept both."""
     req = urllib.request.Request(url, headers={"User-Agent": "100-days-out-forecast/1.0"})
     with urllib.request.urlopen(req, timeout=30) as r:
-        return json.load(r)["polls"]
+        data = json.load(r)
+    return data["polls"] if isinstance(data, dict) else data
+
+
+def _iso(d):
+    """'2026-11-09', '2026-11-09T..' or PollResults' '11/9/26' -> '2026-11-09' (or '')."""
+    d = str(d or "").strip()
+    if "/" in d:
+        try:
+            m, day, y = (int(x) for x in d.split()[0].split("/"))
+            return dt.date(y + 2000 if y < 100 else y, m, day).isoformat()
+        except ValueError:
+            return ""
+    return d[:10]
 
 
 def _first(d, *keys):
@@ -35,32 +49,40 @@ def _first(d, *keys):
 
 
 def _normalize_pollresults(res):
-    """PollResults.org groups each poll into questions -> answers but does not document the
-    field names, so read them defensively. Returns a VoteHub-shaped dict or None."""
-    questions = _first(res, "questions") or [res]
-    for q in questions:
-        answers = []
-        for a in _first(q, "answers", "results", "choices") or []:
-            choice = _first(a, "choice", "answer", "name", "label")
-            pct = _first(a, "pct", "percent", "value", "share")
-            if choice is not None and pct is not None:
-                answers.append({"choice": str(choice), "pct": float(pct)})
-        if _pct(answers, "approve") is None or _pct(answers, "disapprove") is None:
-            continue
-        state = _first(q, "state") or _first(res, "state")
-        return {
-            "pollster": _first(res, "pollster", "pollster_name", "display_name") or "?",
-            "end_date": str(_first(q, "end_date") or _first(res, "end_date", "field_end", "end") or "")[:10],
-            "sample_size": _first(q, "sample_size") or _first(res, "sample_size"),
-            "population": _first(q, "population") or _first(res, "population"),
-            "internal": bool(_first(res, "internal")),
-            "partisan": _first(res, "partisan"),
-            "url": _first(res, "url", "source_url"),
-            "state": state if state and str(state).upper() not in ("US", "NATIONAL", "USA") else None,
-            "answers": answers,
-            "source": "pollresults",
-        }
-    return None
+    """PollResults.org (NYT poll data): camelCase fields, dates like '11/9/26', and each poll
+    holds questions -> answers [{politician, yes, no}]. Prefer the all-adults question, as the
+    paper's surveys were of adults, then registered, then likely voters. Returns a
+    VoteHub-shaped dict or None."""
+    best = None
+    rank = {"a": 0, "rv": 1, "lv": 2, "v": 3}
+    for q in _first(res, "questions") or []:
+        for a in _first(q, "answers") or []:
+            who = str(_first(a, "politician", "subject") or "")
+            if who and "trump" not in who.lower():
+                continue
+            yes, no = _first(a, "yes", "approve", "pct"), _first(a, "no", "disapprove")
+            if yes is None or no is None:
+                continue
+            pop = str(_first(q, "population") or "").lower()
+            cand = (rank.get(pop, 9), {"choice_yes": float(yes), "choice_no": float(no), "q": q, "pop": pop})
+            if best is None or cand[0] < best[0]:
+                best = cand
+    if not best:
+        return None
+    b = best[1]
+    state = str(_first(res, "state") or "").upper()
+    return {
+        "pollster": _first(res, "pollster", "displayName") or "?",
+        "end_date": _iso(_first(res, "endDate", "end_date")),
+        "sample_size": _first(b["q"], "sampleSize", "sample_size"),
+        "population": b["pop"],
+        "internal": bool(_first(res, "internal")),
+        "partisan": _first(res, "partisan"),
+        "url": _first(res, "url"),
+        "state": state if state and state not in ("US", "USA", "NATIONAL") else None,
+        "answers": [{"choice": "Approve", "pct": b["choice_yes"]}, {"choice": "Disapprove", "pct": b["choice_no"]}],
+        "source": "pollresults",
+    }
 
 
 def fetch_pollresults(url, max_pages=10):
@@ -82,7 +104,7 @@ def merge_polls(votehub, pollresults_raw):
     """National polls from both sources, de-duplicated on (pollster, end date); plus state polls."""
     seen, national, state = set(), [], []
     for p in votehub:
-        seen.add((str(p.get("pollster", "")).lower(), str(p.get("end_date", ""))[:10]))
+        seen.add((str(p.get("pollster", "")).lower(), _iso(p.get("end_date"))))
         national.append(p)
     for raw in pollresults_raw:
         p = _normalize_pollresults(raw)
@@ -98,8 +120,8 @@ def merge_polls(votehub, pollresults_raw):
 
 
 def _pct(answers, choice):
-    for a in answers:
-        if a.get("choice", "").lower().startswith(choice):
+    for a in answers or []:
+        if str(a.get("choice", "")).lower().startswith(choice) and a.get("pct") is not None:
             return float(a["pct"])
     return None
 
@@ -118,7 +140,7 @@ def national_average(polls, start, end, half_life_days=14.0):
         if p.get("internal") or p.get("partisan"):
             continue
         try:
-            d = dt.date.fromisoformat(p["end_date"][:10])
+            d = dt.date.fromisoformat(_iso(p.get("end_date") or p.get("endDate")))
         except (KeyError, ValueError, TypeError):
             continue
         if not (start <= d <= end):
@@ -178,7 +200,7 @@ def state_approval(cfg, national, results2024, csv_path=None, state_polls=None, 
                 if str(p["state"]).upper() != st or p.get("internal") or p.get("partisan"):
                     continue
                 try:
-                    d = dt.date.fromisoformat(p["end_date"][:10])
+                    d = dt.date.fromisoformat(_iso(p["end_date"]))
                 except ValueError:
                     continue
                 if not (lo <= d <= hi):
