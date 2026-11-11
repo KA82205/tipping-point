@@ -81,84 +81,85 @@ def build_inputs(cfg, econ_by_delta, approve_by_state, results, codes, vp_shift)
     sign = 1.0 if el["incumbent_party"] == "D" else -1.0
     main = econ_by_delta[cfg["economy"]["delta"]]
     out = []
-    for s in results:
-        st = s["abbr"]
-        base_st = DISTRICTS.get(st, st)
-        approve = approve_by_state.get(base_st, approve_by_state.get(st, 50.0))
-        econ = main.get(st, main.get(base_st, 0.0))
+    for st, v in states.items():
         out.append({
-            "abbr": st, "ev": s["ev"], "pop": s.get("pop", 1),
-            "lagDev": s["lagDev"],
-            "approve": round(approve, 2),
+            "abbr": st, "ev": v["ev"], "pop": v["votes"],
             "inputs": {
-                "lagDev": s["lagDev"],
-                "approval": sign * (approve + vp_shift - a["constant"]),
-                "econ": econ,
-                "home": home_code(base_st, codes.get("dem_p"), codes.get("rep_p")),
-                "homeLag": home_code(base_st, cfg["candidates"]["dem_president_home_lag"],
-                                     cfg["candidates"]["rep_president_home_lag"]),
-                "vpHome": home_code(base_st, codes.get("dem_vp"), codes.get("rep_vp")),
+                "lagDev": v["share"] - nat,
+                "approval": sign * (approve_by_state[st] + vp_shift - a["constant"]),
+                "econ": main[st],
+                "home": home_code(st, codes["dem_president_home"], codes["rep_president_home"]),
+                "homeLag": home_code(st, codes["dem_president_home_lag"], codes["rep_president_home_lag"]),
+                "vpHome": home_code(st, codes["dem_vp_home"], codes["rep_vp_home"]),
                 "anderson": 0, "perot": 0,
             },
+            "approve": approve_by_state[st],
         })
-    return out
+    districts = [{"abbr": d, "parent": p, "ev": 1,
+                  "offset": results[d]["share"] - results[p]["share"]} for d, p in DISTRICTS.items()]
+    return out, districts, nat, sign
 
 
-def load_results(path):
-    with open(path) as f:
-        return json.load(f)
+def slug(name):
+    return re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
 
 
-def load_registry(path):
-    if not os.path.exists(path):
-        return []
-    with open(path) as f:
-        return json.load(f)
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--fixtures", help="read every source from this folder instead of the network")
+    ap.add_argument("--today", help="YYYY-MM-DD, defaults to today (UTC)")
+    args = ap.parse_args()
 
-
-def r4(x): return round(float(x), 4) if x is not None else None
-
-
-def run(args):
     cfg = json.load(open(os.path.join(HERE, "config.json")))
-    today = dt.date.today()
-    results = load_results(os.path.join(HERE, "results_2024.json"))
-    registry = load_registry(os.path.join(HERE, "candidates.json"))
+    results = json.load(open(os.path.join(HERE, "results_2024.json")))
+    registry = json.load(open(os.path.join(HERE, "candidates.json")))["candidates"]
+    today = dt.date.fromisoformat(args.today) if args.today else dt.datetime.now(dt.timezone.utc).date()
     cache = os.path.join(HERE, "cache")
-
-    # Optional fixture override (offline testing)
     fx = args.fixtures
+
+    def fx_json(name, default=None):
+        p = os.path.join(fx, name)
+        return json.load(open(p)) if os.path.exists(p) else default
+
     if fx:
-        def polls_from(path):
-            with open(path) as f:
-                d = json.load(f)
-            return d.get("polls", d) if isinstance(d, dict) else d
-        polls = polls_from(os.path.join(fx, "votehub.json"))
-        pr_raw = polls_from(os.path.join(fx, "pollresults.json"))
-        appr = polls_from(os.path.join(fx, "vp_approval.json"))
-        pres_raw = polls_from(os.path.join(fx, "pollresults_president.json"))
-        wiki = lambda url: open(os.path.join(fx, "wiki.html")).read()  # noqa: E731
-        fred = lambda url, **kw: json.load(open(os.path.join(fx, "fred_" + url.split("series_id=")[1].split("&")[0] + ".json")))  # noqa: E731
+        fred = lambda sid, key, start: json.load(open(os.path.join(fx, f"{sid}.json")))  # noqa: E731
+        vh = fx_json("votehub.json", [])
+        polls = vh["polls"] if isinstance(vh, dict) else vh
+        pr_raw = (fx_json("pollresults.json", {}) or {}).get("results", [])
+
+        def wiki(title):
+            p = os.path.join(fx, "wiki_" + slug(title) + ".txt")
+            return open(p).read() if os.path.exists(p) else ""
+
+        def fav(subject_slug):
+            return fx_json(f"fav_{subject_slug}.json", [])
+
+        def appr(subject_slug):
+            return fx_json(f"appr_{subject_slug}.json", [])
+        pres_raw = (fx_json("pollresults_president.json", {}) or {}).get("results", [])
+        cache = None
     else:
-        key = os.environ.get("FRED_API_KEY", "").strip()
+        key = os.environ.get("FRED_API_KEY")
         if not key:
-            sys.exit("FRED_API_KEY not set")
-        def _subject(poll_type, url_key):
-            slug = cfg["candidates"].get("sitting_vp_slug") or "jd-vance"
-            url = cfg["approval"][url_key].format(slug=slug, poll_type=poll_type)
-            try:
-                return approval.fetch_votehub(url)
-            except Exception as e:
-                print(f"WARNING: VP {poll_type} fetch failed ({e})")
-                return []
-        wiki = lambda url: urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "tipping-point-forecast/1.0"}), timeout=30).read().decode()  # noqa: E731
-        fred = None
+            sys.exit("FRED_API_KEY is not set. On GitHub: Settings -> Secrets and variables -> Actions.")
+        fred = economy.fetch_fred
         polls = approval.fetch_votehub(cfg["approval"]["votehub_url"])
         try:
             pr_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_url"])
-        except Exception as e:
-            print(f"WARNING: PollResults fetch failed ({e})")
+        except Exception as e:  # second source is optional
+            print(f"WARNING: PollResults fetch failed ({e}); continuing with VoteHub only")
             pr_raw = []
+        wiki = None
+
+        def _subject(kind, key):
+            def get(subject_slug):
+                try:
+                    return approval.fetch_votehub(cfg["approval"][key].format(slug=subject_slug))
+                except Exception as e:
+                    print(f"WARNING: {kind} fetch for {subject_slug} failed ({e})")
+                    return []
+            return get
+        fav = _subject("favorability", "votehub_fav_url")
         appr = _subject("approval", "votehub_subject_approval_url")
         try:
             pres_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_president_url"], max_pages=4)
@@ -194,9 +195,6 @@ def run(args):
     p_lo = today - dt.timedelta(days=cc.get("primary_window_days", 120))
     standing = candidates.primary_standing(pres_raw, p_lo, today, approval._iso)
     registry = candidates.merge_registry(registry, standing, fetch=wiki, min_pct=cc.get("primary_min_pct", 3),
-window_days", 120))
-    standing = candidates.primary_standing(pres_raw, p_lo, today, approval._iso)
-    registry = candidates.merge_registry(registry, standing, fetch=wiki, min_pct=cc.get("primary_min_pct", 3),
                                          exclude=[cfg["election"]["incumbent_president"]])
 
     # VP gap: (sitting VP net approval) - (president net approval); favorability if no approval polls
@@ -213,6 +211,8 @@ window_days", 120))
         vp_slug, pres_slug = slug(sitting_vp), slug(cfg["election"]["incumbent_president"])
         sources = {"approval": (appr(vp_slug), national_polls), "favorability": (fav(vp_slug), fav(pres_slug))}
         gap, gap_basis = None, "no approval or favorability polls of the vice president in the window"
+        # Prefer job approval with 3 or more polls of the vice president, looking further back if
+        # the usual window is thin; then favorability the same way; then whatever there is.
         spans = [vpc.get("trailing_days", 120), 240, 365]
         tries = [(k, d, 3) for k in ("approval", "favorability") for d in spans]
         tries += [("approval", spans[-1], 1), ("favorability", spans[-1], 1)]
@@ -224,6 +224,17 @@ window_days", 120))
                 gap, gap_kind, g_lo = g, kind, lo
                 gap_basis = basis if usual else f"{basis} from the last {days} days"
                 break
+    # ASSUMPTION (not in the paper): a gap measured from few polls is counted only in part.
+    # It reaches full weight at full_weight_polls polls of the vice president.
+    gap_raw, gap_polls, gap_weight = gap, None, 1.0
+    if gap is not None and vpc.get("mode") != "manual":
+        m = re.search(r"\d+", gap_basis)
+        gap_polls = int(m.group()) if m else 0
+        full = vpc.get("full_weight_polls", 20)
+        gap_weight = min(1.0, gap_polls / full) if full else 1.0
+        if gap_weight < 1:
+            gap = gap_raw * gap_weight
+            gap_basis += f"; counted at {gap_weight:.0%} of {gap_raw:+.1f} until there are {full} polls"
     applied = (vp_is_nominee or vpc.get("mode") == "manual") and gap is not None
     vp_shift = gap if applied else 0.0
 
@@ -253,6 +264,7 @@ window_days", 120))
         "tickets": tickets,
         "sitting_vp": sitting_vp,
         "vp": {"gap": None if gap is None else round(gap, 2), "kind": gap_kind, "basis": gap_basis, "applied": applied,
+               "raw_gap": None if gap_raw is None else round(gap_raw, 2), "polls": gap_polls, "weight": round(gap_weight, 2),
                "window": [g_lo.isoformat(), g_hi.isoformat()]},
         "summary": {"pDemWin": res["pDemWin"], "pTie": res["pTie"], "demPopular": res["demPopular"],
                     "demEvPoint": dem_ev_point, "simulations": res["simulations"]},
@@ -261,14 +273,12 @@ window_days", 120))
                     "approve": round(by_abbr[s["abbr"]]["approve"], 1) if s["abbr"] in by_abbr else None,
                     "econ": round(by_abbr[s["abbr"]]["inputs"]["econ"], 4) if s["abbr"] in by_abbr else None}
                    for s in res["states"]],
+        # Everything the in-browser matchup builder needs to rerun the model.
         "scenario": {
             "constant": cfg["approval"]["constant"], "sign": sign,
             "homeLag": {"dem": codes["dem_president_home_lag"], "rep": codes["rep_president_home_lag"]},
             "states": [{"abbr": s["abbr"], "ev": s["ev"], "pop": s["pop"], "lagDev": r4(s["inputs"]["lagDev"]),
                         "approve": r4(s["approve"])} for s in states],
-            "econVariants": [{k: r4(v) for k, v in econ[d].items()} for d in cfg["economy"]["delta_grid"]],
-            "districts": [{**d, "offset": r4(d["offset"])} for d in districts],
-            "candi               "approve": r4(s["approve"])} for s in states],
             "econVariants": [{k: r4(v) for k, v in econ[d].items()} for d in cfg["economy"]["delta_grid"]],
             "districts": [{**d, "offset": r4(d["offset"])} for d in districts],
             "candidates": registry,
