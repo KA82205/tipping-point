@@ -475,6 +475,7 @@
         <div><dt>Rating</dt><dd>${RATING[s.rating] || s.rating}</dd></div>
         ${base ? `<div><dt>Trump approval in state</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
       </dl>
+      ${a === N.scenario.homeLag.rep ? `<p class="hint">Includes 3.5 points toward the Democrat: the model assumes the 2024 Republican nominee's home-state boost here fades. If this state's 2024 shift was lasting, the nowcast is too favorable to the Democrat.</p>` : a === N.scenario.homeLag.dem ? `<p class="hint">Includes 3.5 points toward the Republican: the model assumes the 2024 Democratic nominee's home-state boost here fades.</p>` : ''}
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>`;
   }
