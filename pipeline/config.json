@@ -55,7 +55,7 @@
     "pollresults_president_url": "https://api.pollresults.org/v1.0/politics/results/president",
     "_pollresults_note": "PollResults.org (NYT poll data, CC BY 4.0, non-commercial). Merged into the national average; its state polls feed state_source state_polls. If its format changes, the run logs a warning and continues with VoteHub only.",
     "nowcast_window_days": 30,
-    "state_source": "state_polls",
+    "state_source": "csv",
     "state_prior_n": 1500,
     "state_poll_extra_days": 60,
     "_state_source_note": "state_polls (default): vote_swing, pulled toward any state approval polls from the window plus 60 days. vote_swing: state = national + k * (Trump 2024 two-party share in state - national). csv: read pipeline/state_approval.csv (columns state,approve) from Civiqs, Morning Consult or your own MRP; the CSV's state differences are kept and re-centered on the national average.",
