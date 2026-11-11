@@ -52,3 +52,16 @@ fav = lambda f, u: [{"pollster": p, "end_date": "2026-11-0" + str(i + 1), "answe
     {"choice": "Favorable", "pct": f}, {"choice": "Unfavorable", "pct": u}]} for i, p in enumerate("ABCD")]
 json.dump(fav(38, 50), open(os.path.join(out, "fav_jd-vance.json"), "w"))
 json.dump(fav(40, 56), open(os.path.join(out, "fav_donald-trump.json"), "w"))
+appr = lambda a, d: [{"pollster": p, "end_date": "2026-11-0" + str(i + 1), "answers": [  # noqa: E731
+    {"choice": "Approve", "pct": a}, {"choice": "Disapprove", "pct": d}]} for i, p in enumerate("ABCD")]
+json.dump(appr(39, 49), open(os.path.join(out, "appr_jd-vance.json"), "w"))
+
+# PollResults.org 2028 primary polls in its real format. NOT real data.
+prim = lambda who, sub, rows: {"pollster": who, "state": "US", "endDate": "11/2/26", "questions": [  # noqa: E731
+    {"stage": "primary", "subpopulation": sub, "answers": [{"candidateName": n, "pct": v, "party": sub.upper()} for n, v in rows]}]}
+json.dump({"results": [
+    prim("Pollster A", "d", [("Gavin Newsom", 24), ("Pete Buttigieg", 14), ("Josh Shapiro", 9), ("Undecided", 20)]),
+    prim("Pollster B", "d", [("Gavin Newsom", 22), ("Pete Buttigieg", 16), ("Josh Shapiro", 7)]),
+    prim("Pollster A", "r", [("JD Vance", 48), ("Marco Rubio", 12), ("Donald Trump Jr.", 10)]),
+    prim("Pollster B", "r", [("J.D. Vance", 44), ("Marco Rubio", 14)]),
+]}, open(os.path.join(out, "pollresults_president.json"), "w"))
