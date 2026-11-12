@@ -404,7 +404,7 @@
     if (has('rep-vp')) out.push(`<b>Running mate:</b> ${who('rep-vp')} adds about 1.9 points for the Republican in ${byAbbr[p['rep-vp'].state].name}.`);
     if (has('dem-p') && has('rep-p') && p['dem-p'].state === p['rep-p'].state) out.push(`Both nominees are from ${byAbbr[p['dem-p'].state].name}, so their home-state bonuses cancel out.`);
     const lw = N.scenario.homeLagWeight || { dem: 1, rep: 1 };
-    out.push(`<b>2024 home states fade:</b> Harris's California gives back about ${(3.49 * lw.dem).toFixed(1)} points of its 2024 boost and Trump's Florida about ${(3.49 * lw.rep).toFixed(1)}${lw.rep < 1 ? ', less than the paper\'s 3.5 (see Method)' : ''}.`);
+    out.push(`<b>2024 home states fade:</b> Harris's California gives back about ${(3.49 * lw.dem).toFixed(1)} points of its 2024 boost and Trump's Florida about ${(3.49 * lw.rep).toFixed(1)}. This happens whether or not they run again${lw.rep < 1 || lw.dem < 1 ? ', and is less than the paper\'s 3.5 (see Method)' : ''}.`);
     const net = N.vp.kind === 'favorability' ? 'net favorability' : 'net approval';
     if (cur.vpNom) out.push(N.vp.gap != null
       ? `<b>Vice-president adjustment on:</b> ${esc(N.sitting_vp)} is the sitting vice president, so state approval shifts by ${sgn(N.vp.gap, 1)} points, his ${net} minus Trump's (${esc(N.vp.basis)}).`
@@ -477,7 +477,7 @@
         <div><dt>Rating</dt><dd>${RATING[s.rating] || s.rating}</dd></div>
         ${base ? `<div><dt>Trump approval in state</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
       </dl>
-      ${a === N.scenario.homeLag.rep ? `<p class="hint">Includes ${(3.49 * (N.scenario.homeLagWeight || { rep: 1 }).rep).toFixed(1)} points toward the Democrat: the 2024 Republican nominee's home-state boost here is assumed to fade. The paper's model would add 3.5; see Method for why this site uses less.</p>` : a === N.scenario.homeLag.dem ? `<p class="hint">Includes ${(3.49 * (N.scenario.homeLagWeight || { dem: 1 }).dem).toFixed(1)} points toward the Republican: the 2024 Democratic nominee's home-state boost here is assumed to fade.</p>` : ''}
+      ${a === N.scenario.homeLag.rep ? `<p class="hint">Includes ${(3.49 * (N.scenario.homeLagWeight || { rep: 1 }).rep).toFixed(1)} points toward the Democrat: the 2024 Republican nominee's home-state boost here is assumed to fade. The paper's model would add 3.5; see Method for why this site uses less.</p>` : a === N.scenario.homeLag.dem ? `<p class="hint">Includes ${(3.49 * (N.scenario.homeLagWeight || { dem: 1 }).dem).toFixed(1)} points toward the Republican: the 2024 Democratic nominee's home-state boost here is assumed to fade. The paper's model would add 3.5; see Method for why this site uses less.</p>` : ''}
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>`;
   }
@@ -519,7 +519,7 @@
       setLayer28('official'); return;
     }
     document.getElementById('live-pill').textContent = `Live · updated ${niceDate(N.generated_at)}`;
-    document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> State approval from Morris’s explorer · national average ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])} · state economies through ${monthName(N.economy.through)}. Only the tickets can be changed above.`;
+    document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> National approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])} · state-by-state differences from Morris's estimates (updated about monthly) · state economies through ${monthName(N.economy.through)}. Only the tickets can be changed above.`;
     const picks = [...document.querySelectorAll('.pick')];
     picks.forEach(buildPick);
     const locked = Object.keys(ROLES).filter(official).length;
