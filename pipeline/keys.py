@@ -9,12 +9,21 @@ The six keys (each one TRUE favors the party holding the White House):
   6  Long-term economy  Real per capita growth during the term equals or exceeds the mean of the previous two terms.
 The other seven keys (scandal, charisma, foreign success and so on) need Lichtman's judgment and are not used.
 
-Keys 1 to 4 are set in config.json ("keys") once they are known; a key not yet known counts as half false.
-Keys 5 and 6 are scored every day from FRED:
-  5  false if the real-time Sahm rule indicator (SAHMREALTIME) is 0.5 or more, or real GDP per capita
-     (A939RX0Q048SBEA) fell in each of the last two quarters.
-  6  annualized growth of real GDP per capita from the quarter before the term began to the latest quarter,
-     against the mean of the same growth over each of the previous two terms.
+Each key is scored by Lichtman's own rule (as set out on Wikipedia, "The Keys to the White House"):
+  1  Set by hand after each midterm (config.json "keys"): seats after this midterm against after the last.
+  2  True if the nominee wins at least two-thirds of the first-ballot delegates at the convention, with no
+     deep and vocal party divisions. Set by hand once the delegates are known; until then it counts as half
+     false, and the note shows the leader's share in the latest national primary polls.
+  3  Set by hand: is the party's candidate the sitting president?
+  4  Scored daily from PollResults.org: false if a single third-party or independent candidate consistently
+     polls at 10% or more in national general-election polls. "Consistently" here means a median of 10% or
+     more over at least 3 polls from at least 2 pollsters in the last 120 days.
+  5  Scored daily from FRED: false if the real-time Sahm rule indicator (SAHMREALTIME) is 0.5 or more, or
+     real GDP per capita (A939RX0Q048SBEA) fell in each of the last two quarters. Lichtman also counts a
+     recession the public believes is happening; config.json "key5" can set that by hand.
+  6  Scored daily from FRED: annualized growth of real GDP per capita from the quarter before the term began
+     to the latest quarter, against the mean of the same growth over each of the previous two terms.
+A key that is not known yet counts as half false.
 
 The vote: incumbent party's share of the national two-party vote = a + b x (number of the six keys false),
 fitted on every election 1864-2024 (keys_history.csv: Lichtman's ratings as tabulated on Wikipedia; the
@@ -26,8 +35,10 @@ two with equal weights lowered the average state miss from 2.10 to 1.87 points a
 0.98 to 0.78 points.
 """
 import csv
+import datetime as dt
 import math
 import os
+import statistics
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 NAMES = {1: "Party mandate", 2: "No primary contest", 3: "Sitting president running", 4: "No third party",
@@ -55,6 +66,72 @@ def fit(rows):
     a = my - b * mx
     see = math.sqrt(sum((r["share"] - a - b * r["false"]) ** 2 for r in rows) / (n - 2))
     return a, b, see, n
+
+
+THIRD_PARTY = {"threshold": 10.0, "days": 120, "min_polls": 3, "min_pollsters": 2}
+_NOT_A_PERSON = ("undecided", "other", "someone else", "none", "not sure", "don't know", "dont know", "refused",
+                 "would not vote", "no one", "unsure", "generic", "cannot vote")
+
+
+def score_third_party(raw, end, iso, rule=THIRD_PARTY):
+    """Key 4 from PollResults.org records. A poll counts once per candidate (the average over the match-ups
+    in that poll that named them). Returns a key dict, or None if there are no general-election polls."""
+    start = end - dt.timedelta(days=rule["days"])
+    seen, n_polls = {}, set()
+    for res in raw or []:
+        if str(res.get("state") or "").upper() not in ("US", "USA", "NATIONAL", "") or res.get("internal"):
+            continue
+        try:
+            day = dt.date.fromisoformat(iso(res.get("endDate") or res.get("end_date")))
+        except (ValueError, TypeError):
+            continue
+        if not (start <= day <= end):
+            continue
+        pollster = str(res.get("pollster") or "").strip()
+        for q in res.get("questions") or []:
+            if str(q.get("stage") or "").lower() != "general":
+                continue
+            n_polls.add((pollster, day))
+            for a in q.get("answers") or []:
+                name = str(a.get("candidateName") or "").strip()
+                tag = str(a.get("party") or "").upper()[:1]
+                if not name or a.get("pct") is None or tag in ("D", "R", "N", "") \
+                        or any(w in name.lower() for w in _NOT_A_PERSON):
+                    continue
+                seen.setdefault(name, {}).setdefault((pollster, day), []).append(float(a["pct"]))
+    if not n_polls:
+        return None
+    rows = []
+    for name, polls in seen.items():
+        vals = [sum(v) / len(v) for v in polls.values()]
+        rows.append({"name": name, "median": statistics.median(vals), "polls": len(vals),
+                     "pollsters": len({p for p, _ in polls})})
+    rows.sort(key=lambda r: (-r["median"], -r["polls"]))
+    hits = [r for r in rows if r["median"] >= rule["threshold"] and r["polls"] >= rule["min_polls"]
+            and r["pollsters"] >= rule["min_pollsters"]]
+    def desc(r):
+        return (f"{r['name']} ({r['median']:.0f}% median in {r['polls']} poll{'s' if r['polls'] != 1 else ''} "
+                f"from {r['pollsters']} pollster{'s' if r['pollsters'] != 1 else ''})")
+    if hits:
+        why = (f"{desc(hits[0])} is consistently polling at {rule['threshold']:.0f}% or more in national polls "
+               f"over the last {rule['days']} days.")
+    else:
+        top = f" The highest tested: {desc(rows[0])}." if rows else " No poll tested one."
+        why = (f"No third-party or independent candidate is consistently polling at {rule['threshold']:.0f}% or "
+               f"more in national polls ({len(n_polls)} polls in the last {rule['days']} days).{top}")
+    return {"false": bool(hits), "why": why, "tested": rows[:5]}
+
+
+def primary_note(standing, party):
+    """A line on the incumbent party's primary polling, for key 2 while it is still pending."""
+    rows = (standing or {}).get(party) or []
+    if not rows:
+        return ""
+    lead = rows[0]
+    second = f", ahead of {rows[1]['name']} at {rows[1]['pct']:.0f}%" if len(rows) > 1 else ""
+    return (f" In the latest national primary polls {lead['name']} leads with {lead['pct']:.0f}%{second}; "
+            f"two-thirds of the delegates would need a much larger share.") if lead["pct"] < 66.7 else \
+           (f" In the latest national primary polls {lead['name']} leads with {lead['pct']:.0f}%{second}.")
 
 
 def _quarter_back(ym, q):
@@ -90,22 +167,32 @@ def score_economy(gdp, sahm, term_start):
     return k5, k6
 
 
-def build(cfg, fetch, api_key, base_dem):
+def build(cfg, fetch, api_key, base_dem, polls=None, standing=None, today=None, iso=None):
     """Score the six keys and return the payload block. fetch(series, key, start) -> [(YYYY-MM, value)].
-    base_dem: Democratic share of the national two-party vote in the previous election."""
+    base_dem: Democratic share of the national two-party vote in the previous election.
+    polls: PollResults.org presidential records (key 4); standing: primary polling by party (key 2 note)."""
     kc = cfg["keys"]
+    party = cfg["election"]["incumbent_party"]
     gdp = fetch(kc["fred_gdp_per_capita"], api_key, "2016-01-01")
     sahm = fetch(kc["fred_sahm"], api_key, "2025-01-01")
-    k5, k6 = score_economy(gdp, sahm, kc["term_start"])
+    auto = dict(zip((5, 6), score_economy(gdp, sahm, kc["term_start"])))
+    k5_hand = kc.get("key5") or {}
+    if k5_hand.get("false") is not None:          # a recession the public perceives, set by hand
+        auto[5] = {"false": k5_hand["false"], "why": k5_hand["why"]}
+    if kc.get("key4", {}).get("false") is None and today and iso:
+        k4 = score_third_party(polls, today, iso)
+        if k4:
+            auto[4] = k4
     keys = []
     for k in range(1, 7):
-        if k == 5:
-            s = k5
-        elif k == 6:
-            s = k6
-        else:
-            s = kc[f"key{k}"]
-        keys.append({"n": k, "name": NAMES[k], "false": s["false"], "why": s["why"]})
+        s = dict(auto.get(k) or kc[f"key{k}"])
+        if k == 2 and s["false"] is None:
+            s["why"] = s["why"] + primary_note(standing, party)
+        row = {"n": k, "name": NAMES[k], "false": s["false"], "why": s["why"]}
+        if s.get("tested"):
+            row["tested"] = [{"name": t["name"], "median": round(t["median"], 1), "polls": t["polls"]}
+                             for t in s["tested"]]
+        keys.append(row)
     n_false = sum(1.0 if x["false"] is True else 0.5 if x["false"] is None else 0.0 for x in keys)
     a, b, see, n = fit(load_history())
     inc = a + b * n_false

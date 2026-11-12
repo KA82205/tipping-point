@@ -88,7 +88,7 @@
     "seed": 2028
   },
   "keys": {
-    "_comment": "Third model: Lichtman's six objective keys, counted (pipeline/keys.py). key1-key4 are set by hand when known: false = true means the key is FALSE (bad for the party holding the White House); null = not known yet, counted as half false. Keys 5 and 6 are scored daily from FRED.",
+    "_comment": "Third model: Lichtman's six objective keys, counted (pipeline/keys.py), each scored by his own rule. false = true means the key is FALSE (bad for the party holding the White House); null = not known yet, counted as half false. key1 and key3 are set by hand. key2 is set by hand once the convention delegates are known. key4 is scored daily from the polls unless set here. key5 and key6 are scored daily from FRED; key5 can be set here for a recession the public perceives.",
     "term_start": "2025-01",
     "fred_gdp_per_capita": "A939RX0Q048SBEA",
     "fred_sahm": "SAHMREALTIME",
@@ -98,7 +98,7 @@
     },
     "key2": {
       "false": null,
-      "why": "Not known until the 2028 Republican primaries."
+      "why": "Decided at the 2028 Republican convention: true if the nominee wins at least two-thirds of the first-ballot delegates with no deep and vocal party divisions."
     },
     "key3": {
       "false": true,
@@ -106,7 +106,11 @@
     },
     "key4": {
       "false": null,
-      "why": "Not known until the 2028 campaign."
+      "why": "Scored daily from the polls: false if one third-party or independent candidate consistently polls at 10% or more."
+    },
+    "key5": {
+      "false": null,
+      "why": "Scored daily from FRED. Set to true here if the public clearly believes the economy is in recession."
     }
   },
   "ensemble": {

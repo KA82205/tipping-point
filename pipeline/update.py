@@ -264,7 +264,8 @@ def main():
     st24 = [v for k, v in results.items() if len(k) == 2]
     base_dem = sum(v["share"] * v["votes"] for v in st24) / sum(v["votes"] for v in st24)
     try:
-        keys_block = lichtman.build(cfg, fred, None if fx else key, base_dem)
+        keys_block = lichtman.build(cfg, fred, None if fx else key, base_dem, polls=pres_raw, standing=standing,
+                                    today=today, iso=approval._iso)
     except Exception as e:  # the Nowcast runs on two models if the keys cannot be scored today
         print(f"WARNING: keys model not scored ({e}); running without it")
         keys_block = None
