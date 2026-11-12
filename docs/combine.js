@@ -120,9 +120,10 @@
    * picks  { dp, rp, dv, rv }: nominee and running mate per party as { name, state }, or null if not chosen
    * Returns { combined, enns, desart, info }: the average and each model alone, all simulated the same way.
    * desart is null when there are no head-to-head polls, and combined is then the approval and economy
-   * model alone. With parts: false only combined is run (faster).
+   * model alone. With parts: false only combined is run (faster). keep: how many of the combined
+   * simulations to keep draw by draw (see docs/engine.js), returned as combined.draws.
    */
-  function run(N, picks = {}, { n = 10000, seed = 2028, forceVpShift = null, parts = true } = {}) {
+  function run(N, picks = {}, { n = 10000, seed = 2028, forceVpShift = null, parts = true, keep = 0 } = {}) {
     const S = N.scenario, { dp, rp, dv, rv } = picks;
     const lagW = S.homeLagWeight || { dem: 1, rep: 1 };
     const fieldD = primaryField(S.candidates, 'D'), fieldR = primaryField(S.candidates, 'R');
@@ -148,12 +149,12 @@
     // Every run uses the approval and economy model's simulation: its coefficient draws, its seven economic
     // weightings, and its model error, most of it shared by every state. mix sets how much of each state's
     // forecast comes from the polls model instead.
-    const sim = (weight, point) => SPASE.simulate({ states, districts: S.districts, n, seed, econVariants: weight === 0 ? null : S.econVariants,
-      mix: point ? { weight, point } : null });
+    const sim = (weight, point, kp = 0) => SPASE.simulate({ states, districts: S.districts, n, seed, econVariants: weight === 0 ? null : S.econVariants,
+      mix: point ? { weight, point } : null, keep: kp });
     const info = { vpNom, vpShift, vpWeight, fieldD, fieldR, polls: null };
     const h = N.h2h;
     if (!h || !h.polls || !h.polls.length || S.states.some(s => s.prior == null)) {
-      const enns = sim(1);
+      const enns = sim(1, null, keep);
       return { combined: enns, enns, desart: null, info };
     }
 
@@ -164,7 +165,7 @@
     const dPoint = Object.fromEntries(S.states.map(s => [s.abbr, desartPredict(s.prior, sel.avg,
       hD(s.abbr) - hR(s.abbr) - (s.abbr === S.homeLag.dem ? 1 : 0) + (s.abbr === S.homeLag.rep ? 1 : 0), h.terms)]));
     info.polls = { avg: sel.avg, n: sel.polls.length, basis: sel.basis, total: h.polls.length, pollD, pollR };
-    const combined = sim(WEIGHT_ENNS, dPoint);
+    const combined = sim(WEIGHT_ENNS, dPoint, keep);
     if (!parts) return { combined, enns: null, desart: null, info };
     const enns = sim(1), desart = sim(0, dPoint);
     const eBy = Object.fromEntries(enns.states.map(x => [x.abbr, x])), dBy = Object.fromEntries(desart.states.map(x => [x.abbr, x]));

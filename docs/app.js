@@ -50,10 +50,10 @@
     rows.forEach(r => { r.before = cum; cum += r.ev; r.after = cum; if (!tp && cum >= 270) tp = r; });
     return { rows, tp };
   }
-  function snake(el, readEl, items, label) {
+  function snake(el, readEl, items, label, onPick) {
     const { rows, tp } = tippingOf(items);
     const demEV = rows.filter(r => r.share > 50).reduce((a, r) => a + r.ev, 0);
-    el.innerHTML = rows.map(r => `<div class="seg${r === tp ? ' tp' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${shareColor(r.share)}" tabindex="0" aria-label="${esc(byAbbr[r.abbr].name)} ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`).join('') +
+    el.innerHTML = rows.map(r => `<div class="seg${r === tp ? ' tp' : ''}${r.ev < 19 ? ' sm' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${shareColor(r.share)}" tabindex="0" aria-label="${esc(byAbbr[r.abbr].name)} ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`).join('') +
       `<div class="mark270" style="left:${270 / 538 * 100}%"></div>`;
     const tpName = byAbbr[tp.abbr].name.replace(' District', '');
     const winner = tp.share > 50 ? 'Democrats' : 'Republicans';
@@ -64,6 +64,7 @@
       const show = () => { readEl.innerHTML = `<b>${esc(byAbbr[r.abbr].name)}</b> · ${r.ev} EV · ${fmt(r.share)} Democratic · Democrats reach ${r.after} electoral votes if they win every state up to here`; };
       s.addEventListener('mouseenter', show); s.addEventListener('focus', show);
       s.addEventListener('mouseleave', () => { readEl.innerHTML = base; }); s.addEventListener('blur', () => { readEl.innerHTML = base; });
+      if (onPick) { s.addEventListener('click', () => onPick(r.abbr)); s.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(r.abbr); } }); }
     });
   }
 
@@ -76,7 +77,7 @@
     const x = v => l + v / 538 * (W - l - r), y = p => t + (1 - p / max) * (H - t - b);
     let cum = 0, median = 0;
     for (let i = 0; i < hist.length; i++) { cum += hist[i]; if (cum >= 0.5) { median = i; break; } }
-    let o = bins.map(bn => `<rect x="${x(bn.x) + 0.5}" y="${y(bn.p)}" width="${Math.max(1, x(bn.x + bin) - x(bn.x) - 1)}" height="${H - b - y(bn.p)}" fill="${bn.x + bin / 2 >= 270 ? '#4f8de0' : '#d8665b'}" rx="1.5"></rect>`).join('');
+    let o = bins.map(bn => `<rect x="${x(bn.x) + 0.5}" y="${y(bn.p)}" width="${Math.max(1, x(bn.x + bin) - x(bn.x) - 1)}" height="${H - b - y(bn.p)}" fill="${bn.x + bin / 2 >= 270 ? '#4f8de0' : '#d8665b'}" rx="1.5"><title>${bn.x} to ${Math.min(538, bn.x + bin - 1)} Democratic electoral votes: ${bn.p < 0.0005 ? 'almost none' : (100 * bn.p).toFixed(1) + '%'} of simulations</title></rect>`).join('');
     o += `<line x1="${x(270)}" x2="${x(270)}" y1="${t - 6}" y2="${H - b}" stroke="#e9eef5" stroke-dasharray="3 3"></line><text x="${x(270) + 5}" y="${t + 2}">270</text>`;
     [0, 100, 200, 300, 400, 538].forEach(v => { o += `<text x="${x(v)}" y="${H - 10}" text-anchor="${v === 0 ? 'start' : v === 538 ? 'end' : 'middle'}">${v}</text>`; });
     o += `<text x="${W - r}" y="${t + 2}" text-anchor="end">Median: ${median} Democratic EV</text>`;
@@ -137,13 +138,39 @@
     return { mark, recolor: f => svg.querySelectorAll('[data-a]').forEach(el => { const t = el.tagName === 'g' ? el.querySelector('rect') : el; t.setAttribute('fill', f(el.dataset.a)); }) };
   }
 
-  // ---------- balance beam: tips toward whoever wins more simulations ----------
-  const BEAM = ['#4f8de0', '#6083dc', '#717ad7', '#8270d3', '#976bc1', '#af6ba0', '#c66a80', '#de6a5f'];
-  function beamSVG() {
-    let h = '';
-    for (let i = 0; i < 8; i++) h += `<path d="${hexD(62 + i * 68, 96, 32)}" fill="${BEAM[i]}"></path>`;
-    for (let i = 0; i < 7; i++) h += `<path d="${hexD(96 + i * 68, 153, 32)}" fill="${mix(BEAM[i], BEAM[i + 1], 0.5)}"></path>`;
-    return `<svg viewBox="0 0 600 300" aria-hidden="true"><g class="beam-arm">${h}</g><path d="M300,190 L258,288 L342,288 Z" fill="#f0a35e"></path></svg>`;
+  // ---------- the balance: the path to 270 as a beam on a fulcrum ----------
+  // The beam tips toward whoever wins more simulations: level at 50-50, five degrees at a certainty.
+  const BALANCE = `<div class="bal-top"><div class="side d"><span class="big" data-k="dem"></span><span class="l">in 100<b>Democrat wins</b></span></div>
+    <div class="side r"><span class="l">in 100<b>Republican wins</b></span><span class="big" data-k="rep"></span></div></div>
+    <div class="bal-stage"><div class="bal-arm"><div class="snake"></div></div><div class="bal-fulcrum" aria-hidden="true"><span>270</span></div></div>
+    <p class="snake-read"></p>`;
+  const tiltOf = d => -Math.sign(d) * 5 * Math.pow(Math.min(1, Math.abs(d)), 0.6);
+  function balance(el, items, label, pDem, pRep, onPick) {
+    if (!el.firstChild) el.innerHTML = BALANCE;
+    const whole = v => String(Math.round(100 * v));
+    countTo(el.querySelector('[data-k="dem"]'), pDem, whole);
+    countTo(el.querySelector('[data-k="rep"]'), pRep, whole);
+    snake(el.querySelector('.snake'), el.querySelector('.snake-read'), items, label, onPick);
+    const arm = el.querySelector('.bal-arm');
+    setTimeout(() => { arm.style.transform = `rotate(${tiltOf(pDem - pRep).toFixed(2)}deg)`; }, 80);
+  }
+  // The two models and their average, side by side. m: { enns, desart, now }, each { pDemWin, demPopular }.
+  function ensemble(el, m) {
+    const card = (cls, name, by, x) => `<div class="ens ${cls}"><span class="nm">${name}</span><span class="by">${by}</span>
+      <span class="odds"><b>${Math.round(100 * x.pDemWin)}</b> in 100 for the Democrat</span><span class="split" aria-hidden="true"><i style="width:${(100 * x.pDemWin).toFixed(1)}%"></i></span>
+      <span class="vote">${fmt(x.demPopular)} of the two-party vote</span></div>`;
+    el.classList.toggle('one', !m.desart);
+    el.innerHTML = m.desart
+      ? card('a', 'Approval and economy model', 'Enns, Colner, Kumar and Lagodny', m.enns) + '<span class="op" aria-hidden="true">+</span>' +
+        card('b', 'Long-range polls model', 'DeSart', m.desart) + '<span class="op" aria-hidden="true">=</span>' +
+        card('now', 'The Nowcast', 'Their average, state by state', m.now)
+      : card('now', 'The Nowcast', 'The approval and economy model alone today, because no head-to-head polls are available', m.now);
+  }
+  // The light at the top of the page leans toward whoever is ahead.
+  function setGlow(pDem, pRep) {
+    const d = Math.max(-0.5, Math.min(0.5, pDem - pRep)), st = document.documentElement.style;
+    st.setProperty('--glow-d', (0.10 + 0.16 * d).toFixed(3));
+    st.setProperty('--glow-r', (0.10 - 0.16 * d).toFixed(3));
   }
 
   // ---------- 100 simulated elections as hexagons ----------
@@ -189,23 +216,24 @@
 
   // ================= HOME =================
   function renderHome() {
-    document.getElementById('hero-2024').innerHTML = strip({ f: NAT.fc, a: natActual }, 40, 60);
-    document.getElementById('hero-2024-read').innerHTML =
-      `Forecast <b class="a-ink">${fmt(NAT.fc)}</b><br>Result <b>${fmt(natActual)}</b><br>Trump won, as the model gave ${Math.round(100 * (1 - NAT.pDemWin))}% odds`;
-    const el = document.getElementById('hero-2028'), rd = document.getElementById('hero-2028-read');
-    if (N && !N.fixture_run) {
-      el.className = 'strip';
-      el.innerHTML = strip({ f: N.summary.demPopular }, 40, 60);
-      rd.innerHTML = `Nowcast <b class="a-ink">${fmt(N.summary.demPopular)}</b><br>Democrat wins ${pct(N.summary.pDemWin)} of simulations<br><a href="#nowcast">Pick the tickets</a>`;
-    } else {
-      el.innerHTML = `<div class="pending">Real forecast publishes July 30, 2028</div>`;
-      rd.innerHTML = `${daysTo(FORECAST_DATE)} days to go<br><a href="#nowcast">See the 2028 Nowcast</a>`;
-    }
     const views = {
       fc: [R.map(r => ({ abbr: r.abbr, ev: r.ev, share: r.fc })), '2024 forecast'],
       actual: [R.map(r => ({ abbr: r.abbr, ev: r.ev, share: r.share })), '2024 result'],
       today: N ? [N.states.map(s => ({ abbr: s.abbr, ev: s.ev, share: s.demShare })), '2028 Nowcast'] : null,
     };
+    const hb = document.getElementById('bal-home');
+    if (N && !N.fixture_run) {
+      const s = N.summary, M = N.models || {}, nD = Math.round(100 * s.pDemWin), nT = Math.round(100 * s.pTie), rep = (100 - nD - nT) / 100;
+      balance(hb, views.today[0], '2028 Nowcast', s.pDemWin, rep, () => { location.hash = 'nowcast'; });
+      ensemble(document.getElementById('ens-home'), { enns: M.enns || s, desart: M.desart || null, now: s });
+      document.getElementById('hero-date').textContent = `Updated ${niceDate(N.generated_at)}. Not the forecast, which publishes July 30, 2028.`;
+      setGlow(s.pDemWin, rep);
+    } else {
+      balance(hb, views.fc[0], '2024 forecast', NAT.pDemWin, 1 - NAT.pDemWin);
+      document.getElementById('hero-live').textContent = 'The 2024 forecast, as published in July 2024';
+      document.getElementById('hero-date').textContent = 'The 2028 Nowcast starts with its first daily data run.';
+      document.getElementById('ens-home').hidden = true;
+    }
     const tabs = document.querySelectorAll('[data-snake]');
     const show = k => { const v = views[k] || views.fc; tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.snake === k)); snake(document.getElementById('snake-home'), document.getElementById('snake-home-read'), v[0], v[1]); };
     tabs.forEach(t => { if (t.dataset.snake === 'today' && !views.today) t.disabled = true; t.addEventListener('click', () => show(t.dataset.snake)); });
@@ -373,7 +401,7 @@
 
   // Both models and their average, for a set of picks (docs/combine.js). n is draws per economic weighting.
   const pk = o => ({ dp: o['dem-p'] || null, rp: o['rep-p'] || null, dv: o['dem-vp'] || null, rv: o['rep-vp'] || null });
-  const runModels = (o, n) => window.TP.run(N, pk(o), { n: n || 10000 });
+  const runModels = (o, n) => window.TP.run(N, pk(o), { n: n || 10000, keep: 14000 });
   const runCombined = (o, n) => window.TP.run(N, pk(o), { n: n || 10000, parts: false }).combined;
   const lastName = n => n.replace(/ (Jr\.|Sr\.|II|III)$/, '').split(' ').pop();
 
@@ -481,29 +509,31 @@
     for (let i = 0; i < s.evHistogram.length; i++) { cum += s.evHistogram[i]; if (cum >= 0.5) { median = i; break; } }
     const items = s.states.map(x => ({ abbr: x.abbr, ev: x.ev, share: x.demShare }));
     const tp = tippingOf(items).tp;
-    countTo(document.getElementById('bm-dem'), s.pDemWin, pct);
-    countTo(document.getElementById('bm-rep'), rep, pct);
-    document.querySelector('#beam .beam-arm').style.transform = `rotate(${(-12 * (s.pDemWin - rep)).toFixed(1)}deg)`;
+    const toMap = a => {
+      setLayer28('tracker');
+      if (pinned28 !== a) pick28(a, true);
+      document.getElementById('map-2028').scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center' });
+    };
+    balance(document.getElementById('bal-28'), items, '2028 Nowcast', s.pDemWin, rep, toMap);
+    ensemble(document.getElementById('ens-28'), { enns: s.enns || s, desart: s.desart, now: s });
+    setGlow(s.pDemWin, rep);
     waffle(document.getElementById('waffle-28'), s.pDemWin, s.pTie);
     document.getElementById('waffle-cap').textContent = `Out of 100 simulated elections held today, the Democrat wins ${nD} and the Republican wins ${100 - nD - nT}${nT ? `, with ${nT} tied` : ''}. A simulation is one possible outcome given how far off the models have been in the past.`;
     const mo = document.getElementById('models-28');
     if (mo) mo.innerHTML = s.desart
-      ? `Each state's number is the average of two models, and the map is then simulated as a whole. Each model on its own, simulated the same way: <b>approval and economy</b>, Democrat wins ${Math.round(100 * s.enns.pDemWin)} in 100 with ${fmt(s.enns.demPopular)} of the two-party vote; <b>polls model</b>, ${Math.round(100 * s.desart.pDemWin)} in 100 with ${fmt(s.desart.demPopular)}. ${POLLS_NOTE(s.info)} <a href="#method">How they work</a>`
+      ? `Each state's number is the average of the two models, and the whole map is then simulated together, so the Nowcast's odds are not simply the average of theirs. ${POLLS_NOTE(s.info)} <a href="#method">How they work</a>`
       : `Today's Nowcast is the approval and economy model on its own, because no head-to-head polls are available. <a href="#method">How it works</a>`;
     document.getElementById('figs-2028').innerHTML = [
       [fmt(s.demPopular), 'Democratic share of the two-party vote'],
       [`${median}`, 'Median Democratic electoral votes, of 538'],
       [esc(byAbbr[tp.abbr].name.replace(' District', '')), `Tipping-point state, ${fmt(tp.share)} Democratic`],
     ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
-    snake(document.getElementById('snake-2028'), document.getElementById('snake-2028-read'), items, '2028 Nowcast');
-    board(document.getElementById('board-28'), s.states, a => {
-      setLayer28('tracker');
-      if (pinned28 !== a) pick28(a);
-      document.getElementById('map-2028').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
+    board(document.getElementById('board-28'), s.states, toMap);
     histogram(document.getElementById('hist-2028'), s.evHistogram);
-    if (map28) map28.recolor(fill28);
-    insp28(pinned28);
+    const dp = s.picks['dem-p'], rp = s.picks['rep-p'];
+    document.querySelectorAll('#matchups button').forEach(b => b.classList.toggle('on', !!dp && !!rp && b.dataset.d === dp.name && b.dataset.r === rp.name));
+    stopSim();
+    refreshPlay();
     effectsList();
   }
 
@@ -542,18 +572,127 @@
         <div><dt>Democrat wins</dt><dd>${pct(s.pDem)} of simulations</dd></div>
         <div><dt>Rating</dt><dd>${RATING[s.rating] || s.rating}</dd></div>
         ${base ? `<div><dt>Trump approval in state</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
+        ${cond && cond.n && !calls[a] ? `<div><dt>With your calls</dt><dd>Democrat wins ${pct(cond.by[a].pDem)}</dd></div>` : ''}
+        ${sim && sim.shown[a] ? `<div><dt>In this simulated election</dt><dd>${fmt(sim.share[a])} Democratic</dd></div>` : ''}
       </dl>
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>
       ${s.desart != null ? modelTable([['Approval and economy', s.enns, s.ennsP], ['Polls model', s.desart, s.desartP], ['Nowcast', s.demShare, s.pDem, 'avg']], 'the state') : ''}
-      ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models take back part of the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(-window.SPASE.coef('homeLag') * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the approval and economy model${s.desart != null ? `, ${window.TP.DESART.home.toFixed(1)} in the polls model` : ''}.</p>` : ''}`;
+      ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models take back part of the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(-window.SPASE.coef('homeLag') * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the approval and economy model${s.desart != null ? `, ${window.TP.DESART.home.toFixed(1)} in the polls model` : ''}.</p>` : ''}
+      ${cur.draws ? `<div class="callrow"><span>What if this one goes</span><button type="button" class="D" data-call="D" aria-pressed="${calls[a] === 'D'}">Democratic</button><button type="button" class="R" data-call="R" aria-pressed="${calls[a] === 'R'}">Republican</button></div>` : ''}`;
+    el.querySelectorAll('[data-call]').forEach(b => b.addEventListener('click', () => setCall(a, calls[a] === b.dataset.call ? null : b.dataset.call)));
   }
   function fill28(a) {
     if (layer28 === 'lean') return shareColor(50 + (byAbbr[a].share - 100 * NAT.dem / (NAT.dem + NAT.rep)));
+    if (sim) return sim.shown[a] ? winColor(sim.share[a]) : greyColor();
     const s = cur && cur.byAbbr[a];
-    return s ? shareColor(s.demShare) : greyColor();
+    if (!s) return greyColor();
+    if (calls[a]) return calls[a] === 'D' ? '#4f8de0' : '#de6a5f';
+    return shareColor(cond && cond.n ? cond.by[a].share : s.demShare);
   }
-  function pick28(a) { pinned28 = a === pinned28 ? null : a; map28.mark(pinned28); insp28(pinned28); }
+  // A click on the map looks a state up, or, while "Call states yourself" is on, calls it. force: always look it up.
+  function pick28(a, force) {
+    if (callMode && !force && layer28 === 'tracker' && !sim) { pinned28 = a; cycleCall(a); map28.mark(a); return; }
+    pinned28 = a === pinned28 ? null : a; map28.mark(pinned28); insp28(pinned28);
+  }
+
+  // ---------- playing with the map: call states yourself, or watch one simulated election ----------
+  // Both read the 14,000 simulated elections kept from the current run (cur.draws).
+  let calls = {}, callMode = false, cond = null, sim = null;
+  const simRuns = { n: 0, dem: 0 };
+  const SIDE = { D: 'Democrat', R: 'Republican' };
+  const winColor = sh => { const t = Math.min(1, Math.abs(sh - 50) / 12); return sh > 50 ? mix('#2f5fa3', '#5b9cf0', t) : mix('#9c4138', '#ee7a6d', t); };
+  const anyCalls = () => Object.keys(calls).length > 0;
+  // The kept simulations in which every called state went the way it was called.
+  function matching() {
+    const D = cur.draws, nU = D.units.length, ix = Object.entries(calls).map(([a, side]) => [D.units.indexOf(a), side === 'D']), out = [];
+    for (let k = 0; k < D.n; k++) { let ok = true; for (const [i, d] of ix) if ((D.shares[k * nU + i] > 5000) !== d) { ok = false; break; } if (ok) out.push(k); }
+    return out;
+  }
+  function condStats() {
+    if (!cur || !cur.draws || !anyCalls()) return null;
+    const D = cur.draws, nU = D.units.length, ks = matching(), wins = new Float64Array(nU), sum = new Float64Array(nU);
+    let dem = 0, tie = 0, ev = 0;
+    for (const k of ks) {
+      const e = D.ev[k]; ev += e; if (e >= 270) dem++; else if (e === 269) tie++;
+      for (let i = 0; i < nU; i++) { const v = D.shares[k * nU + i]; sum[i] += v; if (v > 5000) wins[i]++; }
+    }
+    const n = ks.length;
+    return { n, total: D.n, pDemWin: n ? dem / n : 0, pTie: n ? tie / n : 0, ev: n ? ev / n : 0,
+      by: Object.fromEntries(D.units.map((a, i) => [a, { pDem: n ? wins[i] / n : 0, share: n ? sum[i] / n / 100 : 50 }])) };
+  }
+  function setCall(a, side) { if (side) calls[a] = side; else delete calls[a]; stopSim(); refreshPlay(); }
+  function cycleCall(a) { setCall(a, !calls[a] ? 'D' : calls[a] === 'D' ? 'R' : null); }
+  function markCalled() {
+    document.querySelectorAll('#map-2028 [data-a]').forEach(el => el.classList.toggle('called', !sim && layer28 === 'tracker' && !!calls[el.dataset.a]));
+  }
+  function refreshPlay() {
+    cond = condStats();
+    if (map28 && layer28 !== 'official') { map28.recolor(fill28); markCalled(); }
+    drawBar();
+    insp28(pinned28);
+  }
+  // The bar above the map: the result of your calls, or the count of one simulated election.
+  function drawBar() {
+    const el = document.getElementById('mapbar'), n100 = v => Math.round(100 * v);
+    document.getElementById('btn-calls').setAttribute('aria-pressed', callMode);
+    if (layer28 !== 'tracker' || !cur || !cur.draws || (!sim && !callMode && !anyCalls())) { el.hidden = true; return; }
+    el.hidden = false;
+    if (sim) {
+      const p = cond && cond.n ? cond.pDemWin : cur.pDemWin;
+      const line = !sim.done ? 'Counting one simulated election, safest states first.'
+        : (sim.dem >= 270 ? `<b class="d-ink">The Democrat wins this one</b>, ${sim.dem} to ${sim.rep}.` : sim.rep >= 270 ? `<b class="r-ink">The Republican wins this one</b>, ${sim.rep} to ${sim.dem}.` : '<b>A tie, 269 to 269.</b> The House would decide.') +
+          ` The Democrat has won ${simRuns.dem} of your ${simRuns.n} run${simRuns.n > 1 ? 's' : ''}. Over many runs it comes to about ${n100(p)} in 100${anyCalls() ? ' with your calls' : ''}.`;
+      el.innerHTML = `<div class="tally-nums"><span class="d-ink" id="sim-d">${sim.dem}</span><small>270 to win</small><span class="r-ink" id="sim-r">${sim.rep}</span></div>
+        <div class="tally"><i class="d" id="sim-db" style="width:${sim.dem / 5.38}%"></i><i class="r" id="sim-rb" style="width:${sim.rep / 5.38}%"></i></div>
+        <p>${line}</p>${sim.done ? '<div class="row"><button class="btn primary" type="button" id="sim-again">Run another</button><button class="btn" type="button" id="sim-exit">Back to the Nowcast</button></div>' : ''}`;
+      if (sim.done) {
+        document.getElementById('sim-again').addEventListener('click', runOne);
+        document.getElementById('sim-exit').addEventListener('click', () => { stopSim(); refreshPlay(); });
+      }
+      return;
+    }
+    const chips = Object.entries(calls).map(([a, side]) => `<span class="chip ${side}">${esc(byAbbr[a].name)}: ${SIDE[side]}<button type="button" data-clear="${a}" aria-label="Clear ${esc(byAbbr[a].name)}">×</button></span>`).join('');
+    let res;
+    if (!anyCalls()) res = '<p>Click a state once to give it to the Democrat, twice for the Republican, a third time to clear it. The odds then come from the simulated elections where that happens.</p>';
+    else if (!cond.n) res = `<p class="res">None of the ${cond.total.toLocaleString()} simulated elections went that way.</p>`;
+    else res = `<p class="res">Then the Democrat wins <b class="d-ink">${n100(cond.pDemWin)} in 100</b> and the Republican <b class="r-ink">${100 - n100(cond.pDemWin) - n100(cond.pTie)} in 100</b>${n100(cond.pTie) ? `, with ${n100(cond.pTie)} in 100 tied at 269` : ''}.</p>
+      <p>Without your calls the Democrat wins ${n100(cur.pDemWin)} in 100. ${cond.n.toLocaleString()} of ${cond.total.toLocaleString()} simulated elections went the way you called, and the Democrat averages ${Math.round(cond.ev)} electoral votes in them.${cond.n < 150 ? ' So few match that these odds are rough.' : ''}</p>`;
+    el.innerHTML = `${anyCalls() ? `<div class="row">${chips}<button class="btn" type="button" data-clear="all">Clear all</button></div>` : ''}${res}`;
+    el.querySelectorAll('[data-clear]').forEach(b => b.addEventListener('click', () => { if (b.dataset.clear === 'all') calls = {}; else delete calls[b.dataset.clear]; refreshPlay(); }));
+  }
+  // One simulated election, counted state by state on the map. With calls in place it is one where they hold.
+  function stopSim() { if (sim) { clearTimeout(sim.timer); sim = null; } }
+  function runOne() {
+    if (!cur || !cur.draws) return;
+    if (layer28 !== 'tracker') setLayer28('tracker');
+    stopSim();
+    const D = cur.draws, nU = D.units.length, pool = anyCalls() ? matching() : null;
+    if (pool && !pool.length) { refreshPlay(); return; }
+    const k = pool ? pool[Math.floor(Math.random() * pool.length)] : Math.floor(Math.random() * D.n);
+    const share = Object.fromEntries(D.units.map((a, i) => [a, D.shares[k * nU + i] / 100]));
+    const order = D.units.slice().sort((a, b) => Math.abs(share[b] - 50) - Math.abs(share[a] - 50));
+    sim = { share, shown: {}, dem: 0, rep: 0, done: false, timer: null };
+    const bar = document.getElementById('mapbar');
+    bar.setAttribute('aria-live', 'off');
+    map28.recolor(fill28); markCalled(); drawBar();
+    let i = 0;
+    const count = () => {
+      const a = order[i++], ev = cur.byAbbr[a].ev;
+      sim.shown[a] = true;
+      if (share[a] > 50) sim.dem += ev; else sim.rep += ev;
+    };
+    const finish = () => { sim.done = true; simRuns.n++; if (sim.dem >= 270) simRuns.dem++; bar.setAttribute('aria-live', 'polite'); map28.recolor(fill28); drawBar(); insp28(pinned28); };
+    if (still) { while (i < order.length) count(); finish(); return; }
+    const step = () => {
+      count();
+      map28.recolor(fill28);
+      document.getElementById('sim-d').textContent = sim.dem; document.getElementById('sim-r').textContent = sim.rep;
+      document.getElementById('sim-db').style.width = sim.dem / 5.38 + '%'; document.getElementById('sim-rb').style.width = sim.rep / 5.38 + '%';
+      if (i < order.length) sim.timer = setTimeout(step, 18 + 150 * Math.pow(i / order.length, 3)); else finish();
+    };
+    step();
+  }
   const draw28 = () => drawUS(document.getElementById('map-2028'), { fill: fill28, selected: pinned28, onPick: pick28, onHover: a => { insp28(a || pinned28); map28.mark(a || pinned28); } });
 
   // Map layers. "Real forecast" shows a countdown, not a map, until July 30, 2028.
@@ -562,7 +701,9 @@
     document.querySelectorAll('[data-layer28]').forEach(x => x.setAttribute('aria-selected', x.dataset.layer28 === l));
     document.getElementById('desk-28').hidden = l === 'official';
     document.getElementById('official-28').hidden = l !== 'official';
-    if (l !== 'official') { map28.recolor(fill28); insp28(pinned28); }
+    document.getElementById('play-tools').hidden = l !== 'tracker';
+    stopSim();
+    refreshPlay();
   }
   function tickCountdown() {
     const ms = Math.max(0, FORECAST_DATE - new Date());
@@ -575,13 +716,12 @@
     document.getElementById('d-forecast').textContent = days;
     document.getElementById('cd-days').textContent = days;
     tickCountdown(); setInterval(tickCountdown, 1000);
-    document.getElementById('beam').innerHTML = beamSVG();
     map28 = draw28();
     ramp(document.getElementById('ramp-2028'), 'share');
     document.querySelectorAll('[data-layer28]').forEach(b => b.addEventListener('click', () => setLayer28(b.dataset.layer28)));
     document.getElementById('btn-to-nowcast').addEventListener('click', () => setLayer28('tracker'));
     if (!N) {
-      ['hero-28', 'builder', 'results-detail', 'tracker-detail'].forEach(id => { document.getElementById(id).hidden = true; });
+      ['hero-28', 'jump-28', 'builder', 'results-detail', 'tracker-detail', 'play-tools'].forEach(id => { document.getElementById(id).hidden = true; });
       document.getElementById('live-pill').textContent = 'Waiting for the first data run';
       setLayer28('official'); return;
     }
@@ -597,6 +737,49 @@
     const reset = document.getElementById('btn-reset');
     reset.hidden = locked === 4;
     reset.addEventListener('click', () => { picks.forEach(buildPick); schedule(); });
+    document.getElementById('btn-sim').addEventListener('click', runOne);
+    document.getElementById('btn-calls').addEventListener('click', () => { callMode = !callMode; if (callMode && layer28 !== 'tracker') setLayer28('tracker'); else { stopSim(); refreshPlay(); } });
+    // Jump links, with the section on screen marked.
+    const jump = [...document.querySelectorAll('#jump-28 button')];
+    jump.forEach(b => b.addEventListener('click', () => document.getElementById(b.dataset.to).scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' })));
+    if ('IntersectionObserver' in window) {
+      const seen = {};
+      const io = new IntersectionObserver(es => {
+        es.forEach(e => { seen[e.target.id] = e.isIntersecting; });
+        const on = jump.filter(b => seen[b.dataset.to]).pop();
+        jump.forEach(b => b.setAttribute('aria-current', b === on));
+      }, { rootMargin: '-130px 0px -55% 0px' });
+      jump.forEach(b => io.observe(document.getElementById(b.dataset.to)));
+    }
+    // Head-to-head polls: a grid of the pairings polled (Democrats down the side, Republicans across the top), and the list.
+    const hp = (N.h2h && N.h2h.polls) || [], several = n => `${n} poll${n === 1 ? '' : 's'}`;
+    if (hp.length && !official('dem-p') && !official('rep-p')) {
+      const cell = {}, cnt = { d: {}, r: {} }, min = N.h2h.min_polls || 3;
+      hp.forEach(q => { (cell[q.d + '|' + q.r] = cell[q.d + '|' + q.r] || []).push(q.share); cnt.d[q.d] = (cnt.d[q.d] || 0) + 1; cnt.r[q.r] = (cnt.r[q.r] || 0) + 1; });
+      const most = o => Object.keys(o).sort((a, b) => o[b] - o[a]), ds = most(cnt.d), rs = most(cnt.r);
+      document.getElementById('matchups').innerHTML = `<table><thead><tr><th></th>${rs.map(r => `<th scope="col">${esc(r)}</th>`).join('')}</tr></thead><tbody>${ds.map(d => `<tr><th scope="row">${esc(d)}</th>${rs.map(r => {
+        const v = cell[d + '|' + r];
+        if (!v) return '<td class="empty">no polls</td>';
+        const avg = v.reduce((a, x) => a + x, 0) / v.length;
+        return `<td><button type="button" class="${v.length < min ? 'thin' : ''}" data-d="${esc(d)}" data-r="${esc(r)}" style="background:${winColor(avg)}" aria-label="${esc(d)} against ${esc(r)}: ${fmt(avg)} for the Democrat in ${several(v.length)}"><b>${fmt(avg)}</b><span>${several(v.length)}</span></button></td>`;
+      }).join('')}</tr>`).join('')}</tbody></table>`;
+      document.getElementById('matchups-note').textContent = `The Democrat's share of the two-party vote in national head-to-head polls from the last ${N.h2h.days} days. Choose a pairing to put both nominees on the tickets. Pairings with fewer than ${min} polls are faded: for those the polls model also uses the other polls of either nominee.`;
+      document.getElementById('matchups-wrap').hidden = false;
+      document.querySelectorAll('#matchups button').forEach(b => b.addEventListener('click', () => {
+        [['dem-p', b.dataset.d], ['rep-p', b.dataset.r]].forEach(([role, v]) => { const sel = document.getElementById('sel-' + role); if (!sel) return; sel.value = v; sel.dispatchEvent(new Event('change')); });
+      }));
+    }
+    const tb = document.getElementById('h2h-2028'), more = document.getElementById('h2h-more');
+    const showPolls = all => {
+      tb.innerHTML = (all ? hp : hp.slice(0, 10)).map(q => `<tr><td class="num">${q.date}</td><td>${esc(q.pollster)}</td><td class="mu">${esc(lastName(q.d))} vs. ${esc(lastName(q.r))}</td><td class="n"><span class="bar" aria-hidden="true"><i class="${q.share > 50 ? 'D' : 'R'}" style="width:${Math.min(50, Math.abs(q.share - 50) * 8).toFixed(1)}%"></i></span>${fmt(q.share)}</td></tr>`).join('');
+      more.hidden = all || hp.length <= 10;
+      more.textContent = `Show all ${hp.length} polls`;
+    };
+    more.addEventListener('click', () => showPolls(true));
+    showPolls(false);
+    document.getElementById('h2h-note').innerHTML = hp.length
+      ? `The Democrat's share of the two-party vote in each poll. National polls between two people on the candidate list from the last ${N.h2h.days} days, from <a href="https://pollresults.org/races/president-2028/">PollResults.org</a> (New York Times poll data, CC BY 4.0). ${N.h2h.skipped ? `${N.h2h.skipped} other questions are left out: generic party ballots, questions that name a third candidate, and pairings with someone not on the list.` : ''}`
+      : 'No head-to-head polls are available today, so the Nowcast is the approval and economy model on its own.';
     const t = N.tickets, set = ['dem', 'rep'].filter(s => t[s] && t[s].president).length;
     document.getElementById('need-tickets').textContent = set ? `Confirmed: ${set === 2 ? 'both nominees' : 'one nominee'}` : 'Watching, none yet';
     document.getElementById('need-vp').textContent = N.vp.applied ? `On, ${sgn(N.vp.gap, 1)} pts` : N.vp.gap != null ? `Standing by, ${sgn(N.vp.gap, 1)} pts` : 'No recent polls of the vice president';
@@ -625,7 +808,7 @@
     mapMode = b.dataset.mapmode;
     document.querySelectorAll('[data-mapmode]').forEach(x => x.setAttribute('aria-pressed', x.dataset.mapmode === mapMode));
     if (map24) map24 = draw24();
-    if (map28) map28 = draw28();
+    if (map28) { map28 = draw28(); markCalled(); }
   }));
 
   // ================= routing =================
