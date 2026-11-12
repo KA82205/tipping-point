@@ -373,13 +373,7 @@
 
   // Both models and their average, for a set of picks (docs/combine.js). n is draws per economic weighting.
   const pk = o => ({ dp: o['dem-p'] || null, rp: o['rep-p'] || null, dv: o['dem-vp'] || null, rv: o['rep-vp'] || null });
-  // What-if approval: the slider moves Trump's approval by the same number of points in every state. Only the
-  // approval and economy model reads approval, so the polls model does not move. The strongest-ticket search
-  // always uses today's real numbers.
-  let apprShift = 0;
-  const shifted = () => apprShift === 0 ? N
-    : { ...N, scenario: { ...N.scenario, states: N.scenario.states.map(s => ({ ...s, approve: s.approve + apprShift })) } };
-  const runModels = (o, n) => window.TP.run(shifted(), pk(o), { n: n || 10000 });
+  const runModels = (o, n) => window.TP.run(N, pk(o), { n: n || 10000 });
   const runCombined = (o, n) => window.TP.run(N, pk(o), { n: n || 10000, parts: false }).combined;
   const lastName = n => n.replace(/ (Jr\.|Sr\.|II|III)$/, '').split(' ').pop();
 
@@ -531,7 +525,7 @@
         <dl class="kv">
           <div><dt>Democratic two-party vote</dt><dd class="d-ink">${fmt(cur.demPopular)}</dd></div>
           <div><dt>Democrat wins</dt><dd>${pct(cur.pDemWin)} of simulations</dd></div>
-          <div><dt>Trump approval (national avg)</dt><dd>${fmt(N.approval.approve + apprShift)}${apprShift ? ' <span class="small">what if</span>' : ''}</dd></div>
+          <div><dt>Trump approval (national avg)</dt><dd>${fmt(N.approval.approve)}</dd></div>
           <div><dt>Economy data through</dt><dd>${monthName(N.economy.through)}</dd></div>
         </dl>
         <div class="strip">${strip({ f: cur.demPopular })}</div>
@@ -547,7 +541,7 @@
         <div><dt>2024 D share</dt><dd>${fmt(r.share, 2)}</dd></div>
         <div><dt>Democrat wins</dt><dd>${pct(s.pDem)} of simulations</dd></div>
         <div><dt>Rating</dt><dd>${RATING[s.rating] || s.rating}</dd></div>
-        ${base ? `<div><dt>Trump approval in state</dt><dd>${fmt(base.approve + cur.vpShift + apprShift)}</dd></div>` : ''}
+        ${base ? `<div><dt>Trump approval in state</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
       </dl>
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>
@@ -603,24 +597,6 @@
     const reset = document.getElementById('btn-reset');
     reset.hidden = locked === 4;
     reset.addEventListener('click', () => { picks.forEach(buildPick); schedule(); });
-    // The what-if approval slider.
-    const sl = document.getElementById('appr-slider');
-    if (sl) {
-      const today = N.approval.approve, out = document.getElementById('appr-out'), back = document.getElementById('appr-reset');
-      sl.min = Math.floor(today - 15); sl.max = Math.ceil(today + 15); sl.value = today.toFixed(1);
-      document.getElementById('appr-min').textContent = fmt(+sl.min, 0); document.getElementById('appr-max').textContent = fmt(+sl.max, 0);
-      const label = () => {
-        out.innerHTML = apprShift
-          ? `Set to <b>${fmt(today + apprShift)}</b>, ${apprShift > 0 ? 'up' : 'down'} ${Math.abs(apprShift).toFixed(1)} points from today's ${fmt(today)} in every state. The Democrat would win <b>${Math.round(100 * cur.pDemWin)} in 100</b>. Only the approval and economy model reads approval, so the polls model stays where it is.`
-          : `Today's national average is ${fmt(today)}. Drag to see what the Nowcast would say at a different level.`;
-        back.hidden = !apprShift;
-      };
-      let wait = null;
-      const go = () => { clearTimeout(wait); wait = setTimeout(() => { runScenario(); label(); }, 150); };
-      sl.addEventListener('input', () => { apprShift = Math.round((+sl.value - today) * 10) / 10; go(); });
-      back.addEventListener('click', () => { sl.value = today.toFixed(1); apprShift = 0; go(); });
-      label();
-    }
     const t = N.tickets, set = ['dem', 'rep'].filter(s => t[s] && t[s].president).length;
     document.getElementById('need-tickets').textContent = set ? `Confirmed: ${set === 2 ? 'both nominees' : 'one nominee'}` : 'Watching, none yet';
     document.getElementById('need-vp').textContent = N.vp.applied ? `On, ${sgn(N.vp.gap, 1)} pts` : N.vp.gap != null ? `Standing by, ${sgn(N.vp.gap, 1)} pts` : 'No recent polls of the vice president';
