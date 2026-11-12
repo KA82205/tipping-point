@@ -324,3 +324,8 @@ svg.usmap text.lbl.big { font-size: 13px; }
 .board .chips button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .board .none { color: var(--faint); font-size: 12px; }
 @media (max-width: 980px) { .board { grid-template-columns: repeat(2, 1fr); } }
+
+/* What-if approval slider */
+.whatif { display: grid; gap: 8px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.whatif input[type=range] { width: 100%; accent-color: var(--accent); }
+.whatif .scale { display: flex; justify-content: space-between; font: 12px/1 var(--font-mono); color: var(--faint); }
