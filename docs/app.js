@@ -158,13 +158,13 @@
   const MODELS = [['enns', 'Approval and economy', 'Enns, Colner, Kumar and Lagodny'], ['desart', 'Long-range polls', 'DeSart'], ['keys', 'Five objective keys', 'Lichtman']];
   function ensemble(el, m) {
     const card = (cls, name, by, x) => `<div class="ens ${cls}"><span class="nm">${name}</span><span class="by">${by}</span>
-      <span class="odds"><b>${Math.round(100 * x.pDemWin)}</b> in 100 for the Democrat</span><span class="split" aria-hidden="true"><i style="width:${(100 * x.pDemWin).toFixed(1)}%"></i></span>
+      <span class="odds"><b>${Math.round(100 * x.pDemWin)}</b> in 100 ${cls === 'm-keys' ? 'to win the national vote' : 'for the Democrat'}</span><span class="split" aria-hidden="true"><i style="width:${(100 * x.pDemWin).toFixed(1)}%"></i></span>
       <span class="vote">${fmt(x.demPopular)} of the two-party vote</span></div>`;
     const have = MODELS.filter(([k]) => m[k]);
     el.style.setProperty('--cols', have.length > 1 ? Array(have.length + 1).fill('minmax(0, 1fr)').join(' auto ') : 'minmax(0, 1fr)');
     el.innerHTML = have.length > 1
       ? have.map(([k, name, by]) => card('m-' + k, name, by, m[k])).join('<span class="op" aria-hidden="true">+</span>') + '<span class="op" aria-hidden="true">=</span>' +
-        card('now', 'The Nowcast', 'Their average, state by state', m.now)
+        card('now', 'The Nowcast', m.keys && m.desart ? 'States from the first two, national level from all three' : 'Their average, state by state', m.now)
       : card('now', 'The Nowcast', 'The approval and economy model alone today', m.now);
   }
   // The light at the top of the page leans toward whoever is ahead.
@@ -426,7 +426,7 @@
     document.getElementById('waffle-cap').textContent = `Out of 100 simulated elections held today, the Democrat wins ${nD} and the Republican wins ${100 - nD - nT}${nT ? `, with ${nT} tied` : ''}. A simulation is one possible outcome given how far off the models have been in the past.`;
     const mo = document.getElementById('models-28');
     if (mo) mo.innerHTML = s.desart
-      ? `Each state's number is the average of the ${s.keys && s.desart ? 'three' : 'two'} models, and the whole map is then simulated together, so the Nowcast's odds are not simply the average of theirs. ${nomineesNote()} ${s.desart ? POLLS_NOTE(s.info) : ''} <a href="#method">How they work</a>`
+      ? `${s.keys ? 'The state map is the average of the approval and economy model and the polls model. The keys forecast no states, only a national vote, so they move every state by the same amount: a third of the way to their national number. ' : 'Each state\'s number is the average of the two models. '}The whole map is then simulated together, so the Nowcast's odds are not simply the average of the models' odds. ${nomineesNote()} ${s.desart ? POLLS_NOTE(s.info) : ''} <a href="#method">How they work</a>`
       : `Today's Nowcast is the approval and economy model on its own, because no head-to-head polls are available. <a href="#method">How it works</a>`;
     document.getElementById('figs-2028').innerHTML = [
       [fmt(s.demPopular), 'Democratic share of the two-party vote'],
@@ -461,9 +461,9 @@
           <div><dt>Economy data through</dt><dd>${monthName(N.economy.through)}</dd></div>
         </dl>
         <div class="strip">${strip({ f: cur.demPopular })}</div>
-        ${cur.desart || cur.keys ? modelTable([['Approval and economy', cur.enns.demPopular, cur.enns.pDemWin], ...(cur.desart ? [['Polls model', cur.desart.demPopular, cur.desart.pDemWin]] : []), ...(cur.keys ? [['Keys model', cur.keys.demPopular, cur.keys.pDemWin]] : []), ['Nowcast', cur.demPopular, cur.pDemWin, 'avg']], 'the election') : ''}
+        ${cur.desart || cur.keys ? modelTable([['Approval and economy', cur.enns.demPopular, cur.enns.pDemWin], ...(cur.desart ? [['Polls model', cur.desart.demPopular, cur.desart.pDemWin]] : []), ...(cur.keys ? [['Keys model, national vote only', cur.keys.demPopular, cur.keys.pDemWin]] : []), ['Nowcast', cur.demPopular, cur.pDemWin, 'avg']], 'the election') : ''}
         ${cur.info && cur.info.polls ? `<p class="hint">${POLLS_NOTE(cur.info)}</p>` : ''}
-        <p class="hint">Not the forecast. The Nowcast averages the two models state by state, so its odds are not the average of theirs. Hover a state for its numbers.</p>`;
+        <p class="hint">Not the forecast. The Nowcast simulates the models together, so its odds are not the average of theirs. Hover a state for its numbers.</p>`;
       return;
     }
     const r = byAbbr[a], base = N.scenario.states.find(x => x.abbr === a);

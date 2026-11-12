@@ -84,7 +84,9 @@
    * mix (optional, not in the paper): { weight, point: {abbr: share} }. Each state's share becomes
    *            weight x this model + (1 - weight) x another model's forecast, before the model error
    *            is added. Used to average in the head-to-head polls model (docs/combine.js).
-   *            weight 1 (the default) is this model alone, with the same random draws.
+   *            weight 1 (the default) is this model alone, with the same random draws. point may be left
+   *            out when weight is 1. shift (optional) is added to every state, in points: used to move the
+   *            whole map to a national level set partly by a model that gives no state forecasts.
    * model (optional): the fits to use (default MODEL); one per econVariant.
    * keep (optional): keep about this many of the simulated elections, evenly spaced, so the site can replay
    *            one or count only those where chosen states go a chosen way. Returned as draws:
@@ -113,7 +115,7 @@
     const z = new Float64Array(nB), bAll = new Float64Array(nB), b = new Float64Array(nV), share = new Float64Array(nS);
     const col = vars.map(v => model.vars.indexOf(v));
     const dIdx = districts.map(d => states.findIndex(s => s.abbr === d.parent));
-    const w = mix ? mix.weight : 1, other = states.map(s => mix ? mix.point[s.abbr] : 0);
+    const w = mix ? mix.weight : 1, other = states.map(s => mix && mix.point ? mix.point[s.abbr] : 0), shift = mix && mix.shift || 0;
     const every = keep > 0 ? Math.max(1, Math.floor(n * variants.length / keep)) : 0, nU = all.length;
     const kept = every ? { n: 0, units: all.map(s => s.abbr), shares: new Int16Array(variants.length * Math.ceil(n / every) * nU), ev: new Uint16Array(variants.length * Math.ceil(n / every)) } : null;
     // A share is stored in hundredths of a point; a rounded value never lands on the other side of 50.
@@ -136,7 +138,7 @@
           const row = X[i];
           let y = b0;
           for (let j = 0; j < nV; j++) y += b[j] * row[j];
-          y = w * y + (1 - w) * other[i] + shared + stateSd * normal(rand);
+          y = w * y + (1 - w) * other[i] + shift + shared + stateSd * normal(rand);
           share[i] = y;
           pop += y * (states[i].pop || 1);
           if (y > 50) { ev += states[i].ev; wins[states[i].abbr]++; }
@@ -158,7 +160,7 @@
     });
     const total = n * variants.length;
     const mid = model.variants[Math.floor(model.variants.length / 2)];
-    const point = Object.fromEntries(states.map((s, i) => [s.abbr, w * predict(s.inputs, mid, model) + (1 - w) * other[i]]));
+    const point = Object.fromEntries(states.map((s, i) => [s.abbr, w * predict(s.inputs, mid, model) + (1 - w) * other[i] + shift]));
     for (const d of districts) point[d.abbr] = point[d.parent] + d.offset;
     const byState = all.map(s => {
       const p = wins[s.abbr] / total;
