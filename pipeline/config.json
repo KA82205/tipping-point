@@ -71,9 +71,10 @@
     "_pollresults_note": "PollResults.org (NYT poll data, CC BY 4.0, non-commercial). Merged into the national average; its state polls feed state_source state_polls. If its format changes, the run logs a warning and continues with VoteHub only.",
     "nowcast_window_days": 30,
     "state_source": "csv",
+    "state_live_read": false,
     "state_prior_n": 1500,
     "state_poll_extra_days": 60,
-    "_state_source_note": "csv (used): state differences come from Civiqs's public Trump approval tracker (pipeline/civiqs.py), read once a day and written to pipeline/state_approval.csv (columns state,approve); the differences between states are kept and re-centered on the national poll average. state_csv_as_of dates the copy of that CSV kept in the repository, used only if a day's read fails and no cached copy exists. Other options: state_polls: vote_swing, pulled toward any state approval polls from the window plus 60 days. vote_swing: state = national + k * (Trump 2024 two-party share in state - national).",
+    "_state_source_note": "csv (used): state differences come from a copy of Civiqs's public Trump approval tracker kept in pipeline/state_approval.csv (columns state,approve), dated by state_csv_as_of; the differences between states are kept and re-centered on the national poll average. state_live_read: false = no daily request to Civiqs. Its site answers automatic reads with HTTP 403, so the copy stays fixed until Civiqs agrees to regular access; set true only then (pipeline/civiqs.py does the read). Other options: state_polls: vote_swing, pulled toward any state approval polls from the window plus 60 days. vote_swing: state = national + k * (Trump 2024 two-party share in state - national).",
     "vote_swing_k": 1.0,
     "state_csv_as_of": "2026-11-10"
   },

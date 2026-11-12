@@ -188,10 +188,13 @@ def main():
     # State-by-state approval from Civiqs's public tracker (CSV source)
     state_info = None
     if cfg["approval"].get("state_source") == "csv":
-        state_info = refresh_civiqs_state_approval(os.path.join(HERE, "state_approval.csv"),
-                                                   os.path.join(cache, "civiqs_state_approval.json") if cache else None,
-                                                   offline=bool(fx),
-                                                   fixture=fx_json("civiqs_state_approval.json") if fx else None)
+        if fx or cfg["approval"].get("state_live_read", False):
+            state_info = refresh_civiqs_state_approval(os.path.join(HERE, "state_approval.csv"),
+                                                       os.path.join(cache, "civiqs_state_approval.json") if cache else None,
+                                                       offline=bool(fx),
+                                                       fixture=fx_json("civiqs_state_approval.json") if fx else None)
+        else:   # no daily request: Civiqs's site turns automatic reads away (HTTP 403), so the dated copy
+            state_info = {"name": "Civiqs", "url": civiqs.URL, "as_of": None, "live": False}   # in the repository is used
         if not state_info["as_of"]:
             state_info["as_of"] = cfg["approval"].get("state_csv_as_of")
 
