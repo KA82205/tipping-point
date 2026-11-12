@@ -1,5 +1,5 @@
 {
-  "_comment": "Settings for the 2028 cycle. Values marked ASSUMPTION are not published in the paper; replace them once the replication data is in hand.",
+  "_comment": "Settings for the 2028 cycle. Values marked FROM REPLICATION come from the authors' replication files (Enns et al., doi:10.7910/DVN/PBGFOF); values marked ASSUMPTION are this site's own.",
 
   "election": {
     "year": 2028,
@@ -22,9 +22,9 @@
     "rep_vp_home": null,
     "dem_president_home_lag": "CA",
     "rep_president_home_lag": "FL",
-    "dem_president_home_lag_weight": 0.5,
-    "rep_president_home_lag_weight": 0.5,
-    "_home_lag_weight_note": "DEPARTURE from the paper, which always uses 1. Share of the previous nominees' home-state fade (-3.49) that is applied, the same for both parties. Set to 0.5 because the full fade looked too large in all three home states in 2024: Delaware (Biden, fade applied) came in 5.5 points more Democratic than the paper forecast, California showed no home boost for Harris, and Florida kept moving right with Trump already running from there in 2020. Set both to 1 to restore the paper's rule.",
+    "dem_president_home_lag_weight": 1,
+    "rep_president_home_lag_weight": 1,
+    "_home_lag_weight_note": "Share of the previous nominees' home-state fade that is applied. 1 = the model as fitted. The site used 0.5 until the replication files arrived; the refit on 1980-2024 (docs/engine.js) now learns the fade from the 2024 results (-3.07, down from -3.49), so halving it as well would count that evidence twice.",
     "primary_window_days": 120,
     "primary_min_pct": 3,
     "_primary_note": "Possible candidates in the ticket picker are ordered by their average in national 2028 primary polls (PollResults.org) over the last primary_window_days. Anyone at primary_min_pct or more who is not in candidates.json is added automatically."
@@ -43,16 +43,16 @@
   "economy": {
     "fred_series_template": "{state}PHCI",
     "delta": 0.55,
-    "delta_grid": [0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70],
-    "_delta_note": "ASSUMPTION: 0.55 is the paper's California illustration; the 2024 forecast used the median of the fitted 2008-2016 values, which is not published. Grid step is also an assumption.",
+    "delta_grid": [0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58],
+    "_delta_note": "FROM REPLICATION: 0.55, the median fitted weight for 2008-2016, simulated from 0.52 to 0.58 in steps of 0.01 (Figures1andA2_2024.do). One model fit per value; docs/engine.js holds the fits in this order.",
     "signed_by_incumbent_party": true,
-    "_signed_note": "ASSUMPTION: like approval, economic growth is multiplied by -1 under a Republican president so higher values always favor the Democrat.",
+    "_signed_note": "FROM REPLICATION: economic growth is multiplied by -1 under a Republican president (Figures1andA2_2024.do).",
     "dc_from": ["MD", "VA"]
   },
 
   "approval": {
-    "constant": 50,
-    "_constant_note": "ASSUMPTION: subtracted from state approval before signing. The paper fits this value but does not report it; Table A-3's range is consistent with roughly 50.",
+    "constant": 44,
+    "_constant_note": "FROM REPLICATION (inferred): the authors' data stores approval already centered, and the center is 44. Their approval surveys average 44.2% approve (ReadMe), the centered variable moves by whole points between forecast years, and comparing it with national approval in each election from 1980 to 2024 gives 43.6 +/- 0.6.",
     "national_source": "votehub",
     "votehub_url": "https://api.votehub.com/polls?poll_type=approval&subject=donald-trump",
     "votehub_fav_url": "https://api.votehub.com/polls?poll_type=favorability&subject={slug}",
