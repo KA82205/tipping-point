@@ -189,13 +189,16 @@
         <h3>Democratic ticket</h3>
         <div class="pick" data-role="dem-p"></div>
         <div class="pick" data-role="dem-vp"></div>
+        <div class="best" id="best-dem" hidden></div>
       </div>
       <div class="ticket rep">
         <h3>Republican ticket</h3>
         <div class="pick" data-role="rep-p"></div>
         <div class="pick" data-role="rep-vp"></div>
+        <div class="best" id="best-rep" hidden></div>
       </div>
     </div>
+    <p class="small" id="best-note" hidden>The strongest ticket is the pairing from the lists above that gives its party the best odds. The model only sees where a candidate is from, plus the sitting vice president's approval rating. It knows nothing else about them. Nominee and running mate must be from different states.</p>
     <ul class="effects" id="effects" aria-live="polite"></ul>
     <div class="btns" style="align-items:center"><button class="btn" id="btn-reset" type="button">Clear picks</button><p class="small" id="live-inputs"></p></div>
   </section>
@@ -255,7 +258,7 @@
         <h3>What updates on its own</h3>
         <div class="needs needs-1">
           <div><span class="s ok" id="need-econ">Daily</span><h3>State economies</h3><p>Philadelphia Fed coincident indexes via FRED, through June 2028.</p></div>
-          <div><span class="s ok">Daily</span><h3>Trump approval</h3><p>The national average updates every day. How far each state sits from it comes from G. Elliott Morris's state estimates, loaded November 11, 2026. That source updates about monthly, so state differences can lag. Civiqs or Morning Consult estimates will replace it if either grants permission.</p></div>
+          <div><span class="s ok">Daily</span><h3>Trump approval</h3><p>The national average updates every day. How far each state sits from it comes from G. Elliott Morris's state estimates, last updated by him on September 22, 2026, so state differences lag the national number. Civiqs or Morning Consult estimates will replace it if either grants permission.</p></div>
           <div><span class="s ok" id="need-tickets">Watching</span><h3>Nominees and home states</h3><p>Read from Wikipedia every morning. Each nominee and running mate locks in as soon as they are confirmed, and the home-state bonuses switch on.</p></div>
           <div><span class="s ok" id="need-cands">Daily</span><h3>Possible candidates</h3><p>Ordered by national 2028 primary polls from PollResults.org. Anyone new who polls at 3% or more is added.</p></div>
           <div><span class="s ok" id="need-vp">Daily</span><h3>Vice-president adjustment</h3><p>If the sitting vice president is a nominee, approval shifts by his net job approval minus the president's.</p></div>
@@ -302,7 +305,7 @@
   <section class="cols2">
     <div>
       <h2 style="margin-bottom:14px">Data behind the Nowcast</h2>
-      <p>State economies come from the Philadelphia Fed State Coincident Indexes via FRED. Trump's national approval is an average of public polls from VoteHub and PollResults.org. State-level approval estimates come from G. Elliott Morris's Trump Approval Explorer (<a href="https://projects.gelliottmorris.com/trump-approval/">projects.gelliottmorris.com/trump-approval</a>). That source updates about monthly, and the copy used here was loaded on November 11, 2026, so the gaps between states can be weeks old while the national level is current. It will be replaced by Civiqs or Morning Consult estimates if a data-sharing agreement is reached.</p>
+      <p>State economies come from the Philadelphia Fed State Coincident Indexes via FRED. Trump's national approval is an average of public polls from VoteHub and PollResults.org. State-level approval estimates come from G. Elliott Morris's Trump Approval Explorer (<a href="https://projects.gelliottmorris.com/trump-approval/">projects.gelliottmorris.com/trump-approval</a>). Those estimates were last updated on September 22, 2026, so the gaps between states are from then while the national level is current. It will be replaced by Civiqs or Morning Consult estimates if a data-sharing agreement is reached.</p>
       <p>Nominees, running mates and their home states are read from Wikipedia each morning. The vice-president adjustment uses job-approval polls of the vice president from VoteHub, or favorability when there are none, as the authors did for 1988. The list of possible candidates follows national 2028 primary polls from PollResults.org.</p>
       <p>The 2024 scorecard uses the paper's own published forecasts, untouched. The Nowcast differs from the paper in the ways listed below.</p>
     </div>
