@@ -442,10 +442,11 @@
     const has = r => p[r] && p[r].state;
     const pts = v => v.toFixed(1);
     if (!has('dem-p') && !has('rep-p')) out.push(`<b>No nominees chosen.</b> Each party's possible nominees are weighted by their polling, so the home-state effects are spread across the field. Pick candidates to test a ticket; they lock in automatically once confirmed.`);
-    if (has('dem-p')) out.push(`<b>Home state:</b> ${who('dem-p')} adds about 2.5 points for the Democrat in ${byAbbr[p['dem-p'].state].name}, in both models.`);
-    if (has('rep-p')) out.push(`<b>Home state:</b> ${who('rep-p')} adds about 2.5 points for the Republican in ${byAbbr[p['rep-p'].state].name}, in both models.`);
-    if (has('dem-vp')) out.push(`<b>Running mate:</b> ${who('dem-vp')} adds about 1.9 points for the Democrat in ${byAbbr[p['dem-vp'].state].name} in the approval and economy model. The polls model has no running-mate effect.`);
-    if (has('rep-vp')) out.push(`<b>Running mate:</b> ${who('rep-vp')} adds about 1.9 points for the Republican in ${byAbbr[p['rep-vp'].state].name} in the approval and economy model. The polls model has no running-mate effect.`);
+    const E = window.SPASE.coef, DH = window.TP.DESART.home, homePts = `${pts(E('home'))} points in the approval and economy model and ${pts(DH)} in the polls model`;
+    if (has('dem-p')) out.push(`<b>Home state:</b> ${who('dem-p')} adds ${homePts}, for the Democrat in ${byAbbr[p['dem-p'].state].name}.`);
+    if (has('rep-p')) out.push(`<b>Home state:</b> ${who('rep-p')} adds ${homePts}, for the Republican in ${byAbbr[p['rep-p'].state].name}.`);
+    if (has('dem-vp')) out.push(`<b>Running mate:</b> ${who('dem-vp')} adds about ${pts(E('vpHome'))} points for the Democrat in ${byAbbr[p['dem-vp'].state].name} in the approval and economy model. The polls model has no running-mate effect.`);
+    if (has('rep-vp')) out.push(`<b>Running mate:</b> ${who('rep-vp')} adds about ${pts(E('vpHome'))} points for the Republican in ${byAbbr[p['rep-vp'].state].name} in the approval and economy model. The polls model has no running-mate effect.`);
     if (has('dem-p') && has('rep-p') && p['dem-p'].state === p['rep-p'].state) out.push(`Both nominees are from ${byAbbr[p['dem-p'].state].name}, so their home-state bonuses cancel out.`);
     if (info.polls) {
       const q = info.polls, share = fmt(q.avg), d = has('dem-p') && p['dem-p'].name, r = has('rep-p') && p['rep-p'].name;
@@ -457,7 +458,7 @@
         : `the Democrat gets ${share} of the two-party vote on average across all ${q.n} national head-to-head polls from the last ${h.days} days.${short}`));
     } else out.push(`<b>Head-to-head polls:</b> none are available today, so the Nowcast is the approval and economy model on its own.`);
     const lw = N.scenario.homeLagWeight || { dem: 1, rep: 1 };
-    out.push(`<b>2024 home states fade:</b> Harris's California and Trump's Florida give back part of their 2024 boost, whether or not they run again: about ${pts(3.49 * lw.dem)} points in the approval and economy model${cur.desart ? ' and 2.5 in the polls model' : ''}.`);
+    out.push(`<b>2024 home states fade:</b> Harris's California and Trump's Florida give back part of their 2024 boost, whether or not they run again: about ${pts(-E('homeLag') * lw.dem)} points in the approval and economy model${cur.desart ? ` and ${pts(DH)} in the polls model` : ''}.`);
     const net = N.vp.kind === 'favorability' ? 'net favorability' : 'net approval';
     if (N.vp.gap == null) out.push(`<b>Vice-president adjustment:</b> there are no recent polls of ${esc(N.sitting_vp)} to measure it.`);
     else if (cur.vpNom) out.push(`<b>Vice-president adjustment on:</b> ${esc(N.sitting_vp)} is the sitting vice president, so state approval shifts by ${sgn(N.vp.gap, 1)} points, his ${net} minus Trump's (${esc(N.vp.basis)}).`);
@@ -538,7 +539,7 @@
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>
       ${s.desart != null ? modelTable([['Approval and economy', s.enns, s.ennsP], ['Head-to-head polls', s.desart, s.desartP], ['Nowcast', s.demShare, s.pDem, 'avg']], 'the state') : ''}
-      ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models assume the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here fades, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(3.49 * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the approval and economy model${s.desart != null ? ', 2.5 in the polls model' : ''}. See Method.</p>` : ''}`;
+      ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models take back part of the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(-window.SPASE.coef('homeLag') * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the approval and economy model${s.desart != null ? `, ${window.TP.DESART.home.toFixed(1)} in the polls model` : ''}.</p>` : ''}`;
   }
   function fill28(a) {
     if (layer28 === 'lean') return shareColor(50 + (byAbbr[a].share - 100 * NAT.dem / (NAT.dem + NAT.rep)));
