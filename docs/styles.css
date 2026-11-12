@@ -250,6 +250,8 @@ footer p { max-width: none; margin: 4px 0; }
 .pick select:focus, .pick input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .pick .custom { display: grid; grid-template-columns: 1fr 96px; gap: 8px; }
 .pick .hint { font-size: 12px; color: var(--faint); }
+.models { max-width: 78ch; }
+.models b { color: var(--ink); font-weight: 500; }
 .best { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 6px; justify-items: start; }
 .best .lab { font-size: 13px; color: var(--muted); }
 .best .who { font-size: 16px; color: var(--ink); }
