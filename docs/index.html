@@ -34,7 +34,7 @@
   <section class="hero">
     <div class="stack" style="gap:20px">
       <h1>Presidential forecasts from the fundamentals, published 100 days out.</h1>
-      <p class="lede">A personal project built on Peter K. Enns's State Presidential Approval/State Economy Model. It reads state-level approval of the president, each state's economy and its voting history, with no horse-race polls. In 2024 the model put all 56 states and districts on the right side, from data collected in July.</p>
+      <p class="lede">A personal project. The 2028 Nowcast is an ensemble of two published models: the State Presidential Approval/State Economy Model by Peter K. Enns and colleagues, which reads state approval of the president, state economies and voting history, and Jay DeSart's long-range model, which reads early head-to-head polls. In 2024 the Enns model put all 56 states and districts on the right side, from data collected in July.</p>
       <div class="btns">
         <a class="btn primary" href="#nowcast">See the 2028 Nowcast</a>
         <a class="btn" href="#results-2024">Open the 2024 scorecard</a>
@@ -78,7 +78,7 @@
         <p>The idea: presidential elections are largely decided by fundamentals that are knowable months ahead. The authors publish their forecast about 100 days before Election Day. The name comes from the state that decides the Electoral College, and the logo is that idea drawn as districts on a balance beam.</p>
       </div>
       <div class="stack">
-        <p><strong>The 2024 scorecard</strong> compares the authors' published July 2024 forecast with the certified results, state by state. The forecast numbers are read from the paper's own charts.</p>
+        <p><strong>The 2024 scorecard</strong> compares the authors' published July 2024 forecast with the certified results, state by state. The forecast numbers are recomputed from the authors' replication files.</p>
         <p><strong>The 2028 Nowcast</strong> runs that model every morning on the latest Trump approval polls and state economic data, runs DeSart's model on the latest head-to-head polls, and averages the two. You can pick who you think will be on each ticket. It shows what the models say if the election were held today. It is not the forecast, which needs the nominees and June–July 2028 surveys and is due July 30, 2028.</p>
         <p class="small">Everything updates automatically: polls, state economies, and the nominees, running mates and home states once the conventions pick them. Data: FRED (Philadelphia Fed state coincident indexes), VoteHub and PollResults.org (poll data, CC BY 4.0), Wikipedia, certified 2024 returns.</p>
       </div>
@@ -201,13 +201,6 @@
     </div>
     <p class="small" id="best-note" hidden>The strongest ticket is the possible nominee who does best in the Nowcast, paired with the running mate whose home state helps most. Only nominees with at least five recent head-to-head polls are compared, and the two must be from different states. Polls this far from an election can change a lot.</p>
     <ul class="effects" id="effects" aria-live="polite"></ul>
-    <div class="whatif">
-      <label for="appr-slider"><b>What if Trump's approval were different?</b></label>
-      <input type="range" id="appr-slider" min="20" max="55" step="0.1" aria-describedby="appr-out">
-      <div class="scale"><span id="appr-min"></span><span id="appr-max"></span></div>
-      <p class="small" id="appr-out" aria-live="polite"></p>
-      <div><button class="btn" id="appr-reset" type="button" hidden>Back to today's approval</button></div>
-    </div>
     <div class="btns" style="align-items:center"><button class="btn" id="btn-reset" type="button">Clear picks</button><p class="small" id="live-inputs"></p></div>
   </section>
 
