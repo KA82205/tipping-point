@@ -32,43 +32,45 @@ sys.path.insert(0, HERE)
 import urllib.request
 
 import approval  # noqa: E402
+import civiqs  # noqa: E402
 import candidates  # noqa: E402
 import economy  # noqa: E402
 
 
-def refresh_morris_state_approval(csv_path):
-    """Fetch the latest state-level Trump approval estimates from G. Elliott Morris's
-    Trump Approval Explorer (projects.gelliottmorris.com/trump-approval) and write them
-    to state_approval.csv.  Falls back silently if the fetch fails so that the previous
-    CSV is kept.  Returns True on success."""
+def refresh_civiqs_state_approval(csv_path, cache_path, offline=False, fixture=None):
+    """State approval from Civiqs's public tracker (pipeline/civiqs.py), written to state_approval.csv.
+    If today's read fails, the last good read (pipeline/cache) is used, and failing that the CSV in the
+    repository, so the run never stops for this. Returns {"name", "url", "as_of", "live"}."""
+    import csv as _csv
+    data, live = None, False
     try:
-        url = "https://projects.gelliottmorris.com/trump-approval/assets/index-BHx_LEl6.js"
-        req = urllib.request.Request(url, headers={"User-Agent": "tipping-point-forecast/1.0"})
-        with urllib.request.urlopen(req, timeout=20) as r:
-            js = r.read().decode("utf-8", errors="replace")
-        # Extract abbrev/approval pairs: abbrev:"AK",approval:40.3
-        pairs = re.findall(r'abbrev:"([A-Z]{2})",approval:([0-9]+(?:\.[0-9]+)?)', js)
-        if len(pairs) < 40:
-            print(f"WARNING: Morris data fetch only returned {len(pairs)} states; keeping previous CSV")
-            return False
-        import csv as _csv
-        state_map = {abbr: float(appr) for abbr, appr in pairs}
-        if "DC" not in state_map:
-            # Not in the source. Keep the value already in the CSV (an assumed 15.0 to begin with).
-            state_map["DC"] = 15.0
-            if os.path.exists(csv_path):
-                for row in _csv.DictReader(open(csv_path)):
-                    if row.get("state") == "DC":
-                        state_map["DC"] = float(row["approve"])
+        if offline:           # a test run: the saved fixture, never the network
+            data = fixture
+        else:
+            data, live = civiqs.parse(civiqs.fetch()), True
+        if live:
+            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+            json.dump(data, open(cache_path, "w"))
+            print(f"Civiqs state approval read: 50 states through {data['as_of']}")
+    except Exception as e:
+        print(f"WARNING: Civiqs state approval not read today ({e}); using the last good copy")
+        if cache_path and os.path.exists(cache_path):
+            data = json.load(open(cache_path))
+    info = {"name": "Civiqs", "url": civiqs.URL, "as_of": None, "live": live}
+    if data:
+        rows = {st: v["approve"] for st, v in data["states"].items()}
+        # DC is not in the tracker: assumed 24 points below the average of the 50 states.
+        rows["DC"] = round(sum(rows.values()) / len(rows) - 24.0, 2)
         with open(csv_path, "w", newline="") as f:
             w = _csv.writer(f)
             w.writerow(["state", "approve"])
-            for st in sorted(state_map):
-                w.writerow([st, state_map[st]])
-        print(f"Morris state approval updated: {len(state_map)} states written to {os.path.basename(csv_path)}")
-        return True
-    except Exception as e:
-        print(f"WARNING: Morris state approval refresh failed ({e}); keeping previous CSV")
+            for st in sorted(rows):
+                w.writerow([st, rows[st]])
+        info["as_of"] = data.get("as_of") or None
+    else:   # the CSV kept in the repository: a Civiqs snapshot, dated in config.json
+        info["as_of"] = None
+    return info
+
 
 DISTRICTS = {"ME1": "ME", "ME2": "ME", "NE1": "NE", "NE2": "NE", "NE3": "NE"}
 
@@ -183,10 +185,15 @@ def main():
         json.dump({"results": pr_raw}, open(os.path.join(cache, "pollresults.json"), "w"))
         json.dump({"results": pres_raw}, open(os.path.join(cache, "pollresults_president.json"), "w"))
 
-    # Refresh Morris state-level approval estimates (CSV source)
+    # State-by-state approval from Civiqs's public tracker (CSV source)
+    state_info = None
     if cfg["approval"].get("state_source") == "csv":
-        csv_path = os.path.join(HERE, "state_approval.csv")
-        refresh_morris_state_approval(csv_path)
+        state_info = refresh_civiqs_state_approval(os.path.join(HERE, "state_approval.csv"),
+                                                   os.path.join(cache, "civiqs_state_approval.json") if cache else None,
+                                                   offline=bool(fx),
+                                                   fixture=fx_json("civiqs_state_approval.json") if fx else None)
+        if not state_info["as_of"]:
+            state_info["as_of"] = cfg["approval"].get("state_csv_as_of")
 
     # Economy and approval
     econ, econ_last, _ = economy.build_economy(cfg, None if fx else key, cache, fetch=fred)
@@ -269,7 +276,7 @@ def main():
         "approval": {"approve": round(nat["approve"], 1), "disapprove": round(nat["disapprove"], 1),
                      "window": [w_lo.isoformat(), w_hi.isoformat()], "pollsters": nat["pollsters"],
                      "polls": nat["polls"][:25], "state_source": cfg["approval"]["state_source"],
-                     "state_polls_used": state_used},
+                     "state_data": state_info, "state_polls_used": state_used},
         "economy": {"through": econ_last, "delta": cfg["economy"]["delta"]},
         "tickets": tickets,
         "sitting_vp": sitting_vp,

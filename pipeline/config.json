@@ -73,8 +73,9 @@
     "state_source": "csv",
     "state_prior_n": 1500,
     "state_poll_extra_days": 60,
-    "_state_source_note": "state_polls (default): vote_swing, pulled toward any state approval polls from the window plus 60 days. vote_swing: state = national + k * (Trump 2024 two-party share in state - national). csv: read pipeline/state_approval.csv (columns state,approve) from Civiqs, Morning Consult or your own MRP; the CSV's state differences are kept and re-centered on the national average.",
-    "vote_swing_k": 1.0
+    "_state_source_note": "csv (used): state differences come from Civiqs's public Trump approval tracker (pipeline/civiqs.py), read once a day and written to pipeline/state_approval.csv (columns state,approve); the differences between states are kept and re-centered on the national poll average. state_csv_as_of dates the copy of that CSV kept in the repository, used only if a day's read fails and no cached copy exists. Other options: state_polls: vote_swing, pulled toward any state approval polls from the window plus 60 days. vote_swing: state = national + k * (Trump 2024 two-party share in state - national).",
+    "vote_swing_k": 1.0,
+    "state_csv_as_of": "2026-11-10"
   },
   "head_to_head": {
     "_comment": "Second model: DeSart (2025), doi:10.1017/S1049096524000805. National head-to-head general-election polls between listed candidates, from PollResults.org.",
