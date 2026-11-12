@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261112h">
+<link rel="stylesheet" href="styles.css?v=20261112i">
 </head>
 <body>
 
@@ -243,7 +243,7 @@
         <p class="small" id="live-inputs"></p>
         <div class="needs needs-1">
           <div><span class="s ok" id="need-econ">Daily</span><h3>State economies</h3><p>Philadelphia Fed coincident indexes via FRED, through June 2028.</p></div>
-          <div><span class="s ok">Daily</span><h3>Trump approval</h3><p>The national average updates every day. How far each state sits from it comes from G. Elliott Morris's state estimates, last updated by him on September 22, 2026, so state differences lag the national number. Civiqs or Morning Consult estimates will replace it if either grants permission.</p></div>
+          <div><span class="s ok">Daily</span><h3>Trump approval</h3><p>The national average updates every day. How far each state sits from it comes from <a href="https://civiqs.com/results/approve_president_trump_2025">Civiqs's daily tracker of Trump's job approval</a> among registered voters, read each morning.</p></div>
           <div><span class="s ok" id="need-h2h">Daily</span><h3>Head-to-head polls</h3><p>National general-election polls between possible nominees, from PollResults.org, over the last 180 days. They feed the second model.</p></div>
           <div><span class="s ok" id="need-tickets">Watching</span><h3>Nominees and home states</h3><p>Read from Wikipedia every morning. Each nominee and running mate locks in as soon as they are confirmed, and the home-state bonuses switch on.</p></div>
           <div><span class="s ok" id="need-cands">Daily</span><h3>Possible candidates</h3><p>Ordered by national 2028 primary polls from PollResults.org. Anyone new who polls at 3% or more is added.</p></div>
@@ -381,7 +381,7 @@
   <section class="cols2">
     <div>
       <h2 style="margin-bottom:14px">Data behind the Nowcast</h2>
-      <p>State economies come from the Philadelphia Fed State Coincident Indexes via FRED. Trump's national approval is an average of public polls from VoteHub and PollResults.org. State-level approval estimates come from G. Elliott Morris's Trump Approval Explorer (<a href="https://projects.gelliottmorris.com/trump-approval/">projects.gelliottmorris.com/trump-approval</a>). Those estimates were last updated on September 22, 2026, so the gaps between states are from then while the national level is current. It will be replaced by Civiqs or Morning Consult estimates if a data-sharing agreement is reached.</p>
+      <p>State economies come from the Philadelphia Fed State Coincident Indexes via FRED. Trump's national approval is an average of public polls from VoteHub and PollResults.org. State-by-state approval comes from <a href="https://civiqs.com/results/approve_president_trump_2025">Civiqs's daily tracker of Trump's job approval</a> (registered voters, all 50 states), read once a day; only the differences between states are used.</p>
       <p>The 2024 back-test on the scorecard: DeSart's published state forecasts for 2024, from the file dated November 5, 2023 in his replication data (doi:10.7910/DVN/HZGLY9), averaged with the approval and economy forecast published in July 2024.</p>
       <p>Nominees, running mates and their home states are read from Wikipedia each morning. The vice-president adjustment uses job-approval polls of the vice president from VoteHub, or favorability when there are none, as the authors did for 1988. The list of possible candidates follows national 2028 primary polls from PollResults.org.</p>
       <p>Head-to-head polls are national general-election polls between two people on the candidate list, over the last 180 days. They come from the PollResults.org feed behind its <a href="https://pollresults.org/races/president-2028/">2028 presidential polls page</a>, which carries the New York Times poll data, and every record in it is read each morning. A poll that tests several pairings counts once for each. Left out: state polls, generic party ballots, questions that name a third candidate, and pairings with anyone not on the candidate list. VoteHub supplies the approval polls; it does not publish general-election pairings yet.</p>
@@ -412,7 +412,7 @@
     </div>
     <div>
       <h2 style="margin-bottom:14px">From other sources, or inferred</h2>
-      <p><b>State approval.</b> The authors estimate approval in each state themselves from national surveys, some of which cannot be shared. The Nowcast uses G. Elliott Morris's state estimates of September 22, 2026, shifted so they agree with today's national average. The District of Columbia is not in that source and is set to 15%.</p>
+      <p><b>State approval.</b> The authors estimate approval in each state themselves from national surveys, some of which cannot be shared. The Nowcast uses <a href="https://civiqs.com/results/approve_president_trump_2025">Civiqs's daily tracker of Trump's job approval</a> instead. Civiqs reports the share of registered voters who approve in each state. Its level runs a few points below the national poll average, so only its differences between states are kept: each state is set to today's national average plus that state's gap from the Civiqs average. The District of Columbia is not in that source and is assumed to sit 24 points below the average state.</p>
       <p><b>National approval.</b> An average of public polls from VoteHub and PollResults.org over the last 30 days: each pollster's latest poll, weighted by sample size and by age, with recent polls counting more. Internal and partisan polls are left out.</p>
       <p><b>Approval baseline: 44.</b> The model reads approval minus a baseline. The replication data stores approval with the baseline already taken off, without stating it, but it is 44. The authors' surveys average 44.2% approval, the stored values shift by whole points from one forecast year to the next, and comparing them with national approval in each election from 1980 to 2024 gives 43.6, give or take 0.6. The site used 50 before these files arrived, which overstated the Democrat's share in the approval and economy model by about 2 points.</p>
     </div>
@@ -458,12 +458,12 @@
 </footer>
 
 <script src="us-states.js"></script>
-<script src="backtest2024.js?v=20261112h"></script>
+<script src="backtest2024.js?v=20261112i"></script>
 <script src="data.js"></script>
 <script src="nowcast.js" onerror="void 0"></script>
 <script src="history.js" onerror="void 0"></script>
-<script src="engine.js?v=20261112h"></script>
-<script src="combine.js?v=20261112h"></script>
-<script src="app.js?v=20261112h"></script>
+<script src="engine.js?v=20261112i"></script>
+<script src="combine.js?v=20261112i"></script>
+<script src="app.js?v=20261112i"></script>
 </body>
 </html>

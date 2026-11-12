@@ -660,7 +660,7 @@
       setLayer28('official'); return;
     }
     document.getElementById('live-pill').textContent = `Live · updated ${niceDate(N.generated_at)}`;
-    document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> National approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])} · state-by-state differences from Morris's estimates of September 22, 2026 · state economies through ${monthName(N.economy.through)}.`;
+    document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> National approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])} · state-by-state differences from ${N.approval.state_data && N.approval.state_data.as_of ? `<a href="${N.approval.state_data.url}">Civiqs</a> through ${niceDate(N.approval.state_data.as_of)}` : 'Civiqs'} · state economies through ${monthName(N.economy.through)}.`;
     document.getElementById('btn-sim').addEventListener('click', runOne);
     document.getElementById('btn-calls').addEventListener('click', () => { callMode = !callMode; if (callMode && layer28 !== 'tracker') setLayer28('tracker'); else { stopSim(); refreshPlay(); } });
     // Jump links, with the section on screen marked.
