@@ -163,9 +163,11 @@
     const combined = sim(WEIGHT_ENNS, dPoint);
     if (!parts) return { combined, enns: null, desart: null, info };
     const enns = sim(1), desart = sim(0, dPoint);
-    const eBy = Object.fromEntries(enns.states.map(x => [x.abbr, x.demShare]));
-    const dBy = Object.fromEntries(desart.states.map(x => [x.abbr, x.demShare]));
-    combined.states.forEach(x => { x.enns = eBy[x.abbr]; x.desart = dBy[x.abbr]; });
+    const eBy = Object.fromEntries(enns.states.map(x => [x.abbr, x])), dBy = Object.fromEntries(desart.states.map(x => [x.abbr, x]));
+    combined.states.forEach(x => {
+      x.enns = eBy[x.abbr].demShare; x.desart = dBy[x.abbr].demShare;
+      x.ennsP = eBy[x.abbr].pDem; x.desartP = dBy[x.abbr].pDem;
+    });
     return { combined, enns, desart, info };
   }
 
