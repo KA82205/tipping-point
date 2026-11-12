@@ -1,10 +1,12 @@
 /*
- * The 2028 Nowcast: two published models, averaged state by state and simulated together.
+ * The 2028 Nowcast: three models, averaged state by state with equal weights and simulated together.
  *
  *   1. Enns, Colner, Kumar & Lagodny (2024): state approval and state economy (engine.js).
  *   2. DeSart (2025), "Long-Range State-Level 2024 Presidential Election Forecast",
  *      PS: Political Science & Politics 58(2), doi:10.1017/S1049096524000805:
  *      previous result, national head-to-head polls, home state, consecutive terms.
+ *   3. Lichtman's six objective Keys to the White House, counted and turned into a national vote
+ *      (pipeline/keys.py), spread to the states by shifting the 2024 results.
  *
  * The site (app.js) and the daily run (pipeline/run_forecast.js) both call run(),
  * so the published numbers and the ones in the browser are the same.
@@ -78,9 +80,6 @@
     return { simulations: n, pDemWin: demWins / n, pTie: ties / n, demPopular: popSum / n, evHistogram: evHist.map(c => c / n), states: byState };
   }
 
-  // The two models get equal weight in every state. Equal weights, because averaging forecasts from
-  // different methods usually beats any one of them, and two elections are too few to fit weights.
-  const WEIGHT_ENNS = 0.5;
 
   // Before the nominees are known, DeSart spreads each party's home-state effect over its possible
   // nominees. For his model the weights are how often each candidate appears in the head-to-head
@@ -118,9 +117,9 @@
   /*
    * N      the daily payload (window.NOWCAST)
    * picks  { dp, rp, dv, rv }: nominee and running mate per party as { name, state }, or null if not chosen
-   * Returns { combined, enns, desart, info }: the average and each model alone, all simulated the same way.
-   * desart is null when there are no head-to-head polls, and combined is then the approval and economy
-   * model alone. With parts: false only combined is run (faster). keep: how many of the combined
+   * Returns { combined, enns, desart, keys, info }: the average and each model alone, all simulated the same
+   * way. desart is null without head-to-head polls and keys is null when the keys are not scored; the average
+   * is then taken over the models that are available. With parts: false only combined is run (faster). keep: how many of the combined
    * simulations to keep draw by draw (see docs/engine.js), returned as combined.draws.
    */
   function run(N, picks = {}, { n = 10000, seed = 2028, forceVpShift = null, parts = true, keep = 0 } = {}) {
@@ -151,32 +150,47 @@
     // forecast comes from the polls model instead.
     const sim = (weight, point, kp = 0) => SPASE.simulate({ states, districts: S.districts, n, seed, econVariants: weight === 0 ? null : S.econVariants,
       mix: point ? { weight, point } : null, keep: kp });
-    const info = { vpNom, vpShift, vpWeight, fieldD, fieldR, polls: null };
-    const h = N.h2h;
-    if (!h || !h.polls || !h.polls.length || S.states.some(s => s.prior == null)) {
-      const enns = sim(1, null, keep);
-      return { combined: enns, enns, desart: null, info };
+    const info = { vpNom, vpShift, vpWeight, fieldD, fieldR, polls: null, keys: null };
+    const h = N.h2h, K = N.keys, priors = !S.states.some(s => s.prior == null);
+    let dPoint = null, kPoint = null;
+    if (priors && h && h.polls && h.polls.length) {
+      const sel = pickPolls(h, dp, rp);
+      const pollD = pollField(h.polls, S.candidates, 'd'), pollR = pollField(h.polls, S.candidates, 'r');
+      const hD = st => dp ? (dp.state === st ? 1 : 0) : fieldAt(pollD, st);
+      const hR = st => rp ? (rp.state === st ? 1 : 0) : fieldAt(pollR, st);
+      dPoint = Object.fromEntries(S.states.map(s => [s.abbr, desartPredict(s.prior, sel.avg,
+        hD(s.abbr) - hR(s.abbr) - (s.abbr === S.homeLag.dem ? 1 : 0) + (s.abbr === S.homeLag.rep ? 1 : 0), h.terms)]));
+      info.polls = { avg: sel.avg, n: sel.polls.length, basis: sel.basis, total: h.polls.length, pollD, pollR };
     }
-
-    const sel = pickPolls(h, dp, rp);
-    const pollD = pollField(h.polls, S.candidates, 'd'), pollR = pollField(h.polls, S.candidates, 'r');
-    const hD = st => dp ? (dp.state === st ? 1 : 0) : fieldAt(pollD, st);
-    const hR = st => rp ? (rp.state === st ? 1 : 0) : fieldAt(pollR, st);
-    const dPoint = Object.fromEntries(S.states.map(s => [s.abbr, desartPredict(s.prior, sel.avg,
-      hD(s.abbr) - hR(s.abbr) - (s.abbr === S.homeLag.dem ? 1 : 0) + (s.abbr === S.homeLag.rep ? 1 : 0), h.terms)]));
-    info.polls = { avg: sel.avg, n: sel.polls.length, basis: sel.basis, total: h.polls.length, pollD, pollR };
-    const combined = sim(WEIGHT_ENNS, dPoint, keep);
-    if (!parts) return { combined, enns: null, desart: null, info };
-    const enns = sim(1), desart = sim(0, dPoint);
-    const eBy = Object.fromEntries(enns.states.map(x => [x.abbr, x])), dBy = Object.fromEntries(desart.states.map(x => [x.abbr, x]));
+    // The keys give one national vote; each state moves from its 2024 result by the same amount.
+    if (priors && K && K.demNational != null) {
+      const shift = K.demNational - K.base;
+      kPoint = Object.fromEntries(S.states.map(s => [s.abbr, s.prior + shift]));
+      info.keys = { false: K.false, pending: K.pending, demNational: K.demNational };
+    }
+    const others = [dPoint, kPoint].filter(Boolean);
+    if (!others.length) {
+      const enns = sim(1, null, keep);
+      return { combined: enns, enns, desart: null, keys: null, info };
+    }
+    // Equal weights: the approval and economy model's share is 1/3 with both others (1/2 with one), and the
+    // rest is the average of the others.
+    const wE = 1 / (1 + others.length);
+    const otherPoint = Object.fromEntries(S.states.map(s => [s.abbr, others.reduce((a, p) => a + p[s.abbr], 0) / others.length]));
+    const combined = sim(wE, otherPoint, keep);
+    if (!parts) return { combined, enns: null, desart: null, keys: null, info };
+    const enns = sim(1), desart = dPoint ? sim(0, dPoint) : null, keys = kPoint ? sim(0, kPoint) : null;
+    const by = m => m && Object.fromEntries(m.states.map(x => [x.abbr, x]));
+    const eBy = by(enns), dBy = by(desart), kBy = by(keys);
     combined.states.forEach(x => {
-      x.enns = eBy[x.abbr].demShare; x.desart = dBy[x.abbr].demShare;
-      x.ennsP = eBy[x.abbr].pDem; x.desartP = dBy[x.abbr].pDem;
+      x.enns = eBy[x.abbr].demShare; x.ennsP = eBy[x.abbr].pDem;
+      if (dBy) { x.desart = dBy[x.abbr].demShare; x.desartP = dBy[x.abbr].pDem; }
+      if (kBy) { x.keys = kBy[x.abbr].demShare; x.keysP = kBy[x.abbr].pDem; }
     });
-    return { combined, enns, desart, info };
+    return { combined, enns, desart, keys, info };
   }
 
-  const api = { DESART, DESART_PAPER, WEIGHT_ENNS, desartPredict, desartSimulate, pickPolls, pollField, primaryField, run };
+  const api = { DESART, DESART_PAPER, desartPredict, desartSimulate, pickPolls, pollField, primaryField, run };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TP = api;
 })(typeof window !== 'undefined' ? window : globalThis);

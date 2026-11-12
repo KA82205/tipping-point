@@ -154,17 +154,18 @@
     const arm = el.querySelector('.bal-arm');
     setTimeout(() => { arm.style.transform = `rotate(${tiltOf(pDem - pRep).toFixed(2)}deg)`; }, 80);
   }
-  // The two models and their average, side by side. m: { enns, desart, now }, each { pDemWin, demPopular }.
+  // The models and their average, side by side. m: { enns, desart, keys, now }, each { pDemWin, demPopular } or null.
+  const MODELS = [['enns', 'Approval and economy', 'Enns, Colner, Kumar and Lagodny'], ['desart', 'Long-range polls', 'DeSart'], ['keys', 'Six objective keys', 'Lichtman']];
   function ensemble(el, m) {
     const card = (cls, name, by, x) => `<div class="ens ${cls}"><span class="nm">${name}</span><span class="by">${by}</span>
       <span class="odds"><b>${Math.round(100 * x.pDemWin)}</b> in 100 for the Democrat</span><span class="split" aria-hidden="true"><i style="width:${(100 * x.pDemWin).toFixed(1)}%"></i></span>
       <span class="vote">${fmt(x.demPopular)} of the two-party vote</span></div>`;
-    el.classList.toggle('one', !m.desart);
-    el.innerHTML = m.desart
-      ? card('a', 'Approval and economy model', 'Enns, Colner, Kumar and Lagodny', m.enns) + '<span class="op" aria-hidden="true">+</span>' +
-        card('b', 'Long-range polls model', 'DeSart', m.desart) + '<span class="op" aria-hidden="true">=</span>' +
+    const have = MODELS.filter(([k]) => m[k]);
+    el.style.setProperty('--cols', have.length > 1 ? Array(have.length + 1).fill('minmax(0, 1fr)').join(' auto ') : 'minmax(0, 1fr)');
+    el.innerHTML = have.length > 1
+      ? have.map(([k, name, by]) => card('m-' + k, name, by, m[k])).join('<span class="op" aria-hidden="true">+</span>') + '<span class="op" aria-hidden="true">=</span>' +
         card('now', 'The Nowcast', 'Their average, state by state', m.now)
-      : card('now', 'The Nowcast', 'The approval and economy model alone today, because no head-to-head polls are available', m.now);
+      : card('now', 'The Nowcast', 'The approval and economy model alone today', m.now);
   }
   // The light at the top of the page leans toward whoever is ahead.
   function setGlow(pDem, pRep) {
@@ -225,7 +226,8 @@
     if (N && !N.fixture_run) {
       const s = N.summary, M = N.models || {}, nD = Math.round(100 * s.pDemWin), nT = Math.round(100 * s.pTie), rep = (100 - nD - nT) / 100;
       balance(hb, views.today[0], '2028 Nowcast', s.pDemWin, rep, () => { location.hash = 'nowcast'; });
-      ensemble(document.getElementById('ens-home'), { enns: M.enns || s, desart: M.desart || null, now: s });
+      ensemble(document.getElementById('ens-home'), { enns: M.enns || s, desart: M.desart || null, keys: M.keys || null, now: s });
+      MODELS.forEach(([k]) => { const el = document.getElementById('odds-' + k); if (el && M[k]) el.textContent = Math.round(100 * M[k].pDemWin); });
       document.getElementById('hero-date').textContent = `Updated ${niceDate(N.generated_at)}. Not the forecast, which publishes July 30, 2028.`;
       setGlow(s.pDemWin, rep);
     } else {
@@ -369,94 +371,28 @@
   // A confirmed nominee or running mate, read from Wikipedia by the daily run. Confirmed names are locked.
   function official(role) { const [side, k] = TICKET_KEY[role]; const o = (N.tickets[side] || {})[k]; return o && o.name ? o : null; }
 
-  function buildPick(box) {
-    const role = box.dataset.role, [party, label] = ROLES[role], off = official(role);
-    box.classList.toggle('locked', !!off);
-    if (off) {
-      box.innerHTML = `<span class="lab">${label}</span><div class="lockrow"><b>${esc(off.name)}</b>${off.state ? `<span>${off.state}</span>` : ''}<span class="lock">Confirmed</span></div>`;
-      return;
-    }
-    const people = N.scenario.candidates.filter(c => c.party === party).slice().sort((a, b) => (b.primary || 0) - (a.primary || 0) || a.name.localeCompare(b.name));
-    const polled = role.endsWith('-p');
-    const opts = `<option value="">Not chosen yet</option><optgroup label="Possible candidates">` +
-      people.map(c => `<option value="${esc(c.name)}">${esc(c.name)} (${c.state})${polled && c.primary ? `, ${Math.round(c.primary)}% in primary polls` : ''}</option>`).join('') +
-      `</optgroup><option value="__custom">Someone else…</option>`;
-    box.innerHTML = `<label for="sel-${role}">${label}</label><select id="sel-${role}">${opts}</select>
-      <div class="custom" hidden><input id="nm-${role}" type="text" placeholder="Name" aria-label="${label} name"><select id="st-${role}" aria-label="${label} home state">${STATE_LIST.map(([a]) => `<option value="${a}">${a}</option>`).join('')}</select></div>`;
-    const sel = box.querySelector('select'), custom = box.querySelector('.custom');
-    sel.addEventListener('change', () => { custom.hidden = sel.value !== '__custom'; if (!custom.hidden) box.querySelector('input').focus(); schedule(); });
-    box.querySelector('input').addEventListener('input', () => schedule());
-    box.querySelector('#st-' + role).addEventListener('change', () => schedule());
+  function nomineesNote() {
+    const d = official('dem-p'), r = official('rep-p');
+    if (d && r) return `The nominees are confirmed: ${esc(d.name)} and ${esc(r.name)}.`;
+    return `Until the nominees are confirmed, each party's possible nominees are averaged by their standing in the polls${d || r ? `; ${esc((d || r).name)} is confirmed` : ''}.`;
   }
-
+  // Until a nominee or running mate is confirmed, each party's possible nominees are averaged by their polling.
   function readPick(role) {
     const off = official(role);
-    if (off) return { name: off.name, state: off.state, locked: true };
-    const v = document.getElementById('sel-' + role).value;
-    if (!v) return null;
-    if (v === '__custom') return { name: document.getElementById('nm-' + role).value.trim() || 'Your pick', state: document.getElementById('st-' + role).value };
-    const c = N.scenario.candidates.find(x => x.name === v);
-    return { name: c.name, state: c.state };
+    return off ? { name: off.name, state: off.state, locked: true } : null;
   }
 
   // Both models and their average, for a set of picks (docs/combine.js). n is draws per economic weighting.
   const pk = o => ({ dp: o['dem-p'] || null, rp: o['rep-p'] || null, dv: o['dem-vp'] || null, rv: o['rep-vp'] || null });
   const runModels = (o, n) => window.TP.run(N, pk(o), { n: n || 10000, keep: 14000 });
-  const runCombined = (o, n) => window.TP.run(N, pk(o), { n: n || 10000, parts: false }).combined;
   const lastName = n => n.replace(/ (Jr\.|Sr\.|II|III)$/, '').split(' ').pop();
-
-  // The strongest ticket on today's numbers, per party. The nominee is the one who does best in
-  // head-to-head polls (the only place the models can tell candidates apart, apart from home state);
-  // the running mate is the one whose home state helps most. Each side faces the other party's whole
-  // field. Runs once, in small steps, so the page stays responsive.
-  let bestStarted = false;
-  async function findStrongest() {
-    if (bestStarted) return;
-    bestStarted = true;
-    const h = N.h2h, min = h && h.min_polls || 3;
-    const sides = [['dem', 'D', 'Democrat', 'Republican', 'd'], ['rep', 'R', 'Republican', 'Democratic', 'r']].filter(([side]) => !official(side + '-p') && !official(side + '-vp'));
-    if (!sides.length || !h || !h.polls || !h.polls.length) return;
-    const pause = () => new Promise(r => setTimeout(r, 0));
-    const head = `<span class="lab">Strongest ticket on today's numbers</span>`;
-    sides.forEach(([side]) => { const el = document.getElementById('best-' + side); el.hidden = false; el.innerHTML = `${head}<p class="hint">Working it out…</p>`; });
-    document.getElementById('best-note').hidden = false;
-    await pause();
-    const base = runCombined({});
-    const open = new Set(base.states.filter(s => s.pDem > 0.02 && s.pDem < 0.98).map(s => s.abbr));
-    for (const [side, party, own, other, key] of sides) {
-      const el = document.getElementById('best-' + side);
-      const wins = r => side === 'dem' ? Math.round(100 * r.pDemWin) : 100 - Math.round(100 * r.pDemWin) - Math.round(100 * r.pTie);
-      const score = r => side === 'dem' ? r.pDemWin : 1 - r.pDemWin - r.pTie;
-      const people = N.scenario.candidates.filter(c => c.party === party);
-      const polled = people.map(c => ({ c, polls: h.polls.filter(p => p[key] === c.name) })).filter(x => x.polls.length >= min);
-      if (!polled.length) { el.innerHTML = `${head}<p class="hint">No possible ${own === 'Democrat' ? 'Democratic' : own} nominee has ${min} head-to-head polls in the last ${h.days} days yet.</p>`; continue; }
-      const ticket = (c, st) => { const o = {}; o[side + '-p'] = { name: c.name, state: c.state }; if (st) o[side + '-vp'] = { name: '', state: st }; return o; };
-      let top = null;
-      for (const x of polled) { const sc = score(runCombined(ticket(x.c), 2000)); if (!top || sc > top.sc) top = { ...x, sc }; await pause(); }
-      // Running mate: one candidate per competitive home state, tested with the nominee in place.
-      const mates = [...new Set(people.filter(c => c.name !== top.c.name && c.state !== top.c.state && open.has(c.state)).map(c => c.state))];
-      let mate = null;
-      for (const st of mates) { const sc = score(runCombined(ticket(top.c, st), 2000)); if (sc > top.sc && (!mate || sc > mate.sc)) mate = { st, sc }; await pause(); }
-      const mateNames = mate ? people.filter(c => c.state === mate.st && c.name !== top.c.name).sort((a, b) => (b.primary || 0) - (a.primary || 0)).map(c => c.name) : [];
-      const now = wins(runCombined(ticket(top.c, mate && mate.st))), was = wins(base);
-      const avg = top.polls.reduce((a, p) => a + p.share, 0) / top.polls.length, ownShare = side === 'dem' ? avg : 100 - avg;
-      el.innerHTML = `${head}
-        <p class="who"><b>${esc(top.c.name)}</b> (${top.c.state})${mate ? ` with <b>${mateNames.slice(0, 3).map(esc).join('</b> or <b>')}</b> (${mate.st})` : ''}</p>
-        <p class="hint">${own} wins ${now} in 100 against the ${other} field, compared with ${was} when both nominees are open. ${esc(lastName(top.c.name))} averages ${fmt(ownShare)} of the two-party vote in ${top.polls.length} head-to-head polls. ${polled.length > 1 ? `Of the ${polled.length} possible nominees with at least ${min} such polls, this one does best in the Nowcast as a whole, which also counts home states and the vice-president adjustment.` : `No other possible nominee has ${min} such polls yet.`}${mate ? ' The running mate is chosen for home state.' : ''}</p>
-        <button class="btn" type="button">Use this ticket</button>`;
-      el.querySelector('button').addEventListener('click', () => {
-        [[side + '-p', top.c.name], [side + '-vp', mateNames[0] || '']].forEach(([role, v]) => { const sel = document.getElementById('sel-' + role); if (!sel) return; sel.value = v; sel.dispatchEvent(new Event('change')); });
-      });
-      await pause();
-    }
-  }
 
   // The Nowcast: today's polls and state economies, with the chosen (or confirmed) tickets.
   function runScenario() {
     const picks = Object.fromEntries(Object.keys(ROLES).map(r => [r, readPick(r)]));
     const out = runModels(picks);
     cur = out.combined;
-    cur.enns = out.enns; cur.desart = out.desart; cur.info = out.info;
+    cur.enns = out.enns; cur.desart = out.desart; cur.keys = out.keys; cur.info = out.info;
     cur.picks = picks; cur.vpNom = out.info.vpNom; cur.vpShift = out.info.vpShift;
     cur.byAbbr = Object.fromEntries(cur.states.map(s => [s.abbr, s]));
     showResults();
@@ -467,38 +403,7 @@
     const out = ['hero-28', 'results-2028'].map(id => document.getElementById(id));
     out.forEach(el => el.classList.add('busy'));
     clearTimeout(timer);
-    timer = setTimeout(() => { runScenario(); out.forEach(el => el.classList.remove('busy')); setTimeout(findStrongest, 300); }, 60);
-  }
-
-  function effectsList() {
-    const p = cur.picks, out = [], info = cur.info, h = N.h2h;
-    const who = r => `${esc(p[r].name)} (${p[r].state})`;
-    const has = r => p[r] && p[r].state;
-    const pts = v => v.toFixed(1);
-    if (!has('dem-p') && !has('rep-p')) out.push(`<b>No nominees chosen.</b> Each party's possible nominees are weighted by their polling, so the home-state effects are spread across the field. Pick candidates to test a ticket; they lock in automatically once confirmed.`);
-    const E = window.SPASE.coef, DH = window.TP.DESART.home, homePts = `${pts(E('home'))} points in the approval and economy model and ${pts(DH)} in the polls model`;
-    if (has('dem-p')) out.push(`<b>Home state:</b> ${who('dem-p')} adds ${homePts}, for the Democrat in ${byAbbr[p['dem-p'].state].name}.`);
-    if (has('rep-p')) out.push(`<b>Home state:</b> ${who('rep-p')} adds ${homePts}, for the Republican in ${byAbbr[p['rep-p'].state].name}.`);
-    if (has('dem-vp')) out.push(`<b>Running mate:</b> ${who('dem-vp')} adds about ${pts(E('vpHome'))} points for the Democrat in ${byAbbr[p['dem-vp'].state].name} in the approval and economy model. The polls model has no running-mate effect.`);
-    if (has('rep-vp')) out.push(`<b>Running mate:</b> ${who('rep-vp')} adds about ${pts(E('vpHome'))} points for the Republican in ${byAbbr[p['rep-vp'].state].name} in the approval and economy model. The polls model has no running-mate effect.`);
-    if (has('dem-p') && has('rep-p') && p['dem-p'].state === p['rep-p'].state) out.push(`Both nominees are from ${byAbbr[p['dem-p'].state].name}, so their home-state bonuses cancel out.`);
-    if (info.polls) {
-      const q = info.polls, share = fmt(q.avg), d = has('dem-p') && p['dem-p'].name, r = has('rep-p') && p['rep-p'].name;
-      const short = (d || r) && q.basis === 'all' ? ` There are fewer than ${h.min_polls} polls of ${d && r ? 'these nominees' : esc(d || r)}, so all of them are used.` : '';
-      out.push(`<b>Head-to-head polls:</b> ` + (
-        q.basis === 'matchup' ? `the Democrat gets ${share} of the two-party vote on average in ${q.n} polls of ${esc(d)} against ${esc(r)}.`
-        : q.basis === 'either' ? `the Democrat gets ${share} of the two-party vote on average in the ${q.n} polls that test ${esc(d)} or ${esc(r)}. Fewer than ${h.min_polls} test them against each other.`
-        : q.basis === 'one' ? `the Democrat gets ${share} of the two-party vote on average in the ${q.n} polls that test ${esc(d || r)}.`
-        : `the Democrat gets ${share} of the two-party vote on average across all ${q.n} national head-to-head polls from the last ${h.days} days.${short}`) + ` ${SHRINK}`);
-    } else out.push(`<b>Head-to-head polls:</b> none are available today, so the Nowcast is the approval and economy model on its own.`);
-    const lw = N.scenario.homeLagWeight || { dem: 1, rep: 1 };
-    out.push(`<b>2024 home states fade:</b> Harris's California and Trump's Florida give back part of their 2024 boost, whether or not they run again: about ${pts(-E('homeLag') * lw.dem)} points in the approval and economy model${cur.desart ? ` and ${pts(DH)} in the polls model` : ''}.`);
-    const net = N.vp.kind === 'favorability' ? 'net favorability' : 'net approval';
-    if (N.vp.gap == null) out.push(`<b>Vice-president adjustment:</b> there are no recent polls of ${esc(N.sitting_vp)} to measure it.`);
-    else if (cur.vpNom) out.push(`<b>Vice-president adjustment on:</b> ${esc(N.sitting_vp)} is the sitting vice president, so state approval shifts by ${sgn(N.vp.gap, 1)} points, his ${net} minus Trump's (${esc(N.vp.basis)}).`);
-    else if (info.vpWeight > 0) out.push(`<b>Vice-president adjustment, in part:</b> ${esc(N.sitting_vp)} has ${Math.round(100 * info.vpWeight)}% of his party's primary polling, so that share of his ${sgn(N.vp.gap, 1)}-point adjustment is applied (${sgn(info.vpShift, 1)} points). It applies in full if he is the nominee and not at all if someone else is.`);
-    else out.push(`<b>Vice-president adjustment off:</b> it applies only if the sitting vice president, ${esc(N.sitting_vp)}, is the nominee.`);
-    document.getElementById('effects').innerHTML = out.map(x => `<li>${x}</li>`).join('');
+    timer = setTimeout(() => { runScenario(); out.forEach(el => el.classList.remove('busy')); }, 60);
   }
 
   function showResults() {
@@ -515,13 +420,13 @@
       document.getElementById('map-2028').scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center' });
     };
     balance(document.getElementById('bal-28'), items, '2028 Nowcast', s.pDemWin, rep, toMap);
-    ensemble(document.getElementById('ens-28'), { enns: s.enns || s, desart: s.desart, now: s });
+    ensemble(document.getElementById('ens-28'), { enns: s.enns || s, desart: s.desart, keys: s.keys, now: s });
     setGlow(s.pDemWin, rep);
     waffle(document.getElementById('waffle-28'), s.pDemWin, s.pTie);
     document.getElementById('waffle-cap').textContent = `Out of 100 simulated elections held today, the Democrat wins ${nD} and the Republican wins ${100 - nD - nT}${nT ? `, with ${nT} tied` : ''}. A simulation is one possible outcome given how far off the models have been in the past.`;
     const mo = document.getElementById('models-28');
     if (mo) mo.innerHTML = s.desart
-      ? `Each state's number is the average of the two models, and the whole map is then simulated together, so the Nowcast's odds are not simply the average of theirs. ${POLLS_NOTE(s.info)} <a href="#method">How they work</a>`
+      ? `Each state's number is the average of the ${s.keys && s.desart ? 'three' : 'two'} models, and the whole map is then simulated together, so the Nowcast's odds are not simply the average of theirs. ${nomineesNote()} ${s.desart ? POLLS_NOTE(s.info) : ''} <a href="#method">How they work</a>`
       : `Today's Nowcast is the approval and economy model on its own, because no head-to-head polls are available. <a href="#method">How it works</a>`;
     document.getElementById('figs-2028').innerHTML = [
       [fmt(s.demPopular), 'Democratic share of the two-party vote'],
@@ -530,11 +435,8 @@
     ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
     board(document.getElementById('board-28'), s.states, toMap);
     histogram(document.getElementById('hist-2028'), s.evHistogram);
-    const dp = s.picks['dem-p'], rp = s.picks['rep-p'];
-    document.querySelectorAll('#matchups button').forEach(b => b.classList.toggle('on', !!dp && !!rp && b.dataset.d === dp.name && b.dataset.r === rp.name));
     stopSim();
     refreshPlay();
-    effectsList();
   }
 
   function insp28(a) {
@@ -559,7 +461,7 @@
           <div><dt>Economy data through</dt><dd>${monthName(N.economy.through)}</dd></div>
         </dl>
         <div class="strip">${strip({ f: cur.demPopular })}</div>
-        ${cur.desart ? modelTable([['Approval and economy', cur.enns.demPopular, cur.enns.pDemWin], ['Polls model', cur.desart.demPopular, cur.desart.pDemWin], ['Nowcast', cur.demPopular, cur.pDemWin, 'avg']], 'the election') : ''}
+        ${cur.desart || cur.keys ? modelTable([['Approval and economy', cur.enns.demPopular, cur.enns.pDemWin], ...(cur.desart ? [['Polls model', cur.desart.demPopular, cur.desart.pDemWin]] : []), ...(cur.keys ? [['Keys model', cur.keys.demPopular, cur.keys.pDemWin]] : []), ['Nowcast', cur.demPopular, cur.pDemWin, 'avg']], 'the election') : ''}
         ${cur.info && cur.info.polls ? `<p class="hint">${POLLS_NOTE(cur.info)}</p>` : ''}
         <p class="hint">Not the forecast. The Nowcast averages the two models state by state, so its odds are not the average of theirs. Hover a state for its numbers.</p>`;
       return;
@@ -577,7 +479,7 @@
       </dl>
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>
-      ${s.desart != null ? modelTable([['Approval and economy', s.enns, s.ennsP], ['Polls model', s.desart, s.desartP], ['Nowcast', s.demShare, s.pDem, 'avg']], 'the state') : ''}
+      ${s.desart != null || s.keys != null ? modelTable([['Approval and economy', s.enns, s.ennsP], ...(s.desart != null ? [['Polls model', s.desart, s.desartP]] : []), ...(s.keys != null ? [['Keys model', s.keys, s.keysP]] : []), ['Nowcast', s.demShare, s.pDem, 'avg']], 'the state') : ''}
       ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models take back part of the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(-window.SPASE.coef('homeLag') * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the approval and economy model${s.desart != null ? `, ${window.TP.DESART.home.toFixed(1)} in the polls model` : ''}.</p>` : ''}
       ${cur.draws ? `<div class="callrow"><span>What if this one goes</span><button type="button" class="D" data-call="D" aria-pressed="${calls[a] === 'D'}">Democratic</button><button type="button" class="R" data-call="R" aria-pressed="${calls[a] === 'R'}">Republican</button></div>` : ''}`;
     el.querySelectorAll('[data-call]').forEach(b => b.addEventListener('click', () => setCall(a, calls[a] === b.dataset.call ? null : b.dataset.call)));
@@ -721,22 +623,12 @@
     document.querySelectorAll('[data-layer28]').forEach(b => b.addEventListener('click', () => setLayer28(b.dataset.layer28)));
     document.getElementById('btn-to-nowcast').addEventListener('click', () => setLayer28('tracker'));
     if (!N) {
-      ['hero-28', 'jump-28', 'builder', 'results-detail', 'tracker-detail', 'play-tools'].forEach(id => { document.getElementById(id).hidden = true; });
+      ['hero-28', 'jump-28', 'results-detail', 'tracker-detail', 'play-tools'].forEach(id => { document.getElementById(id).hidden = true; });
       document.getElementById('live-pill').textContent = 'Waiting for the first data run';
       setLayer28('official'); return;
     }
     document.getElementById('live-pill').textContent = `Live · updated ${niceDate(N.generated_at)}`;
-    document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> National approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])} · state-by-state differences from Morris's estimates of September 22, 2026 · state economies through ${monthName(N.economy.through)}. Only the tickets can be changed above.`;
-    const picks = [...document.querySelectorAll('.pick')];
-    picks.forEach(buildPick);
-    const locked = Object.keys(ROLES).filter(official).length;
-    document.getElementById('builder-h').textContent = locked === 4 ? 'The tickets are set' : 'Pick the tickets';
-    document.getElementById('builder-p').textContent = locked === 4
-      ? 'Both tickets are confirmed, so the Nowcast uses them and they can no longer be changed.'
-      : 'The nominees are not known yet, so each party\'s field is weighted by its polling. Choose who you think will be on each ticket to see what their home states and head-to-head polls do to the map. Each nominee and running mate locks in automatically once confirmed.';
-    const reset = document.getElementById('btn-reset');
-    reset.hidden = locked === 4;
-    reset.addEventListener('click', () => { picks.forEach(buildPick); schedule(); });
+    document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> National approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])} · state-by-state differences from Morris's estimates of September 22, 2026 · state economies through ${monthName(N.economy.through)}.`;
     document.getElementById('btn-sim').addEventListener('click', runOne);
     document.getElementById('btn-calls').addEventListener('click', () => { callMode = !callMode; if (callMode && layer28 !== 'tracker') setLayer28('tracker'); else { stopSim(); refreshPlay(); } });
     // Jump links, with the section on screen marked.
@@ -751,24 +643,13 @@
       }, { rootMargin: '-130px 0px -55% 0px' });
       jump.forEach(b => io.observe(document.getElementById(b.dataset.to)));
     }
-    // Head-to-head polls: a grid of the pairings polled (Democrats down the side, Republicans across the top), and the list.
-    const hp = (N.h2h && N.h2h.polls) || [], several = n => `${n} poll${n === 1 ? '' : 's'}`;
-    if (hp.length && !official('dem-p') && !official('rep-p')) {
-      const cell = {}, cnt = { d: {}, r: {} }, min = N.h2h.min_polls || 3;
-      hp.forEach(q => { (cell[q.d + '|' + q.r] = cell[q.d + '|' + q.r] || []).push(q.share); cnt.d[q.d] = (cnt.d[q.d] || 0) + 1; cnt.r[q.r] = (cnt.r[q.r] || 0) + 1; });
-      const most = o => Object.keys(o).sort((a, b) => o[b] - o[a]), ds = most(cnt.d), rs = most(cnt.r);
-      document.getElementById('matchups').innerHTML = `<table><thead><tr><th></th>${rs.map(r => `<th scope="col">${esc(r)}</th>`).join('')}</tr></thead><tbody>${ds.map(d => `<tr><th scope="row">${esc(d)}</th>${rs.map(r => {
-        const v = cell[d + '|' + r];
-        if (!v) return '<td class="empty">no polls</td>';
-        const avg = v.reduce((a, x) => a + x, 0) / v.length;
-        return `<td><button type="button" class="${v.length < min ? 'thin' : ''}" data-d="${esc(d)}" data-r="${esc(r)}" style="background:${winColor(avg)}" aria-label="${esc(d)} against ${esc(r)}: ${fmt(avg)} for the Democrat in ${several(v.length)}"><b>${fmt(avg)}</b><span>${several(v.length)}</span></button></td>`;
-      }).join('')}</tr>`).join('')}</tbody></table>`;
-      document.getElementById('matchups-note').textContent = `The Democrat's share of the two-party vote in national head-to-head polls from the last ${N.h2h.days} days. Choose a pairing to put both nominees on the tickets. Pairings with fewer than ${min} polls are faded: for those the polls model also uses the other polls of either nominee.`;
-      document.getElementById('matchups-wrap').hidden = false;
-      document.querySelectorAll('#matchups button').forEach(b => b.addEventListener('click', () => {
-        [['dem-p', b.dataset.d], ['rep-p', b.dataset.r]].forEach(([role, v]) => { const sel = document.getElementById('sel-' + role); if (!sel) return; sel.value = v; sel.dispatchEvent(new Event('change')); });
-      }));
-    }
+    const hp = (N.h2h && N.h2h.polls) || [];
+    // Lichtman's six objective keys, as scored today.
+    const KB = N.keys, kel = document.getElementById('keys-list');
+    if (KB && kel) {
+      kel.innerHTML = KB.keys.map(k => `<li class="${k.false === true ? 'f' : k.false === false ? 't' : 'p'}"><span class="st">${k.false === true ? 'False' : k.false === false ? 'True' : 'Not known yet'}</span><b>${k.n}. ${esc(k.name)}</b><p>${esc(k.why)}</p></li>`).join('');
+      document.getElementById('keys-sum').innerHTML = `A true key helps the party in the White House, now the Republicans; a false key hurts it. <b>${KB.false % 1 ? KB.false.toFixed(1) : KB.false} of 6 keys false</b>${KB.pending ? `, counting each of the ${KB.pending} not yet known as half false` : ''}. Since 1864 each false key has cost the party in the White House about ${Math.abs(KB.fit.b).toFixed(1)} points, which puts the Democrat at ${fmt(KB.demNational)} of the national vote in this model.`;
+    } else if (kel) document.getElementById('keys-wrap').hidden = true;
     const tb = document.getElementById('h2h-2028'), more = document.getElementById('h2h-more');
     const showPolls = all => {
       tb.innerHTML = (all ? hp : hp.slice(0, 10)).map(q => `<tr><td class="num">${q.date}</td><td>${esc(q.pollster)}</td><td class="mu">${esc(lastName(q.d))} vs. ${esc(lastName(q.r))}</td><td class="n"><span class="bar" aria-hidden="true"><i class="${q.share > 50 ? 'D' : 'R'}" style="width:${Math.min(50, Math.abs(q.share - 50) * 8).toFixed(1)}%"></i></span>${fmt(q.share)}</td></tr>`).join('');
