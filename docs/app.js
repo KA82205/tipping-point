@@ -361,25 +361,80 @@
     return { name: c.name, state: c.state };
   }
 
-  // The Nowcast: today's live approval and state economies, with the chosen (or confirmed) tickets.
-  function runScenario() {
+  // One run of the Nowcast for a set of home states: h = { dp, rp, dv, rv } (nominee and running-mate states).
+  function simTickets(h, vpShift, n) {
     const S = N.scenario, sign = S.sign, C = S.constant;
     const LAGW = S.homeLagWeight || { dem: 1, rep: 1 };
-    const picks = Object.fromEntries(Object.keys(ROLES).map(r => [r, readPick(r)]));
-    const vpNom = ['dem-p', 'rep-p'].find(r => picks[r] && norm(picks[r].name) === norm(N.sitting_vp));
-    const vpShift = vpNom && N.vp.gap != null ? N.vp.gap : 0;
     const code = (st, d, r) => (st && st === d ? 1 : 0) - (st && st === r ? 1 : 0);
-    const st = r => picks[r] && picks[r].state;
     const mid = S.econVariants[Math.floor(S.econVariants.length / 2)];
     const states = S.states.map(s => ({
       abbr: s.abbr, ev: s.ev, pop: s.pop,
       inputs: {
         lagDev: s.lagDev, approval: sign * (s.approve + vpShift - C), econ: mid[s.abbr],
-        home: code(s.abbr, st('dem-p'), st('rep-p')), homeLag: (s.abbr === S.homeLag.dem ? LAGW.dem : 0) - (s.abbr === S.homeLag.rep ? LAGW.rep : 0),
-        vpHome: code(s.abbr, st('dem-vp'), st('rep-vp')), anderson: 0, perot: 0,
+        home: code(s.abbr, h.dp, h.rp), homeLag: (s.abbr === S.homeLag.dem ? LAGW.dem : 0) - (s.abbr === S.homeLag.rep ? LAGW.rep : 0),
+        vpHome: code(s.abbr, h.dv, h.rv), anderson: 0, perot: 0,
       },
     }));
-    cur = window.SPASE.simulate({ states, districts: S.districts, n: 10000, seed: 2028, econVariants: S.econVariants });
+    return window.SPASE.simulate({ states, districts: S.districts, n, seed: 2028, econVariants: S.econVariants });
+  }
+
+  // The strongest ticket for the model, per party, from the listed candidates. The model sees only home
+  // states (and the sitting vice president's approval), so this searches those. Each side is tested against
+  // an opposing ticket with no home states. Runs once, in small steps, so the page stays responsive.
+  let bestStarted = false;
+  async function findStrongest() {
+    if (bestStarted) return;
+    bestStarted = true;
+    const pause = () => new Promise(r => setTimeout(r, 0));
+    const sides = [['dem', 'D', 'Democrat', 'Republican'], ['rep', 'R', 'Republican', 'Democratic']].filter(([side]) => !official(side + '-p') && !official(side + '-vp'));
+    if (!sides.length) return;
+    sides.forEach(([side]) => { const el = document.getElementById('best-' + side); el.hidden = false; el.innerHTML = `<span class="lab">Strongest ticket for the model</span><p class="hint">Working it out…</p>`; });
+    document.getElementById('best-note').hidden = false;
+    await pause();
+    const base = simTickets({}, 0, 10000);
+    const open = new Set(base.states.filter(s => s.pDem > 0.02 && s.pDem < 0.98).map(s => s.abbr));
+    for (const [side, party, own, other] of sides) {
+      const wins = r => side === 'dem' ? Math.round(100 * r.pDemWin) : 100 - Math.round(100 * r.pDemWin) - Math.round(100 * r.pTie);
+      const score = r => side === 'dem' ? r.pDemWin : 1 - r.pDemWin - r.pTie;
+      const people = N.scenario.candidates.filter(c => c.party === party).slice().sort((a, b) => (b.primary || 0) - (a.primary || 0) || a.name.localeCompare(b.name));
+      const isVp = c => N.vp.gap != null && norm(c.name) === norm(N.sitting_vp);
+      const group = (list, key) => { const m = new Map(); list.forEach(c => { const k = key(c); if (!m.has(k)) m.set(k, { state: c.state, shift: isVp(c) && k === 'vp' ? N.vp.gap : 0, names: [] }); m.get(k).names.push(c.name); }); return [...m.values()]; };
+      const noms = group(people, c => isVp(c) ? 'vp' : c.state).filter(o => o.shift || open.has(o.state));
+      const mates = group(people.filter(c => !isVp(c)), c => c.state).filter(o => open.has(o.state));
+      const run = (p, v, n) => simTickets(side === 'dem' ? { dp: p && p.state, dv: v && v.state } : { rp: p && p.state, rv: v && v.state }, p ? p.shift : 0, n);
+      const rank = async (opts, mk) => { const out = []; for (const o of opts) { out.push([score(mk(o)), o]); await pause(); } return out.sort((a, b) => b[0] - a[0]).slice(0, 3).map(x => x[1]); };
+      const topP = await rank(noms, o => run(o, null, 1000)), topV = await rank(mates, o => run(null, o, 1000));
+      const pairs = [];
+      for (const p of topP.length ? topP : [null]) for (const v of topV.length ? topV : [null]) {
+        if (p && v && p.state === v.state) continue;
+        pairs.push([score(run(p, v, 3000)), p, v]);
+        await pause();
+      }
+      pairs.sort((a, b) => b[0] - a[0]);
+      const el = document.getElementById('best-' + side), was = wins(base);
+      const [top, p, v] = pairs[0] || [0, null, null];
+      const full = p || v ? run(p, v, 10000) : base, now = wins(full);
+      if (now <= was) { el.innerHTML = `<span class="lab">Strongest ticket for the model</span><p class="hint">No listed candidate's home state improves on the ${was} in 100 the ${own} gets with no tickets chosen.</p>`; continue; }
+      const near = pairs.slice(1).filter(x => top - x[0] < 0.01).length;
+      const nm = o => `<b>${o.names.slice(0, 3).map(esc).join('</b> or <b>')}</b> (${o.state})`;
+      el.innerHTML = `<span class="lab">Strongest ticket for the model</span>
+        <p class="who">${p ? nm(p) : 'Any nominee'}${v ? ` with ${nm(v)}` : ''}</p>
+        <p class="hint">${own} wins ${now} in 100 against a ${other} ticket with no home states, up from ${was} with no tickets chosen.${near ? ` ${near} other pairing${near > 1 ? 's are' : ' is'} within a point.` : ''}</p>
+        <button class="btn" type="button">Use this ticket</button>`;
+      el.querySelector('button').addEventListener('click', () => {
+        [[side + '-p', p], [side + '-vp', v]].forEach(([role, o]) => { const sel = document.getElementById('sel-' + role); if (!sel) return; sel.value = o ? o.names[0] : ''; sel.dispatchEvent(new Event('change')); });
+      });
+      await pause();
+    }
+  }
+
+  // The Nowcast: today's live approval and state economies, with the chosen (or confirmed) tickets.
+  function runScenario() {
+    const picks = Object.fromEntries(Object.keys(ROLES).map(r => [r, readPick(r)]));
+    const vpNom = ['dem-p', 'rep-p'].find(r => picks[r] && norm(picks[r].name) === norm(N.sitting_vp));
+    const vpShift = vpNom && N.vp.gap != null ? N.vp.gap : 0;
+    const st = r => picks[r] && picks[r].state;
+    cur = simTickets({ dp: st('dem-p'), rp: st('rep-p'), dv: st('dem-vp'), rv: st('rep-vp') }, vpShift, 10000);
     cur.picks = picks; cur.vpNom = vpNom; cur.vpShift = vpShift;
     cur.byAbbr = Object.fromEntries(cur.states.map(s => [s.abbr, s]));
     showResults();
@@ -390,7 +445,7 @@
     const out = ['hero-28', 'results-2028'].map(id => document.getElementById(id));
     out.forEach(el => el.classList.add('busy'));
     clearTimeout(timer);
-    timer = setTimeout(() => { runScenario(); out.forEach(el => el.classList.remove('busy')); }, 60);
+    timer = setTimeout(() => { runScenario(); out.forEach(el => el.classList.remove('busy')); setTimeout(findStrongest, 300); }, 60);
   }
 
   function effectsList() {
@@ -519,7 +574,7 @@
       setLayer28('official'); return;
     }
     document.getElementById('live-pill').textContent = `Live · updated ${niceDate(N.generated_at)}`;
-    document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> National approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])} · state-by-state differences from Morris's estimates (updated about monthly) · state economies through ${monthName(N.economy.through)}. Only the tickets can be changed above.`;
+    document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> National approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])} · state-by-state differences from Morris's estimates of September 22, 2026 · state economies through ${monthName(N.economy.through)}. Only the tickets can be changed above.`;
     const picks = [...document.querySelectorAll('.pick')];
     picks.forEach(buildPick);
     const locked = Object.keys(ROLES).filter(official).length;
