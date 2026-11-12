@@ -12,8 +12,12 @@
 (function (root) {
   const SPASE = root.SPASE || require(require('path').join(__dirname, 'engine.js'));
 
-  // DeSart, Table 2 (1996-2020 estimates). se is the standard error of the estimate.
-  const DESART = { constant: -27.423, prior: 1.017, polls: 0.524, home: 2.544, terms: -0.988, se: 3.08 };
+  // DeSart, Table 2 (1996-2020 estimates, as published). se is the standard error of the estimate.
+  const DESART_PAPER = { constant: -27.423, prior: 1.017, polls: 0.524, home: 2.544, terms: -0.988, se: 3.08 };
+  // The model the Nowcast runs: the same regression refitted on 1996-2024 from DeSart's replication data
+  // (doi:10.7910/DVN/HZGLY9) with 2024 added (October 2023 poll average 49.53%, Harris CA, Trump FL), as he
+  // refits before each forecast. Refitting on 1996-2020 reproduces Table 2 exactly.
+  const DESART = { constant: -26.91544, prior: 1.00662, polls: 0.52232, home: 1.90685, terms: -0.9966, se: 2.93309 };
   const norm = s => (s || '').toLowerCase().replace(/[^a-z]/g, '');
 
   function mulberry32(seed) {
@@ -35,8 +39,8 @@
    * home   this election's home states (+ Democrat, - Republican) minus the previous election's
    * terms  consecutive terms the incumbent party has held the White House (+ Democrats, - Republicans)
    */
-  function desartPredict(prior, polls, home, terms) {
-    return DESART.constant + DESART.prior * prior + DESART.polls * polls + DESART.home * home + DESART.terms * terms;
+  function desartPredict(prior, polls, home, terms, c = DESART) {
+    return c.constant + c.prior * prior + c.polls * polls + c.home * home + c.terms * terms;
   }
 
   /*
@@ -47,7 +51,7 @@
    */
   function desartSimulate({ states, districts = [], polls, terms, n = 20000, seed = 2028 }) {
     const rand = mulberry32(seed), nS = states.length;
-    const point = states.map(s => desartPredict(s.prior, polls, s.home || 0, terms));
+    const point = states.map(s => desartPredict(s.prior, polls, s.home || 0, terms, DESART_PAPER));
     const dIdx = districts.map(d => states.findIndex(s => s.abbr === d.parent));
     const wins = new Float64Array(nS + districts.length), share = new Float64Array(nS);
     const evHist = new Array(539).fill(0);
@@ -56,7 +60,7 @@
     for (let it = 0; it < n; it++) {
       let ev = 0, pop = 0;
       for (let i = 0; i < nS; i++) {
-        const y = point[i] + DESART.se * normal(rand);
+        const y = point[i] + DESART_PAPER.se * normal(rand);
         share[i] = y;
         pop += y * (states[i].pop || 1);
         if (y > 50) { ev += states[i].ev; wins[i]++; }
@@ -171,7 +175,7 @@
     return { combined, enns, desart, info };
   }
 
-  const api = { DESART, WEIGHT_ENNS, desartPredict, desartSimulate, pickPolls, pollField, primaryField, run };
+  const api = { DESART, DESART_PAPER, WEIGHT_ENNS, desartPredict, desartSimulate, pickPolls, pollField, primaryField, run };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TP = api;
 })(typeof window !== 'undefined' ? window : globalThis);
