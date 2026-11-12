@@ -1,0 +1,205 @@
+{
+"as_of": "2026-11-10",
+"states": {
+"AL": {
+"approve": 42.84,
+"disapprove": 46.31
+},
+"AK": {
+"approve": 37.86,
+"disapprove": 54.49
+},
+"AZ": {
+"approve": 37.69,
+"disapprove": 56.44
+},
+"AR": {
+"approve": 49.14,
+"disapprove": 43.54
+},
+"CA": {
+"approve": 22.0,
+"disapprove": 72.95
+},
+"CO": {
+"approve": 27.9,
+"disapprove": 67.3
+},
+"CT": {
+"approve": 24.24,
+"disapprove": 69.49
+},
+"DE": {
+"approve": 28.88,
+"disapprove": 65.72
+},
+"FL": {
+"approve": 38.77,
+"disapprove": 55.15
+},
+"GA": {
+"approve": 33.11,
+"disapprove": 59.21
+},
+"HI": {
+"approve": 18.4,
+"disapprove": 77.13
+},
+"ID": {
+"approve": 45.23,
+"disapprove": 44.6
+},
+"IL": {
+"approve": 28.23,
+"disapprove": 66.4
+},
+"IN": {
+"approve": 41.63,
+"disapprove": 50.49
+},
+"IA": {
+"approve": 33.12,
+"disapprove": 55.53
+},
+"KS": {
+"approve": 44.09,
+"disapprove": 46.28
+},
+"KY": {
+"approve": 35.97,
+"disapprove": 52.72
+},
+"LA": {
+"approve": 39.96,
+"disapprove": 52.04
+},
+"ME": {
+"approve": 29.91,
+"disapprove": 62.33
+},
+"MD": {
+"approve": 19.29,
+"disapprove": 74.38
+},
+"MA": {
+"approve": 21.83,
+"disapprove": 73.28
+},
+"MI": {
+"approve": 32.88,
+"disapprove": 60.71
+},
+"MN": {
+"approve": 26.36,
+"disapprove": 64.58
+},
+"MS": {
+"approve": 40.8,
+"disapprove": 51.64
+},
+"MO": {
+"approve": 39.44,
+"disapprove": 53.17
+},
+"MT": {
+"approve": 43.96,
+"disapprove": 47.47
+},
+"NE": {
+"approve": 40.5,
+"disapprove": 51.25
+},
+"NV": {
+"approve": 33.72,
+"disapprove": 59.67
+},
+"NH": {
+"approve": 26.3,
+"disapprove": 65.09
+},
+"NJ": {
+"approve": 28.92,
+"disapprove": 65.95
+},
+"NM": {
+"approve": 30.9,
+"disapprove": 63.56
+},
+"NY": {
+"approve": 27.12,
+"disapprove": 67.43
+},
+"NC": {
+"approve": 35.53,
+"disapprove": 56.99
+},
+"ND": {
+"approve": 51.91,
+"disapprove": 40.67
+},
+"OH": {
+"approve": 34.81,
+"disapprove": 57.64
+},
+"OK": {
+"approve": 45.29,
+"disapprove": 45.32
+},
+"OR": {
+"approve": 26.33,
+"disapprove": 68.21
+},
+"PA": {
+"approve": 33.73,
+"disapprove": 58.69
+},
+"RI": {
+"approve": 24.47,
+"disapprove": 68.95
+},
+"SC": {
+"approve": 38.62,
+"disapprove": 53.2
+},
+"SD": {
+"approve": 45.1,
+"disapprove": 45.41
+},
+"TN": {
+"approve": 41.07,
+"disapprove": 50.59
+},
+"TX": {
+"approve": 35.79,
+"disapprove": 56.9
+},
+"UT": {
+"approve": 46.04,
+"disapprove": 45.12
+},
+"VT": {
+"approve": 19.27,
+"disapprove": 76.04
+},
+"VA": {
+"approve": 30.46,
+"disapprove": 63.76
+},
+"WA": {
+"approve": 24.03,
+"disapprove": 69.89
+},
+"WV": {
+"approve": 47.79,
+"disapprove": 41.37
+},
+"WI": {
+"approve": 33.64,
+"disapprove": 59.12
+},
+"WY": {
+"approve": 48.72,
+"disapprove": 38.35
+}
+}
+}
