@@ -248,6 +248,56 @@ def primary_standing(raw, start, end, iso):
     return out
 
 
+def general_matchups(raw, start, end, iso, registry):
+    """National general-election head-to-head polls between two listed candidates, from PollResults.org
+    records. One row per pairing a poll tested, as DeSart counts them. A pairing is skipped if it names
+    a third candidate, a generic "Democrat"/"Republican", or anyone not on the candidate list.
+    Returns ([{d, r, share, date, pollster}], skipped), newest first; share = Democratic two-party %."""
+    names = {}
+    for c in registry:
+        for n in [c["name"]] + list(c.get("aliases", [])):
+            names[(c["party"], _norm(n))] = c["name"]
+    rank = {"lv": 0, "rv": 1}
+    best, skipped = {}, 0
+    for res in raw or []:
+        if str(res.get("state") or "").upper() not in ("US", "USA", "NATIONAL", "") or res.get("internal"):
+            continue
+        try:
+            day = dt.date.fromisoformat(iso(res.get("endDate") or res.get("end_date")))
+        except ValueError:
+            continue
+        if not (start <= day <= end):
+            continue
+        for q in res.get("questions") or []:
+            if str(q.get("stage") or "").lower() != "general":
+                continue
+            side = {"D": [], "R": [], "other": []}
+            for a in q.get("answers") or []:
+                name = str(a.get("candidateName") or "").strip()
+                if not name or a.get("pct") is None or any(w in name.lower() for w in NOT_A_PERSON):
+                    continue
+                tag = str(a.get("party") or "").upper()[:1]
+                if tag in ("D", "R"):
+                    side[tag].append(a)
+                elif tag not in ("N", ""):      # a named independent or third-party candidate
+                    side["other"].append(a)
+            if len(side["D"]) != 1 or len(side["R"]) != 1 or side["other"]:
+                skipped += 1
+                continue
+            d, r = side["D"][0], side["R"][0]
+            dn, rn = names.get(("D", _norm(d["candidateName"]))), names.get(("R", _norm(r["candidateName"])))
+            tot = float(d["pct"]) + float(r["pct"])
+            if not dn or not rn or tot <= 0:
+                skipped += 1
+                continue
+            key = (str(res.get("pollster") or ""), day, dn, rn)
+            pop = rank.get(str(q.get("population") or "").lower(), 2)
+            if key not in best or pop < best[key][0]:   # one row per poll and pairing: likely voters first
+                best[key] = (pop, round(100 * float(d["pct"]) / tot, 2))
+    rows = [{"d": k[2], "r": k[3], "share": v[1], "date": k[1].isoformat(), "pollster": k[0]} for k, v in best.items()]
+    return sorted(rows, key=lambda x: (x["date"], x["pollster"], x["d"], x["r"]), reverse=True), skipped
+
+
 def merge_registry(registry, standing, fetch=None, min_pct=3.0, max_new=8, exclude=()):
     """Attach primary-poll standing to the candidate list, and add anyone polling at min_pct or
     more who is not on it yet (home state from their Wikipedia infobox; skipped if not found)."""
