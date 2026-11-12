@@ -181,6 +181,7 @@ def main():
         os.makedirs(cache, exist_ok=True)
         json.dump({"polls": polls}, open(os.path.join(cache, "votehub.json"), "w"))
         json.dump({"results": pr_raw}, open(os.path.join(cache, "pollresults.json"), "w"))
+        json.dump({"results": pres_raw}, open(os.path.join(cache, "pollresults_president.json"), "w"))
 
     # Refresh Morris state-level approval estimates (CSV source)
     if cfg["approval"].get("state_source") == "csv":
@@ -252,16 +253,13 @@ def main():
 
     states, districts, nat_dem, sign = build_inputs(cfg, econ, by_state, results, codes, vp_shift)
 
-    sim_in = {"states": states, "districts": districts,
-              "n_per_delta": cfg["simulation"]["n_per_delta"], "seed": cfg["simulation"]["seed"],
-              "econ_variants": [econ[d] for d in cfg["economy"]["delta_grid"]]}
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        json.dump(sim_in, f)
-    res = json.loads(subprocess.check_output(["node", os.path.join(HERE, "run_forecast.js"), f.name]))
-    os.unlink(f.name)
+    # National head-to-head polls between listed candidates, for the second model (DeSart 2025).
+    hh = cfg.get("head_to_head", {})
+    h_lo = today - dt.timedelta(days=hh.get("window_days", 180))
+    matchups, h_skipped = candidates.general_matchups(pres_raw, h_lo, today, approval._iso, registry)
+    terms = (1 if cfg["election"]["incumbent_party"] == "D" else -1) * cfg["election"].get("incumbent_party_terms", 1)
 
     by_abbr = {s["abbr"]: s for s in states}
-    dem_ev_point = sum(s["ev"] for s in res["states"] if s["demShare"] > 50)
     r4 = lambda x: round(x, 4)  # noqa: E731
     payload = {
         "generated_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
@@ -278,34 +276,57 @@ def main():
         "vp": {"gap": None if gap is None else round(gap, 2), "kind": gap_kind, "basis": gap_basis, "applied": applied,
                "raw_gap": None if gap_raw is None else round(gap_raw, 2), "polls": gap_polls, "weight": round(gap_weight, 2),
                "window": [g_lo.isoformat(), g_hi.isoformat()]},
-        "summary": {"pDemWin": res["pDemWin"], "pTie": res["pTie"], "demPopular": res["demPopular"],
-                    "demEvPoint": dem_ev_point, "simulations": res["simulations"]},
-        "evHistogram": [round(x, 5) for x in res["evHistogram"]],
-        "states": [{**s, "demShare": round(s["demShare"], 2), "pDem": round(s["pDem"], 4),
-                    "approve": round(by_abbr[s["abbr"]]["approve"], 1) if s["abbr"] in by_abbr else None,
-                    "econ": round(by_abbr[s["abbr"]]["inputs"]["econ"], 4) if s["abbr"] in by_abbr else None}
-                   for s in res["states"]],
-        # Everything the in-browser matchup builder needs to rerun the model.
+        "h2h": {"window": [h_lo.isoformat(), today.isoformat()], "days": hh.get("window_days", 180),
+                "min_polls": hh.get("min_polls", 3), "terms": terms, "polls": matchups, "skipped": h_skipped},
+        # Everything the in-browser ticket picker needs to rerun both models (docs/combine.js).
         "scenario": {
             "constant": cfg["approval"]["constant"], "sign": sign,
             "homeLag": {"dem": codes["dem_president_home_lag"], "rep": codes["rep_president_home_lag"]},
             "homeLagWeight": home_lag_weights(cfg),
             "states": [{"abbr": s["abbr"], "ev": s["ev"], "pop": s["pop"], "lagDev": r4(s["inputs"]["lagDev"]),
-                        "approve": r4(s["approve"])} for s in states],
+                        "approve": r4(s["approve"]), "prior": results[s["abbr"]]["share"]} for s in states],
             "econVariants": [{k: r4(v) for k, v in econ[d].items()} for d in cfg["economy"]["delta_grid"]],
             "districts": [{**d, "offset": r4(d["offset"])} for d in districts],
             "candidates": registry,
         },
     }
+
+    # Run both models on the payload with the same code the site uses, so the numbers agree.
+    def pick(role, side, key):
+        t = tickets[side].get(key) or {}
+        return {"name": t.get("name") or "", "state": codes[role]} if codes[role] else None
+    sim_in = {"N": payload, "n": cfg["simulation"]["n_per_delta"], "seed": cfg["simulation"]["seed"],
+              "picks": {"dp": pick("dem_president_home", "dem", "president"), "rp": pick("rep_president_home", "rep", "president"),
+                        "dv": pick("dem_vp_home", "dem", "vp"), "rv": pick("rep_vp_home", "rep", "vp")},
+              "force_vp_shift": gap if vpc.get("mode") == "manual" and gap is not None else None}
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(sim_in, f)
+    out = json.loads(subprocess.check_output(["node", os.path.join(HERE, "run_forecast.js"), f.name]))
+    os.unlink(f.name)
+    res = out["combined"]
+    dem_ev_point = sum(s["ev"] for s in res["states"] if s["demShare"] > 50)
+    brief = lambda m: m and {"pDemWin": round(m["pDemWin"], 4), "pTie": round(m["pTie"], 4),  # noqa: E731
+                             "demPopular": round(m["demPopular"], 2)}
+    payload["summary"] = {"pDemWin": res["pDemWin"], "pTie": res["pTie"], "demPopular": res["demPopular"],
+                          "demEvPoint": dem_ev_point, "simulations": res["simulations"]}
+    payload["models"] = {"enns": brief(out["enns"]), "desart": brief(out["desart"]),
+                         "polls": out["info"]["polls"] and {"avg": round(out["info"]["polls"]["avg"], 2), "n": out["info"]["polls"]["n"]}}
+    payload["evHistogram"] = [round(x, 5) for x in res["evHistogram"]]
+    payload["states"] = [{**{k: (round(v, 2) if k in ("demShare", "enns", "desart") else v) for k, v in s.items()},
+                          "pDem": round(s["pDem"], 4),
+                          "approve": round(by_abbr[s["abbr"]]["approve"], 1) if s["abbr"] in by_abbr else None,
+                          "econ": round(by_abbr[s["abbr"]]["inputs"]["econ"], 4) if s["abbr"] in by_abbr else None}
+                         for s in res["states"]]
+
     with open(os.path.join(ROOT, "docs", "nowcast.js"), "w") as f:
         f.write("// Generated by pipeline/update.py. Do not edit.\nwindow.NOWCAST = " + json.dumps(payload) + ";\n")
 
     hist_path = os.path.join(HERE, "history.json")
     hist = json.load(open(hist_path)) if os.path.exists(hist_path) else []
     if not fx:
-        # v2: model error shared across states. Earlier days used a different method and are dropped.
-        hist = [h for h in hist if h.get("v") == 2 and h["date"] != today.isoformat()]
-        hist.append({"v": 2, "date": today.isoformat(), "pDemWin": round(res["pDemWin"], 4),
+        # v3: average of two models. Earlier days used one model and are dropped.
+        hist = [h for h in hist if h.get("v") == 3 and h["date"] != today.isoformat()]
+        hist.append({"v": 3, "date": today.isoformat(), "pDemWin": round(res["pDemWin"], 4),
                      "demPopular": round(res["demPopular"], 2), "approve": round(nat["approve"], 1),
                      "econThrough": econ_last})
         hist.sort(key=lambda h: h["date"])
@@ -323,6 +344,10 @@ def main():
     print(f"{today} [{mode}] approval {nat['approve']:.1f}% ({nat['pollsters']} pollsters), "
           f"economy through {econ_last}; Dem win {s['pDemWin']:.1%}, Dem popular {s['demPopular']:.2f}%, "
           f"point EV {dem_ev_point}")
+    m = payload["models"]
+    print(f"Models: approval/economy {m['enns']['pDemWin']:.1%}; head-to-head polls "
+          + (f"{m['desart']['pDemWin']:.1%} from {m['polls']['n']} polls averaging {m['polls']['avg']:.1f}% Democratic"
+             if m["desart"] else "not run (no polls)") + f"; {len(matchups)} matchups in window, {h_skipped} skipped")
 
 
 if __name__ == "__main__":
