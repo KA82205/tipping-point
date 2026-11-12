@@ -1,16 +1,18 @@
 /*
- * The 2028 Nowcast: three models with equal weights, simulated together.
+ * The 2028 Nowcast: two published models, averaged state by state with equal weights and simulated together.
  *
  *   1. Enns, Colner, Kumar & Lagodny (2024): state approval and state economy (engine.js).
  *   2. DeSart (2025), "Long-Range State-Level 2024 Presidential Election Forecast",
  *      PS: Political Science & Politics 58(2), doi:10.1017/S1049096524000805:
  *      previous result, national head-to-head polls, home state, consecutive terms.
- *   3. Five of Lichtman's objective Keys to the White House, counted and turned into a national vote
- *      (pipeline/keys.py). Lichtman forecasts no states, so neither does this model here.
  *
- * The state map is the average of models 1 and 2. The national level is the average of all three: every
- * state moves by the same amount, a third of the gap between the keys' national vote and the map's.
- * Back-tests 2008-2024 (one step ahead): state miss 1.90, states called 95.6%, national miss 0.90.
+ * Nothing in the combination is fitted: both models run with their authors' equations and each gets half.
+ * Back-tests 2008-2024 (one step ahead): state miss 2.10, states called 240 of 250, national miss 0.99.
+ *
+ * Five of Lichtman's objective Keys to the White House, counted and turned into a national vote
+ * (pipeline/keys.py), are reported beside the Nowcast for comparison. They are not part of it: several
+ * third models were tried and the back-tests could not show that any of them reliably helps (see the
+ * Method page). The method was frozen on 2026-11-12.
  *
  * The site (app.js) and the daily run (pipeline/run_forecast.js) both call run(),
  * so the published numbers and the ones in the browser are the same.
@@ -158,8 +160,8 @@
     // Every run uses the approval and economy model's simulation: its coefficient draws, its seven economic
     // weightings, and its model error, most of it shared by every state. mix sets how much of each state's
     // forecast comes from the polls model instead.
-    const sim = (weight, point, kp = 0, shift = 0) => SPASE.simulate({ states, districts: S.districts, n, seed, econVariants: weight === 0 ? null : S.econVariants,
-      mix: point || shift ? { weight, point, shift } : null, keep: kp });
+    const sim = (weight, point, kp = 0) => SPASE.simulate({ states, districts: S.districts, n, seed, econVariants: weight === 0 ? null : S.econVariants,
+      mix: point ? { weight, point } : null, keep: kp });
     // National two-party share of a map of state shares, weighted as the simulation weights them.
     const popTotal = S.states.reduce((a, s) => a + (s.pop || 1), 0);
     const national = byAbbr => S.states.reduce((a, s) => a + byAbbr[s.abbr] * (s.pop || 1), 0) / popTotal;
@@ -175,7 +177,7 @@
         hD(s.abbr) - hR(s.abbr) - (s.abbr === S.homeLag.dem ? 1 : 0) + (s.abbr === S.homeLag.rep ? 1 : 0), h.terms)]));
       info.polls = { avg: sel.avg, n: sel.polls.length, basis: sel.basis, total: h.polls.length, pollD, pollR };
     }
-    // The keys give one national vote, measured against the 2024 national vote on the same states.
+    // The keys give one national vote, measured against the 2024 national vote on the same states. For comparison only.
     let keys = null;
     if (priors && K && K.demNational != null) {
       kNat = national(Object.fromEntries(S.states.map(s => [s.abbr, s.prior]))) + K.demNational - K.base;
@@ -184,21 +186,14 @@
       keys = { demPopular: kNat, pDemWin: phi((K.demNational - 50) / se), pTie: 0, nationalOnly: true };
       info.keys = { false: K.false, pending: K.pending, demNational: K.demNational };
     }
-    if (!dPoint && kNat == null) {
+    if (!dPoint) {
       const enns = sim(1, null, keep);
-      return { combined: enns, enns, desart: null, keys: null, info };
+      return { combined: enns, enns, desart: null, keys, info };
     }
-    // The state map: the approval and economy model and the polls model, half each (or the first alone).
-    // The national level: the average of every model's national vote, reached by moving every state alike.
-    const ennsPoint = Object.fromEntries(SPASE.simulate({ states, districts: [], n: 1, seed }).states.map(x => [x.abbr, x.demShare]));
-    const natE = national(ennsPoint), natD = dPoint ? national(dPoint) : null;
-    const nats = [natE, natD, kNat].filter(v => v != null);
-    const mapNat = dPoint ? (natE + natD) / 2 : natE;
-    const shift = nats.reduce((a, v) => a + v, 0) / nats.length - mapNat;
-    info.shift = shift;
-    const combined = sim(dPoint ? 0.5 : 1, dPoint, keep, shift);
+    // Equal weights, state by state: half the approval and economy model, half the polls model.
+    const combined = sim(0.5, dPoint, keep);
     if (!parts) return { combined, enns: null, desart: null, keys, info };
-    const enns = sim(1), desart = dPoint ? sim(0, dPoint) : null;
+    const enns = sim(1), desart = sim(0, dPoint);
     const by = m => m && Object.fromEntries(m.states.map(x => [x.abbr, x]));
     const eBy = by(enns), dBy = by(desart);
     combined.states.forEach(x => {

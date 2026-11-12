@@ -181,7 +181,9 @@ section + section { border-top: 1px solid var(--line); }
 .ens .vote { font-size: 13px; color: var(--faint); }
 .ens.now { border-color: rgba(242, 166, 94, .6); background: linear-gradient(180deg, rgba(242, 166, 94, .12), rgba(242, 166, 94, .03)); }
 .ensemble .op { align-self: center; font: 400 30px/1 var(--font-display); color: var(--faint); }
-@media (max-width: 1000px) { .ensemble { grid-template-columns: 1fr 1fr !important; gap: 10px; } .ensemble .op { display: none; } .ensemble .ens.now { grid-column: 1 / -1; } }
+.ensemble .op.bar { align-self: stretch; width: 1px; background: var(--line-2); margin: 0 6px; }
+.ens.ref { background: transparent; border-style: dashed; }
+@media (max-width: 1000px) { .ensemble { grid-template-columns: 1fr 1fr !important; gap: 10px; } .ensemble .op { display: none; } .ensemble .ens.now, .ensemble .ens.ref { grid-column: 1 / -1; } }
 @media (max-width: 560px) { .ensemble { grid-template-columns: 1fr !important; } }
 
 .inputs3 { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line-2); }
