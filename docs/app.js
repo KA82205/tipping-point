@@ -327,6 +327,10 @@
   const TICKET_KEY = { 'dem-p': ['dem', 'president'], 'dem-vp': ['dem', 'vp'], 'rep-p': ['rep', 'president'], 'rep-vp': ['rep', 'vp'] };
   const norm = s => (s || '').toLowerCase().replace(/[^a-z]/g, '');
   const pct = p => p > 0.995 ? '>99%' : p < 0.005 ? '<1%' : Math.round(100 * p) + '%';
+  // Each model on its own next to the Nowcast: vote share and how often the Democrat wins.
+  const modelTable = (rows, what) => `<table class="mt"><caption>Each model on its own</caption>
+    <thead><tr><th scope="col"></th><th scope="col">D vote</th><th scope="col">D wins</th></tr></thead><tbody>
+    ${rows.map(([name, v, p, cls]) => `<tr${cls ? ` class="${cls}"` : ''}><th scope="row">${name}</th><td>${fmt(v)}</td><td>${pct(p)}</td></tr>`).join('')}</tbody></table>`;
 
   // A confirmed nominee or running mate, read from Wikipedia by the daily run. Confirmed names are locked.
   function official(role) { const [side, k] = TICKET_KEY[role]; const o = (N.tickets[side] || {})[k]; return o && o.name ? o : null; }
@@ -512,30 +516,29 @@
     if (!s) {
       el.innerHTML = `<span class="tag">2028 Nowcast${N.fixture_run ? '<span class="test-flag">TEST DATA</span>' : ''}</span><h3>National picture</h3>
         <dl class="kv">
-          <div><dt>Democratic two-party vote</dt><dd class="d-ink">${fmt(cur.demPopular, 2)}</dd></div>
+          <div><dt>Democratic two-party vote</dt><dd class="d-ink">${fmt(cur.demPopular)}</dd></div>
           <div><dt>Democrat wins</dt><dd>${pct(cur.pDemWin)} of simulations</dd></div>
-          ${cur.desart ? `<div><dt>Approval and economy model</dt><dd>${fmt(cur.enns.demPopular)}, wins ${pct(cur.enns.pDemWin)}</dd></div>
-          <div><dt>Head-to-head polls model</dt><dd>${fmt(cur.desart.demPopular)}, wins ${pct(cur.desart.pDemWin)}</dd></div>` : ''}
           <div><dt>Trump approval (national avg)</dt><dd>${fmt(N.approval.approve)}</dd></div>
           <div><dt>Economy data through</dt><dd>${monthName(N.economy.through)}</dd></div>
         </dl>
         <div class="strip">${strip({ f: cur.demPopular })}</div>
-        <p class="hint">Not the forecast. Hover a state for its numbers.</p>`;
+        ${cur.desart ? modelTable([['Approval and economy', cur.enns.demPopular, cur.enns.pDemWin], ['Head-to-head polls', cur.desart.demPopular, cur.desart.pDemWin], ['Nowcast', cur.demPopular, cur.pDemWin, 'avg']], 'the election') : ''}
+        <p class="hint">Not the forecast. The Nowcast averages the two models state by state, so its odds are not the average of theirs. Hover a state for its numbers.</p>`;
       return;
     }
     const r = byAbbr[a], base = N.scenario.states.find(x => x.abbr === a);
     el.innerHTML = `<span class="tag">${dname(a)} · ${r.ev} electoral vote${r.ev > 1 ? 's' : ''}</span><h3>${r.name}</h3>
       <dl class="kv">
-        <div><dt>Nowcast D share</dt><dd class="d-ink">${fmt(s.demShare, 2)}</dd></div>
+        <div><dt>Nowcast D share</dt><dd class="d-ink">${fmt(s.demShare)}</dd></div>
         <div><dt>2024 D share</dt><dd>${fmt(r.share, 2)}</dd></div>
         <div><dt>Democrat wins</dt><dd>${pct(s.pDem)} of simulations</dd></div>
         <div><dt>Rating</dt><dd>${RATING[s.rating] || s.rating}</dd></div>
-        ${s.desart != null ? `<div><dt>Approval and economy model</dt><dd>${fmt(s.enns, 2)}</dd></div><div><dt>Head-to-head polls model</dt><dd>${fmt(s.desart, 2)}</dd></div>` : ''}
         ${base ? `<div><dt>Trump approval in state</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
       </dl>
-      ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models assume the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here fades, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(3.49 * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the approval and economy model${s.desart != null ? ', 2.5 in the polls model' : ''}. See Method.</p>` : ''}
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
-      <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>`;
+      <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>
+      ${s.desart != null ? modelTable([['Approval and economy', s.enns, s.ennsP], ['Head-to-head polls', s.desart, s.desartP], ['Nowcast', s.demShare, s.pDem, 'avg']], 'the state') : ''}
+      ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models assume the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here fades, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(3.49 * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the approval and economy model${s.desart != null ? ', 2.5 in the polls model' : ''}. See Method.</p>` : ''}`;
   }
   function fill28(a) {
     if (layer28 === 'lean') return shareColor(50 + (byAbbr[a].share - 100 * NAT.dem / (NAT.dem + NAT.rep)));
