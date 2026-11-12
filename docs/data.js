@@ -10,9 +10,9 @@ window.RESULTS_2024 = [
 "rep": 1462616,
 "rating": "SR",
 "share": 34.56,
-"fc": 35.51,
-"lo": 30.1,
-"hi": 41.0,
+"fc": 35.5,
+"lo": 29.8,
+"hi": 41.2,
 "pDem": 0.0
 },
 {
@@ -23,8 +23,8 @@ window.RESULTS_2024 = [
 "rep": 184458,
 "rating": "SR",
 "share": 43.15,
-"fc": 42.64,
-"lo": 37.4,
+"fc": 42.53,
+"lo": 36.8,
 "hi": 48.2,
 "pDem": 0.015
 },
@@ -36,10 +36,10 @@ window.RESULTS_2024 = [
 "rep": 1770242,
 "rating": "LR",
 "share": 47.21,
-"fc": 47.06,
-"lo": 41.5,
+"fc": 47.02,
+"lo": 41.3,
 "hi": 52.7,
-"pDem": 0.186
+"pDem": 0.196
 },
 {
 "name": "Arkansas",
@@ -49,9 +49,9 @@ window.RESULTS_2024 = [
 "rep": 759241,
 "rating": "SR",
 "share": 34.33,
-"fc": 34.35,
-"lo": 28.9,
-"hi": 40.1,
+"fc": 34.25,
+"lo": 28.5,
+"hi": 40.0,
 "pDem": 0.0
 },
 {
@@ -62,9 +62,9 @@ window.RESULTS_2024 = [
 "rep": 6081697,
 "rating": "SD",
 "share": 60.4,
-"fc": 64.33,
-"lo": 58.6,
-"hi": 70.2,
+"fc": 64.27,
+"lo": 58.4,
+"hi": 70.1,
 "pDem": 1.0
 },
 {
@@ -75,10 +75,10 @@ window.RESULTS_2024 = [
 "rep": 1377441,
 "rating": "LD",
 "share": 55.65,
-"fc": 54.37,
-"lo": 49.0,
-"hi": 59.8,
-"pDem": 0.897
+"fc": 54.29,
+"lo": 48.6,
+"hi": 60.0,
+"pDem": 0.892
 },
 {
 "name": "Connecticut",
@@ -88,10 +88,10 @@ window.RESULTS_2024 = [
 "rep": 736918,
 "rating": "LD",
 "share": 57.38,
-"fc": 57.11,
-"lo": 51.6,
-"hi": 62.7,
-"pDem": 0.98
+"fc": 57.03,
+"lo": 51.3,
+"hi": 62.8,
+"pDem": 0.978
 },
 {
 "name": "Delaware",
@@ -101,10 +101,10 @@ window.RESULTS_2024 = [
 "rep": 214351,
 "rating": "TD",
 "share": 57.48,
-"fc": 52.0,
-"lo": 46.9,
-"hi": 57.2,
-"pDem": 0.719
+"fc": 51.94,
+"lo": 46.1,
+"hi": 57.8,
+"pDem": 0.706
 },
 {
 "name": "District of Columbia",
@@ -114,9 +114,9 @@ window.RESULTS_2024 = [
 "rep": 21076,
 "rating": "SD",
 "share": 93.31,
-"fc": 94.18,
-"lo": 89.1,
-"hi": 98.9,
+"fc": 94.4,
+"lo": 88.6,
+"hi": 100.2,
 "pDem": 1.0
 },
 {
@@ -127,10 +127,10 @@ window.RESULTS_2024 = [
 "rep": 6110125,
 "rating": "LR",
 "share": 43.39,
-"fc": 46.66,
-"lo": 40.9,
-"hi": 52.6,
-"pDem": 0.17
+"fc": 46.61,
+"lo": 40.7,
+"hi": 52.5,
+"pDem": 0.173
 },
 {
 "name": "Georgia",
@@ -140,10 +140,10 @@ window.RESULTS_2024 = [
 "rep": 2663117,
 "rating": "TR",
 "share": 48.9,
-"fc": 48.19,
-"lo": 42.7,
+"fc": 48.14,
+"lo": 42.4,
 "hi": 53.8,
-"pDem": 0.286
+"pDem": 0.296
 },
 {
 "name": "Hawaii",
@@ -153,10 +153,10 @@ window.RESULTS_2024 = [
 "rep": 193661,
 "rating": "SD",
 "share": 61.78,
-"fc": 60.41,
-"lo": 55.3,
-"hi": 65.6,
-"pDem": 1.0
+"fc": 60.28,
+"lo": 54.6,
+"hi": 66.0,
+"pDem": 0.998
 },
 {
 "name": "Idaho",
@@ -166,9 +166,9 @@ window.RESULTS_2024 = [
 "rep": 605246,
 "rating": "SR",
 "share": 31.24,
-"fc": 33.29,
-"lo": 27.8,
-"hi": 39.2,
+"fc": 33.19,
+"lo": 27.5,
+"hi": 38.9,
 "pDem": 0.0
 },
 {
@@ -179,10 +179,10 @@ window.RESULTS_2024 = [
 "rep": 2449079,
 "rating": "LD",
 "share": 55.57,
-"fc": 54.45,
-"lo": 48.8,
-"hi": 60.0,
-"pDem": 0.896
+"fc": 54.41,
+"lo": 48.7,
+"hi": 60.1,
+"pDem": 0.898
 },
 {
 "name": "Indiana",
@@ -192,10 +192,10 @@ window.RESULTS_2024 = [
 "rep": 1720347,
 "rating": "SR",
 "share": 40.35,
-"fc": 39.28,
-"lo": 33.8,
-"hi": 45.0,
-"pDem": 0.0
+"fc": 39.2,
+"lo": 33.5,
+"hi": 44.9,
+"pDem": 0.001
 },
 {
 "name": "Iowa",
@@ -205,10 +205,10 @@ window.RESULTS_2024 = [
 "rep": 927019,
 "rating": "LR",
 "share": 43.28,
-"fc": 43.21,
-"lo": 37.8,
+"fc": 43.13,
+"lo": 37.4,
 "hi": 48.8,
-"pDem": 0.022
+"pDem": 0.024
 },
 {
 "name": "Kansas",
@@ -218,10 +218,10 @@ window.RESULTS_2024 = [
 "rep": 758802,
 "rating": "SR",
 "share": 41.79,
-"fc": 39.9,
-"lo": 34.5,
-"hi": 45.4,
-"pDem": 0.0
+"fc": 39.89,
+"lo": 34.2,
+"hi": 45.6,
+"pDem": 0.002
 },
 {
 "name": "Kentucky",
@@ -231,9 +231,9 @@ window.RESULTS_2024 = [
 "rep": 1337494,
 "rating": "SR",
 "share": 34.49,
-"fc": 34.29,
-"lo": 28.8,
-"hi": 39.9,
+"fc": 34.3,
+"lo": 28.6,
+"hi": 40.0,
 "pDem": 0.0
 },
 {
@@ -244,8 +244,8 @@ window.RESULTS_2024 = [
 "rep": 1208505,
 "rating": "SR",
 "share": 38.82,
-"fc": 38.88,
-"lo": 33.5,
+"fc": 38.83,
+"lo": 33.1,
 "hi": 44.5,
 "pDem": 0.001
 },
@@ -257,10 +257,10 @@ window.RESULTS_2024 = [
 "rep": 377977,
 "rating": "TD",
 "share": 53.54,
-"fc": 51.91,
-"lo": 46.9,
-"hi": 56.9,
-"pDem": 0.72
+"fc": 51.89,
+"lo": 46.2,
+"hi": 57.6,
+"pDem": 0.707
 },
 {
 "name": "Maine 1st District",
@@ -270,10 +270,10 @@ window.RESULTS_2024 = [
 "rep": 165214,
 "rating": "SD",
 "share": 61.04,
-"fc": 59.17,
-"lo": 54.5,
-"hi": 63.7,
-"pDem": 0.998
+"fc": 59.11,
+"lo": 53.4,
+"hi": 64.8,
+"pDem": 0.996
 },
 {
 "name": "Maine 2nd District",
@@ -283,10 +283,10 @@ window.RESULTS_2024 = [
 "rep": 212763,
 "rating": "LR",
 "share": 45.38,
-"fc": 43.38,
-"lo": 37.4,
+"fc": 43.39,
+"lo": 37.7,
 "hi": 49.1,
-"pDem": 0.023
+"pDem": 0.028
 },
 {
 "name": "Maryland",
@@ -296,9 +296,9 @@ window.RESULTS_2024 = [
 "rep": 1035550,
 "rating": "SD",
 "share": 64.75,
-"fc": 63.21,
-"lo": 57.8,
-"hi": 68.8,
+"fc": 63.15,
+"lo": 57.4,
+"hi": 68.9,
 "pDem": 1.0
 },
 {
@@ -309,9 +309,9 @@ window.RESULTS_2024 = [
 "rep": 1251303,
 "rating": "SD",
 "share": 62.96,
-"fc": 63.44,
-"lo": 57.8,
-"hi": 69.2,
+"fc": 63.39,
+"lo": 57.7,
+"hi": 69.1,
 "pDem": 1.0
 },
 {
@@ -322,10 +322,10 @@ window.RESULTS_2024 = [
 "rep": 2816636,
 "rating": "TR",
 "share": 49.28,
-"fc": 48.39,
-"lo": 43.0,
+"fc": 48.35,
+"lo": 42.6,
 "hi": 54.0,
-"pDem": 0.309
+"pDem": 0.318
 },
 {
 "name": "Minnesota",
@@ -335,10 +335,10 @@ window.RESULTS_2024 = [
 "rep": 1519032,
 "rating": "TD",
 "share": 52.17,
-"fc": 51.04,
-"lo": 45.4,
+"fc": 51.01,
+"lo": 45.2,
 "hi": 56.8,
-"pDem": 0.606
+"pDem": 0.612
 },
 {
 "name": "Mississippi",
@@ -348,10 +348,10 @@ window.RESULTS_2024 = [
 "rep": 747744,
 "rating": "SR",
 "share": 38.43,
-"fc": 40.91,
-"lo": 35.6,
-"hi": 46.3,
-"pDem": 0.001
+"fc": 40.89,
+"lo": 35.2,
+"hi": 46.6,
+"pDem": 0.004
 },
 {
 "name": "Missouri",
@@ -361,10 +361,10 @@ window.RESULTS_2024 = [
 "rep": 1751986,
 "rating": "SR",
 "share": 40.66,
-"fc": 39.04,
-"lo": 33.6,
-"hi": 44.6,
-"pDem": 0.0
+"fc": 38.99,
+"lo": 33.3,
+"hi": 44.7,
+"pDem": 0.001
 },
 {
 "name": "Montana",
@@ -374,10 +374,10 @@ window.RESULTS_2024 = [
 "rep": 352079,
 "rating": "SR",
 "share": 39.71,
-"fc": 40.44,
-"lo": 35.2,
-"hi": 45.7,
-"pDem": 0.0
+"fc": 40.57,
+"lo": 34.9,
+"hi": 46.3,
+"pDem": 0.003
 },
 {
 "name": "Nebraska",
@@ -387,9 +387,9 @@ window.RESULTS_2024 = [
 "rep": 564816,
 "rating": "SR",
 "share": 39.58,
-"fc": 38.08,
-"lo": 32.5,
-"hi": 43.9,
+"fc": 38.11,
+"lo": 32.4,
+"hi": 43.8,
 "pDem": 0.0
 },
 {
@@ -400,10 +400,10 @@ window.RESULTS_2024 = [
 "rep": 177666,
 "rating": "SR",
 "share": 43.39,
-"fc": 40.39,
-"lo": 34.4,
-"hi": 46.5,
-"pDem": 0.0
+"fc": 40.21,
+"lo": 34.5,
+"hi": 45.9,
+"pDem": 0.002
 },
 {
 "name": "Nebraska 2nd District",
@@ -413,10 +413,10 @@ window.RESULTS_2024 = [
 "rep": 148905,
 "rating": "TD",
 "share": 52.34,
-"fc": 51.44,
-"lo": 46.8,
-"hi": 56.4,
-"pDem": 0.656
+"fc": 51.23,
+"lo": 45.5,
+"hi": 56.9,
+"pDem": 0.638
 },
 {
 "name": "Nebraska 3rd District",
@@ -426,9 +426,9 @@ window.RESULTS_2024 = [
 "rep": 238245,
 "rating": "SR",
 "share": 22.78,
-"fc": 20.87,
-"lo": 15.9,
-"hi": 26.4,
+"fc": 20.75,
+"lo": 15.0,
+"hi": 26.5,
 "pDem": 0.0
 },
 {
@@ -439,10 +439,10 @@ window.RESULTS_2024 = [
 "rep": 751205,
 "rating": "TR",
 "share": 48.42,
-"fc": 48.42,
-"lo": 43.2,
-"hi": 53.8,
-"pDem": 0.31
+"fc": 48.33,
+"lo": 42.6,
+"hi": 54.0,
+"pDem": 0.315
 },
 {
 "name": "New Hampshire",
@@ -452,10 +452,10 @@ window.RESULTS_2024 = [
 "rep": 395523,
 "rating": "TD",
 "share": 51.41,
-"fc": 51.05,
-"lo": 45.7,
-"hi": 56.5,
-"pDem": 0.612
+"fc": 51.02,
+"lo": 45.3,
+"hi": 56.7,
+"pDem": 0.616
 },
 {
 "name": "New Jersey",
@@ -465,10 +465,10 @@ window.RESULTS_2024 = [
 "rep": 1968215,
 "rating": "LD",
 "share": 53.01,
-"fc": 55.52,
-"lo": 49.9,
+"fc": 55.51,
+"lo": 49.8,
 "hi": 61.2,
-"pDem": 0.942
+"pDem": 0.944
 },
 {
 "name": "New Mexico",
@@ -478,10 +478,10 @@ window.RESULTS_2024 = [
 "rep": 423391,
 "rating": "TD",
 "share": 53.07,
-"fc": 52.07,
-"lo": 46.7,
-"hi": 57.6,
-"pDem": 0.726
+"fc": 51.99,
+"lo": 46.3,
+"hi": 57.7,
+"pDem": 0.716
 },
 {
 "name": "New York",
@@ -491,10 +491,10 @@ window.RESULTS_2024 = [
 "rep": 3578899,
 "rating": "SD",
 "share": 56.34,
-"fc": 59.2,
-"lo": 53.6,
+"fc": 59.16,
+"lo": 53.4,
 "hi": 64.9,
-"pDem": 0.997
+"pDem": 0.996
 },
 {
 "name": "North Carolina",
@@ -504,10 +504,10 @@ window.RESULTS_2024 = [
 "rep": 2898423,
 "rating": "LR",
 "share": 48.37,
-"fc": 46.75,
-"lo": 41.2,
+"fc": 46.7,
+"lo": 41.0,
 "hi": 52.4,
-"pDem": 0.165
+"pDem": 0.171
 },
 {
 "name": "North Dakota",
@@ -517,9 +517,9 @@ window.RESULTS_2024 = [
 "rep": 246505,
 "rating": "SR",
 "share": 31.3,
-"fc": 31.51,
-"lo": 26.4,
-"hi": 36.9,
+"fc": 31.38,
+"lo": 25.7,
+"hi": 37.1,
 "pDem": 0.0
 },
 {
@@ -530,10 +530,10 @@ window.RESULTS_2024 = [
 "rep": 3180116,
 "rating": "SR",
 "share": 44.34,
-"fc": 41.13,
-"lo": 35.5,
+"fc": 41.1,
+"lo": 35.3,
 "hi": 46.9,
-"pDem": 0.003
+"pDem": 0.006
 },
 {
 "name": "Oklahoma",
@@ -543,9 +543,9 @@ window.RESULTS_2024 = [
 "rep": 1036213,
 "rating": "SR",
 "share": 32.53,
-"fc": 32.24,
-"lo": 26.9,
-"hi": 37.6,
+"fc": 32.15,
+"lo": 26.4,
+"hi": 37.9,
 "pDem": 0.0
 },
 {
@@ -556,10 +556,10 @@ window.RESULTS_2024 = [
 "rep": 919480,
 "rating": "LD",
 "share": 57.43,
-"fc": 53.7,
-"lo": 48.2,
-"hi": 59.3,
-"pDem": 0.859
+"fc": 53.66,
+"lo": 48.0,
+"hi": 59.4,
+"pDem": 0.854
 },
 {
 "name": "Pennsylvania",
@@ -569,10 +569,10 @@ window.RESULTS_2024 = [
 "rep": 3543308,
 "rating": "TR",
 "share": 49.14,
-"fc": 48.16,
-"lo": 42.7,
+"fc": 48.08,
+"lo": 42.4,
 "hi": 53.8,
-"pDem": 0.288
+"pDem": 0.29
 },
 {
 "name": "Rhode Island",
@@ -582,9 +582,9 @@ window.RESULTS_2024 = [
 "rep": 214406,
 "rating": "LD",
 "share": 57.08,
-"fc": 56.51,
-"lo": 50.8,
-"hi": 62.2,
+"fc": 56.41,
+"lo": 50.7,
+"hi": 62.1,
 "pDem": 0.968
 },
 {
@@ -595,10 +595,10 @@ window.RESULTS_2024 = [
 "rep": 1483747,
 "rating": "SR",
 "share": 40.94,
-"fc": 41.11,
-"lo": 35.6,
-"hi": 46.6,
-"pDem": 0.003
+"fc": 41.02,
+"lo": 35.3,
+"hi": 46.7,
+"pDem": 0.005
 },
 {
 "name": "South Dakota",
@@ -608,8 +608,8 @@ window.RESULTS_2024 = [
 "rep": 272081,
 "rating": "SR",
 "share": 35.05,
-"fc": 34.75,
-"lo": 29.5,
+"fc": 34.64,
+"lo": 28.9,
 "hi": 40.3,
 "pDem": 0.0
 },
@@ -621,9 +621,9 @@ window.RESULTS_2024 = [
 "rep": 1966865,
 "rating": "SR",
 "share": 34.94,
-"fc": 36.88,
-"lo": 31.5,
-"hi": 42.4,
+"fc": 36.83,
+"lo": 31.1,
+"hi": 42.5,
 "pDem": 0.0
 },
 {
@@ -634,10 +634,10 @@ window.RESULTS_2024 = [
 "rep": 6393597,
 "rating": "LR",
 "share": 43.06,
-"fc": 43.89,
-"lo": 38.4,
-"hi": 49.6,
-"pDem": 0.034
+"fc": 43.84,
+"lo": 38.1,
+"hi": 49.5,
+"pDem": 0.038
 },
 {
 "name": "Utah",
@@ -647,9 +647,9 @@ window.RESULTS_2024 = [
 "rep": 883818,
 "rating": "SR",
 "share": 38.89,
-"fc": 37.48,
-"lo": 32.0,
-"hi": 43.2,
+"fc": 37.42,
+"lo": 31.7,
+"hi": 43.1,
 "pDem": 0.0
 },
 {
@@ -660,9 +660,9 @@ window.RESULTS_2024 = [
 "rep": 119395,
 "rating": "SD",
 "share": 66.39,
-"fc": 64.26,
-"lo": 59.0,
-"hi": 69.5,
+"fc": 64.12,
+"lo": 58.4,
+"hi": 69.9,
 "pDem": 1.0
 },
 {
@@ -673,9 +673,9 @@ window.RESULTS_2024 = [
 "rep": 2075085,
 "rating": "LD",
 "share": 52.95,
-"fc": 52.38,
-"lo": 46.7,
-"hi": 58.1,
+"fc": 52.33,
+"lo": 46.6,
+"hi": 58.0,
 "pDem": 0.749
 },
 {
@@ -686,10 +686,10 @@ window.RESULTS_2024 = [
 "rep": 1530923,
 "rating": "SD",
 "share": 59.46,
-"fc": 58.02,
-"lo": 52.7,
-"hi": 63.5,
-"pDem": 0.991
+"fc": 57.98,
+"lo": 52.3,
+"hi": 63.7,
+"pDem": 0.989
 },
 {
 "name": "West Virginia",
@@ -699,9 +699,9 @@ window.RESULTS_2024 = [
 "rep": 533556,
 "rating": "SR",
 "share": 28.66,
-"fc": 27.99,
-"lo": 22.5,
-"hi": 33.6,
+"fc": 28.0,
+"lo": 22.3,
+"hi": 33.7,
 "pDem": 0.0
 },
 {
@@ -712,10 +712,10 @@ window.RESULTS_2024 = [
 "rep": 1697626,
 "rating": "LR",
 "share": 49.56,
-"fc": 47.35,
-"lo": 41.9,
+"fc": 47.27,
+"lo": 41.6,
 "hi": 53.0,
-"pDem": 0.209
+"pDem": 0.216
 },
 {
 "name": "Wyoming",
@@ -725,9 +725,9 @@ window.RESULTS_2024 = [
 "rep": 192633,
 "rating": "SR",
 "share": 26.52,
-"fc": 28.58,
-"lo": 23.6,
-"hi": 34.0,
+"fc": 28.54,
+"lo": 22.8,
+"hi": 34.3,
 "pDem": 0.0
 }
 ];
