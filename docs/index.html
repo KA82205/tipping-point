@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261112b">
+<link rel="stylesheet" href="styles.css?v=20261112c">
 </head>
 <body>
 
@@ -248,7 +248,7 @@
           <div><span class="s ok" id="need-econ">Daily</span><h3>State economies</h3><p>Philadelphia Fed coincident indexes via FRED, through June 2028.</p></div>
           <div><span class="s ok">Daily</span><h3>Trump approval</h3><p>The national average updates every day. How far each state sits from it comes from G. Elliott Morris's state estimates, last updated by him on September 22, 2026, so state differences lag the national number. Civiqs or Morning Consult estimates will replace it if either grants permission.</p></div>
           <div><span class="s ok" id="need-h2h">Daily</span><h3>Head-to-head polls</h3><p>National general-election polls between possible nominees, from PollResults.org, over the last 180 days. They feed the second model.</p></div>
-          <div><span class="s ok">Daily</span><h3>Keys</h3><p>The two economy keys are scored every morning from FRED: the real-time Sahm rule recession indicator and real GDP per person. The midterm, primary and third-party keys are set by hand once they are known.</p></div>
+          <div><span class="s ok">Daily</span><h3>Keys</h3><p>The two economy keys are scored every morning from FRED: the real-time Sahm rule recession indicator and real GDP per person. The third-party key is scored every morning from the polls, by Lichtman's 10% rule. The midterm and sitting-president keys are settled; the primary key is settled at the 2028 convention.</p></div>
           <div><span class="s ok" id="need-tickets">Watching</span><h3>Nominees and home states</h3><p>Read from Wikipedia every morning. Each nominee and running mate locks in as soon as they are confirmed, and the home-state bonuses switch on.</p></div>
           <div><span class="s ok" id="need-cands">Daily</span><h3>Possible candidates</h3><p>Ordered by national 2028 primary polls from PollResults.org. Anyone new who polls at 3% or more is added.</p></div>
           <div><span class="s ok" id="need-vp">Daily</span><h3>Vice-president adjustment</h3><p>If the sitting vice president is a nominee, approval shifts by his net job approval minus the president's.</p></div>
@@ -296,13 +296,22 @@
     <span class="c">58.26</span>
   − <span class="c">2.89</span> × number of the six keys that are false
   1 Party mandate: more House seats after the midterms than after the previous midterms
-  2 No serious contest for the party's nomination
+  2 No primary contest: the nominee wins two-thirds of first-ballot delegates, without deep party divisions
   3 The party's candidate is the sitting president
-  4 No significant third-party campaign
-  5 No recession during the campaign
+  4 No third party: no one outside the two parties consistently polls at 10% or more
+  5 No recession, real or widely believed, during the campaign
   6 Real growth per person this term at least the average of the previous two terms</div>
     <p class="small">Fitted on 41 elections, 1864–2024, with Lichtman's own ratings as tabulated on Wikipedia. Standard error 4.86 points.</p>
-    <p>The key ratings are scored like this for 2028. The midterm key is false: Democrats won the House in November 2026. The sitting-president key is false: Trump cannot run again. The two economy keys are scored every morning from FRED: the short-term key is false if the real-time Sahm rule recession indicator reaches 0.5 or real GDP per person falls two quarters in a row, and the long-term key compares growth in real GDP per person this term with the average of the previous two terms. The primary-contest and third-party keys cannot be known until 2028, so each counts as half false until then. The model gives one national number; each state moves from its 2024 result by the same amount.</p>
+    <p>Each key is scored by Lichtman's own rule, and each updates as soon as its evidence does:</p>
+    <ul class="small rules">
+      <li><b>1, party mandate:</b> false. Democrats won the House in November 2026, so Republicans hold fewer seats than the 222 they won in 2022. Fixed until the next midterm.</li>
+      <li><b>2, no primary contest:</b> Lichtman's rule is that the nominee wins at least two-thirds of the delegates on the first ballot at the convention, with no deep and vocal party divisions. That cannot be known until 2028, so it counts as half false. The note beside it updates each morning with the Republican leader's share in national primary polls.</li>
+      <li><b>3, sitting president running:</b> false. Trump cannot run for a third term.</li>
+      <li><b>4, no third party:</b> scored each morning from the polls. Lichtman's rule for an upcoming election is that the key turns false if one third-party or independent candidate consistently polls at 10% or more, which tends to mean about 5% on election day. Here "consistently" means a median of 10% or more in at least 3 national polls from at least 2 pollsters over the last 120 days.</li>
+      <li><b>5, short-term economy:</b> scored each morning from FRED. Lichtman counts a recession that is officially under way or that the public believes is happening. The official dating comes months late, so the real-time Sahm rule stands in for it: the key is false if that indicator reaches 0.5 or real GDP per person falls two quarters in a row. A recession the public clearly believes in, as in 1992, is set by hand.</li>
+      <li><b>6, long-term economy:</b> scored each morning from FRED, by Lichtman's rule: yearly growth in real GDP per person this term against the average of the previous two terms.</li>
+    </ul>
+    <p>A key not yet known counts as half false. The model gives one national number; each state moves from its 2024 result by the same amount.</p>
     <h2>How they are combined</h2>
     <p>The three models read different things: how people rate the president and how state economies are doing; what voters say when asked to choose between named candidates; and the political and economic record of the party in power. Each state's Nowcast is the average of the three models' forecasts for that state, each with a third of the weight. The Electoral College is then simulated once from those averages, the way the approval and economy model simulates it.</p>
     <p>Equal weights, because the back-tests below found no mix that does reliably better. Every mix that gave each model between about a quarter and two-fifths of the weight did about equally well, and the best one moved around depending on how the test was run. Research on election forecasting has long found that averaging forecasts from different methods beats relying on one, and these back-tests agree.</p>
@@ -346,6 +355,8 @@
           <tr><th scope="row">Adding all 13 Keys</th><td>2.0</td><td>95%</td><td>1.3</td></tr>
           <tr class="avg"><th scope="row">Adding the 6 objective keys (used)</th><td>1.9</td><td>96%</td><td>0.8</td></tr>
           <tr><th scope="row">Adding the 6 keys, each weighted</th><td>2.1</td><td>94%</td><td>1.3</td></tr>
+          <tr><th scope="row">Adding the 6 keys, weighted by importance</th><td>2.0</td><td>95%</td><td>1.2</td></tr>
+          <tr><th scope="row">Adding all 13 Keys, weighted by importance</th><td>2.1</td><td>94%</td><td>1.3</td></tr>
           <tr><th scope="row">Adding the Primary Model</th><td>2.0</td><td>95%</td><td>0.9</td></tr>
           <tr><th scope="row">Adding Time for Change</th><td>1.8</td><td>95%</td><td>0.9</td></tr>
         </tbody>
@@ -358,12 +369,14 @@
           <tr><th scope="row">Adding all 13 Keys</th><td>2.1</td><td>95%</td><td>1.1</td></tr>
           <tr class="avg"><th scope="row">Adding the 6 objective keys (used)</th><td>2.0</td><td>96%</td><td>0.6</td></tr>
           <tr><th scope="row">Adding the 6 keys, each weighted</th><td>2.2</td><td>94%</td><td>1.3</td></tr>
+          <tr><th scope="row">Adding the 6 keys, weighted by importance</th><td>2.1</td><td>96%</td><td>1.1</td></tr>
+          <tr><th scope="row">Adding all 13 Keys, weighted by importance</th><td>2.2</td><td>95%</td><td>1.1</td></tr>
           <tr><th scope="row">Adding the Primary Model</th><td>2.0</td><td>95%</td><td>1.1</td></tr>
           <tr><th scope="row">Adding Time for Change</th><td>1.9</td><td>96%</td><td>0.8</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="small">Misses are average misses in points of Democratic vote share. The six objective keys, simply counted, gave the best national miss and kept the states called at 96%. Weighting each key by its own past record did worse: each key has flipped only a handful of times since 1864, so weights fitted to history mostly fit its accidents. All 13 keys did worse than six, because the seven judgment keys add noise. Most of the gain from any third model comes from 2020, when both of the first two models overshot the Democrat by about 3 points nationally.</p>
+    <p class="small">Misses are average misses in points of Democratic vote share. The six objective keys, simply counted, gave the best national miss and kept the states called at 96%. Weighting each key by its own past record did worse: each key has flipped only a handful of times since 1864, so weights fitted to history mostly fit its accidents. All 13 keys did worse than six, because the seven judgment keys add noise. Weights taken from a published machine-learning ranking of the keys (Virtual Tout's relative importance, which puts the primary contest and the short-term economy far ahead of the rest) did worse as well, and that ranking was learned from the same elections it would be tested on, so in a fair test it would do worse still. A ranking like that measures what each key adds once the others are known, so a rarely false but decisive key such as the primary contest ranks high; a count of how often each key matched the winner ranks them differently. Neither beats counting. Most of the gain from any third model comes from 2020, when both of the first two models overshot the Democrat by about 3 points nationally.</p>
     <p><b>Primary Model.</b> Norpoth's forecasts as he published them: 50.1% for Obama in 2008, 53.2% for Obama in 2012 and 47.5% for Clinton in 2016, then electoral votes only, 362 for Trump in 2020 and 315 for the Democrat in 2024. The last two were turned into the national vote that would produce them on the previous map. On its own the model missed the national vote by 3.8 points on average and the electoral vote by 64, against 1.0 and 22 for the Nowcast's average. It cannot run until the first primaries in early 2028, so it was left out.</p>
     <p><b>Time for Change.</b> Abramowitz's model predicts the national vote from the president's June net approval, second-quarter economic growth and whether the president's party is seeking a second term. Refitted from public data (Gallup's June approval and the government's growth figures, as compiled for Harvard's Gov 1347 forecasting course), it reproduces his 2024 forecast to within 0.3 points. It needs a judgment call whenever the economy has a shock like the 2020 lockdown quarter, which is handled here as he handled it, without the growth term. It reads mostly the same things as the approval and economy model, and it helped about as much as the keys on states but less on the national vote, so it was left out.</p>
     <p>The Nowcast page shows each model on its own next to the average, simulated the same way, and the six keys as they stand.</p>
@@ -388,7 +401,7 @@
     <div>
       <h2 style="margin-bottom:14px">Data behind the Nowcast</h2>
       <p>State economies come from the Philadelphia Fed State Coincident Indexes via FRED. Trump's national approval is an average of public polls from VoteHub and PollResults.org. State-level approval estimates come from G. Elliott Morris's Trump Approval Explorer (<a href="https://projects.gelliottmorris.com/trump-approval/">projects.gelliottmorris.com/trump-approval</a>). Those estimates were last updated on September 22, 2026, so the gaps between states are from then while the national level is current. It will be replaced by Civiqs or Morning Consult estimates if a data-sharing agreement is reached.</p>
-      <p>The keys: real GDP per person (FRED series A939RX0Q048SBEA) and the real-time Sahm rule recession indicator (SAHMREALTIME), read each morning; the 2026 House result from Associated Press calls.</p>
+      <p>The keys: real GDP per person (FRED series A939RX0Q048SBEA) and the real-time Sahm rule recession indicator (SAHMREALTIME), read each morning; the 2026 House result from Associated Press calls; third-party candidates from the same PollResults.org general-election polls.</p>
       <p>Nominees, running mates and their home states are read from Wikipedia each morning. The vice-president adjustment uses job-approval polls of the vice president from VoteHub, or favorability when there are none, as the authors did for 1988. The list of possible candidates follows national 2028 primary polls from PollResults.org.</p>
       <p>Head-to-head polls are national general-election polls between two people on the candidate list, over the last 180 days. They come from the PollResults.org feed behind its <a href="https://pollresults.org/races/president-2028/">2028 presidential polls page</a>, which carries the New York Times poll data, and every record in it is read each morning. A poll that tests several pairings counts once for each. Left out: state polls, generic party ballots, questions that name a third candidate, and pairings with anyone not on the candidate list. VoteHub supplies the approval polls; it does not publish general-election pairings yet.</p>
       <p>The 2024 scorecard is the paper's own forecast, recomputed exactly from the authors' replication files. The Nowcast differs from the two papers in the ways listed below.</p>
@@ -467,8 +480,8 @@
 <script src="data.js"></script>
 <script src="nowcast.js" onerror="void 0"></script>
 <script src="history.js" onerror="void 0"></script>
-<script src="engine.js?v=20261112b"></script>
-<script src="combine.js?v=20261112b"></script>
-<script src="app.js?v=20261112b"></script>
+<script src="engine.js?v=20261112c"></script>
+<script src="combine.js?v=20261112c"></script>
+<script src="app.js?v=20261112c"></script>
 </body>
 </html>

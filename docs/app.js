@@ -648,7 +648,7 @@
     const KB = N.keys, kel = document.getElementById('keys-list');
     if (KB && kel) {
       kel.innerHTML = KB.keys.map(k => `<li class="${k.false === true ? 'f' : k.false === false ? 't' : 'p'}"><span class="st">${k.false === true ? 'False' : k.false === false ? 'True' : 'Not known yet'}</span><b>${k.n}. ${esc(k.name)}</b><p>${esc(k.why)}</p></li>`).join('');
-      document.getElementById('keys-sum').innerHTML = `A true key helps the party in the White House, now the Republicans; a false key hurts it. <b>${KB.false % 1 ? KB.false.toFixed(1) : KB.false} of 6 keys false</b>${KB.pending ? `, counting each of the ${KB.pending} not yet known as half false` : ''}. Since 1864 each false key has cost the party in the White House about ${Math.abs(KB.fit.b).toFixed(1)} points, which puts the Democrat at ${fmt(KB.demNational)} of the national vote in this model.`;
+      document.getElementById('keys-sum').innerHTML = `A true key helps the party in the White House, now the Republicans; a false key hurts it. <b>${KB.false % 1 ? KB.false.toFixed(1) : KB.false} of 6 keys false</b>${KB.pending ? (KB.pending === 1 ? ', counting the one not yet known as half false' : `, counting each of the ${KB.pending} not yet known as half false`) : ''}. Since 1864 each false key has cost the party in the White House about ${Math.abs(KB.fit.b).toFixed(1)} points, which puts the Democrat at ${fmt(KB.demNational)} of the national vote in this model.`;
     } else if (kel) document.getElementById('keys-wrap').hidden = true;
     const tb = document.getElementById('h2h-2028'), more = document.getElementById('h2h-more');
     const showPolls = all => {
