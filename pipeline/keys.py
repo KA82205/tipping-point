@@ -1,4 +1,5 @@
-"""Third Nowcast model: five of Allan Lichtman's objective Keys to the White House, counted.
+"""Shown beside the Nowcast for comparison, not part of it: five of Allan Lichtman's objective Keys to the
+White House, counted.
 
 The five keys (each one TRUE favors the party holding the White House):
   1  Party mandate      After the midterms the party holds more House seats than after the previous midterms.
@@ -26,13 +27,13 @@ Each key is scored by Lichtman's own rule (as set out on Wikipedia, "The Keys to
 The vote: incumbent party's share of the national two-party vote = a + b x (number of the five keys false),
 fitted on every election 1864-2024 (keys_history.csv: Lichtman's ratings as tabulated on Wikipedia; the
 two-party vote from the Gov 1347 course data, certified results for 2024). Lichtman forecasts no states,
-and neither does this model: in the Nowcast (docs/combine.js) it sets a third of the national level only.
+and neither does this model.
 
-Back-test (each election forecast from earlier elections only, 2008-2024), with the state map from the other
-two models and the national level from all three: state miss 1.90 points (2.10 for the other two alone),
-states called 95.6%, national miss 0.90 (0.98). Against the same with key 4 included: national 0.90 vs 0.78
-from 2008 to 2024, but forecasting each of 1996-2024 from all other elections 1.01 vs 1.13, and the keys
-alone over all 41 elections 3.64 vs 3.68.
+Why it is not in the Nowcast: tested as a third model (state map from the other two, national level from all
+three; each election 2008-2024 forecast from earlier ones) it lowered the national miss from 0.99 to 0.90
+points, but the whole gain comes from 2020, and choosing the third model on four elections and scoring it on
+the fifth did worse (1.46) than using no third model. Five keys rather than six: keys alone over all 41
+elections 3.64 vs 3.68, and key 4 cannot be scored before the campaign the way the record scores it.
 """
 import csv
 import math

@@ -1,5 +1,5 @@
 {
- "_comment": "Inputs for the 2024 back-test of the Nowcast's method (pipeline/make_2024_backtest.js). desart: Jay DeSart's published state forecasts for 2024, Democratic share of the two-party vote, from his replication file 'DeSart PS 2024 Forecast 11-5-23.sav' (doi:10.7910/DVN/HZGLY9), made in November 2023. prev2020: the 2020 results in the same file. keys: the five-key model fitted on 1864-2020 (57.90 - 2.959 x false keys), with 2 of the five keys false for the Democrats in 2024 (party mandate, sitting president running), against the 2020 national two-party vote.",
+ "_comment": "Input for the 2024 back-test of the Nowcast's method (pipeline/make_2024_backtest.js). desart: Jay DeSart's published state forecasts for 2024, Democratic share of the two-party vote, from his replication file 'DeSart PS 2024 Forecast 11-5-23.sav' (doi:10.7910/DVN/HZGLY9), made in November 2023. prev2020: the 2020 results in the same file.",
  "desart": {
   "AK": 43.041,
   "AL": 35.262,
@@ -105,10 +105,5 @@
   "WI": 50.319,
   "WV": 30.201,
   "WY": 27.641
- },
- "keys": {
-  "demNational": 51.981,
-  "base2020": 52.27,
-  "false": 2
  }
 }

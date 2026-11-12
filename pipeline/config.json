@@ -88,7 +88,7 @@
     "seed": 2028
   },
   "keys": {
-    "_comment": "Third model: five of Lichtman's objective keys, counted (pipeline/keys.py), each scored by his own rule. false = true means the key is FALSE (bad for the party holding the White House); null = not known yet, counted as half false. key1 and key3 are set by hand. key2 is set by hand once the convention delegates are known. key5 and key6 are scored daily from FRED; key5 can be set here for a recession the public perceives. Key 4 (third party) is not used.",
+    "_comment": "For comparison only, not part of the Nowcast: five of Lichtman's objective keys, counted (pipeline/keys.py), each scored by his own rule. false = true means the key is FALSE (bad for the party holding the White House); null = not known yet, counted as half false. key1 and key3 are set by hand. key2 is set by hand once the convention delegates are known. key5 and key6 are scored daily from FRED; key5 can be set here for a recession the public perceives. Key 4 (third party) is not used.",
     "term_start": "2025-01",
     "fred_gdp_per_capita": "A939RX0Q048SBEA",
     "fred_sahm": "SAHMREALTIME",
@@ -110,11 +110,9 @@
     }
   },
   "ensemble": {
-    "_comment": "Each state's Nowcast is the equal-weight average of the three models (approval and economy, polls, keys). Equal weights: in back-tests every mix from 25% to 40% for each model did about equally well.",
-    "weights": {
-      "enns": 1,
-      "desart": 1,
-      "keys": 1
-    }
+    "_comment": "The Nowcast is the plain average of the approval and economy model and the polls model, state by state (docs/combine.js). The keys model is reported beside it and has no weight. Method frozen 2026-11-12.",
+    "enns": 1,
+    "desart": 1,
+    "keys": 0
   }
 }
