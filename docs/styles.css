@@ -157,9 +157,16 @@ svg.usmap text.grp { font: 11px var(--font-body); fill: var(--muted); }
 .kv { display: grid; }
 .kv > div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
 .kv > div:last-child { border-bottom: 0; }
-.kv dt { color: var(--muted); white-space: nowrap; }
+.kv dt { color: var(--muted); min-width: 0; }
 .kv dd { white-space: nowrap; margin: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
 .inspector .hint { font-size: 13px; color: var(--faint); }
+.mt { width: 100%; border-collapse: collapse; font-size: 14px; }
+.mt caption { text-align: left; font-size: 13px; color: var(--muted); padding-bottom: 6px; }
+.mt th, .mt td { padding: 7px 0; border-bottom: 1px solid var(--line); }
+.mt thead th { font-size: 12px; font-weight: 400; color: var(--faint); text-align: right; padding-top: 0; padding-left: 16px; }
+.mt tbody th { font-weight: 400; color: var(--muted); text-align: left; padding-right: 10px; }
+.mt td { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 16px; }
+.mt tr.avg th, .mt tr.avg td { color: var(--ink); border-bottom: 0; }
 
 /* Summary figures above the desk */
 .figs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
