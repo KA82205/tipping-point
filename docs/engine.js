@@ -86,11 +86,15 @@
    *            is added. Used to average in the head-to-head polls model (docs/combine.js).
    *            weight 1 (the default) is this model alone, with the same random draws.
    * model (optional): the fits to use (default MODEL); one per econVariant.
+   * keep (optional): keep about this many of the simulated elections, evenly spaced, so the site can replay
+   *            one or count only those where chosen states go a chosen way. Returned as draws:
+   *            { n, units, shares, ev }; shares holds each unit's Democratic share x 100, draw by draw.
+   *            Keeping draws uses no random numbers, so every other result is unchanged.
    *
    * As in the authors' code: coefficients drawn together from their covariance, and a model error with
    * SD = rmse whose correlation across states is drawn once per weighting, between 0.70 and 0.97.
    */
-  function simulate({ states, districts = [], n = 10000, seed = 2028, econVariants = null, mix = null, model = MODEL }) {
+  function simulate({ states, districts = [], n = 10000, seed = 2028, econVariants = null, mix = null, model = MODEL, keep = 0 }) {
     const rand = mulberry32(seed);
     const variants = econVariants && econVariants.length ? econVariants : [null];
     if (variants.length > 1 && variants.length !== model.variants.length) throw new Error('one economic variant per model fit is needed');
@@ -110,6 +114,10 @@
     const col = vars.map(v => model.vars.indexOf(v));
     const dIdx = districts.map(d => states.findIndex(s => s.abbr === d.parent));
     const w = mix ? mix.weight : 1, other = states.map(s => mix ? mix.point[s.abbr] : 0);
+    const every = keep > 0 ? Math.max(1, Math.floor(n * variants.length / keep)) : 0, nU = all.length;
+    const kept = every ? { n: 0, units: all.map(s => s.abbr), shares: new Int16Array(variants.length * Math.ceil(n / every) * nU), ev: new Uint16Array(variants.length * Math.ceil(n / every)) } : null;
+    // A share is stored in hundredths of a point; a rounded value never lands on the other side of 50.
+    const q = y => { const v = Math.round(y * 100); return y > 50 ? Math.max(v, 5001) : Math.min(v, 5000); };
     variants.forEach((variant, k) => {
       const X = variant ? base.map((row, i) => { const r = row.slice(); r[ie] = variant[states[i].abbr]; return r; }) : base;
       const fit = fitFor(k), L = fit.L;
@@ -139,6 +147,12 @@
         }
         evHist[ev]++;
         if (ev >= 270) demWins++; if (ev === 269) ties++;
+        if (every && it % every === 0) {
+          const o = kept.n * nU;
+          for (let i = 0; i < nS; i++) kept.shares[o + i] = q(share[i]);
+          for (let k = 0; k < districts.length; k++) kept.shares[o + nS + k] = q(share[dIdx[k]] + districts[k].offset);
+          kept.ev[kept.n++] = ev;
+        }
         popSum += pop / popTotal;
       }
     });
@@ -157,6 +171,7 @@
       demPopular: popSum / total,
       evHistogram: evHist.map(c => c / total),
       states: byState,
+      draws: kept,
     };
   }
 
