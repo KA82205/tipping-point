@@ -1,5 +1,5 @@
-"""Shown beside the Nowcast for comparison, not part of it: five of Allan Lichtman's objective Keys to the
-White House, counted.
+"""NOT USED by the Nowcast or the site; kept for reference and not run by update.py. Five of Allan
+Lichtman's objective Keys to the White House, counted.
 
 The five keys (each one TRUE favors the party holding the White House):
   1  Party mandate      After the midterms the party holds more House seats than after the previous midterms.

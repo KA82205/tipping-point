@@ -34,7 +34,6 @@ import urllib.request
 import approval  # noqa: E402
 import candidates  # noqa: E402
 import economy  # noqa: E402
-import keys as lichtman  # noqa: E402
 
 
 def refresh_morris_state_approval(csv_path):
@@ -260,15 +259,6 @@ def main():
     matchups, h_skipped = candidates.general_matchups(pres_raw, h_lo, today, approval._iso, registry)
     terms = (1 if cfg["election"]["incumbent_party"] == "D" else -1) * cfg["election"].get("incumbent_party_terms", 1)
 
-    # Third model: five of Lichtman's objective keys (pipeline/keys.py). Economy keys from FRED.
-    st24 = [v for k, v in results.items() if len(k) == 2]
-    base_dem = sum(v["share"] * v["votes"] for v in st24) / sum(v["votes"] for v in st24)
-    try:
-        keys_block = lichtman.build(cfg, fred, None if fx else key, base_dem, standing=standing)
-    except Exception as e:  # the Nowcast runs on two models if the keys cannot be scored today
-        print(f"WARNING: keys model not scored ({e}); running without it")
-        keys_block = None
-
     by_abbr = {s["abbr"]: s for s in states}
     r4 = lambda x: round(x, 4)  # noqa: E731
     payload = {
@@ -288,7 +278,6 @@ def main():
                "window": [g_lo.isoformat(), g_hi.isoformat()]},
         "h2h": {"window": [h_lo.isoformat(), today.isoformat()], "days": hh.get("window_days", 180),
                 "min_polls": hh.get("min_polls", 3), "terms": terms, "polls": matchups, "skipped": h_skipped},
-        "keys": keys_block,
         # Everything the in-browser ticket picker needs to rerun both models (docs/combine.js).
         "scenario": {
             "constant": cfg["approval"]["constant"], "sign": sign,
@@ -320,10 +309,10 @@ def main():
                              "demPopular": round(m["demPopular"], 2)}
     payload["summary"] = {"pDemWin": res["pDemWin"], "pTie": res["pTie"], "demPopular": res["demPopular"],
                           "demEvPoint": dem_ev_point, "simulations": res["simulations"]}
-    payload["models"] = {"enns": brief(out["enns"]), "desart": brief(out["desart"]), "keys": brief(out.get("keys")),
+    payload["models"] = {"enns": brief(out["enns"]), "desart": brief(out["desart"]),
                          "polls": out["info"]["polls"] and {"avg": round(out["info"]["polls"]["avg"], 2), "n": out["info"]["polls"]["n"]}}
     payload["evHistogram"] = [round(x, 5) for x in res["evHistogram"]]
-    payload["states"] = [{**{k: (round(v, 2) if k in ("demShare", "enns", "desart", "keys") else v) for k, v in s.items()},
+    payload["states"] = [{**{k: (round(v, 2) if k in ("demShare", "enns", "desart") else v) for k, v in s.items()},
                           "pDem": round(s["pDem"], 4),
                           "approve": round(by_abbr[s["abbr"]]["approve"], 1) if s["abbr"] in by_abbr else None,
                           "econ": round(by_abbr[s["abbr"]]["inputs"]["econ"], 4) if s["abbr"] in by_abbr else None}
@@ -358,8 +347,7 @@ def main():
     m = payload["models"]
     print(f"Models: approval/economy {m['enns']['pDemWin']:.1%}; head-to-head polls "
           + (f"{m['desart']['pDemWin']:.1%} from {m['polls']['n']} polls averaging {m['polls']['avg']:.1f}% Democratic"
-             if m["desart"] else "not run (no polls)") + f"; {len(matchups)} matchups in window, {h_skipped} skipped"
-          + (f"; keys {m['keys']['pDemWin']:.1%} ({keys_block['false']} of {keys_block['count']} false, {keys_block['pending']} pending)" if m.get("keys") else "; keys not run"))
+             if m["desart"] else "not run (no polls)") + f"; {len(matchups)} matchups in window, {h_skipped} skipped")
 
 
 if __name__ == "__main__":
