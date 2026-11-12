@@ -290,6 +290,7 @@
   − <span class="c">0.35</span> × Anderson 1980 share (1984 only)
   − <span class="c">0.60</span> × Perot 1996 share (2000 only)</div>
     <p class="small">Fitted on 11 elections × 51 jurisdictions, 1980–2020 (N = 561). Adjusted R² 0.90, standard error 3.46 points.</p>
+    <p>The Nowcast runs this regression refitted on 1980–2024 from the authors' replication data, with the 2024 results added, as the authors refit before each forecast. Refitting on 1980–2020 reproduces the numbers above exactly. With 2024 added: approval 0.30, economy 1.56, home state 2.31, previous home state −3.07, running mate 1.78, standard error 3.45.</p>
     <h2>Head-to-head polls</h2>
     <p>The Long-Range State-Level Forecast Model, by Jay A. DeSart. It was built to forecast a year ahead, before the nominees are known.</p>
 <div class="eq">Democratic two-party share in a state =
@@ -300,6 +301,7 @@
   − <span class="c">0.988</span> × consecutive terms the president's party has held the White House
     (counted as positive for Democrats, negative for Republicans)</div>
     <p class="small">Fitted on seven elections × 50 states, 1996–2020 (N = 350). R² 0.90, standard error 3.08 points.</p>
+    <p>The Nowcast runs it refitted on 1996–2024 from DeSart's replication data, with 2024 added. Refitting on 1996–2020 reproduces the numbers above exactly. With 2024 added: previous share 1.007, polls 0.522, home state 1.91, terms −1.00, standard error 2.93.</p>
     <h2>How they are combined</h2>
     <p>The two models read different things. One reads how people rate the president and how state economies are doing; the other reads what voters say when asked to choose between named candidates. Each state's Nowcast is the average of the two models' forecasts for that state, with equal weight. The Electoral College is then simulated once from those averages, the way the approval and economy model simulates it.</p>
     <p>Equal weights, because research on election forecasting has found that averaging forecasts from different methods is usually more accurate than relying on one, and two elections of track record are too few to fit better weights. In 2024 the approval and economy model was closer on the national vote: 49.7% Democratic, against 49.3% in the result. DeSart's model said 50.7%, a year out.</p>
@@ -309,15 +311,15 @@
   <section class="cols2">
     <div>
       <h2 style="margin-bottom:14px">Uncertainty</h2>
-      <p>Each forecast runs 10,000 draws of the coefficients, adds model error with a standard deviation equal to the model's root mean square error, and repeats across seven values of the economic weighting parameter: 70,000 simulations. The Nowcast uses the same simulation for the averaged forecast.</p>
-      <p>Most of that error is shared by every state in a simulation, so when the model misses, it tends to miss the whole map in the same direction. Run on the paper's own 2024 state forecasts, this reproduces its published odds: Trump in 73 of 100 simulations.</p>
-      <p>The polls model's own paper gives each state an independent error and shares none. That makes a national miss nearly impossible: its 95% range for the 2024 national vote was 49.4% to 51.9% Democratic, and the result, 49.3%, fell outside it. Its own record shows national misses of 1 to 2 points, which move every state together. So the Nowcast simulates both models with the shared error above. This site's version of DeSart's equation, run with his independent errors on his 2024 inputs, reproduces his published simulation (256 Democratic electoral votes on average, 95% between 218 and 306), which is how it was checked.</p>
-      <p>Maine and Nebraska districts take the statewide forecast plus each district's gap from its state in the previous election.</p>
+      <p>As in the authors' code: each forecast draws the coefficients 10,000 times, together, from their covariance; adds model error with a standard deviation equal to the model's root mean square error; and repeats for seven values of the economic weighting, 0.52 to 0.58. That makes 70,000 simulations. The Nowcast uses the same simulation for the averaged forecast.</p>
+      <p>The errors of different states are correlated, so when the model misses, it tends to miss the whole map in the same direction. The authors draw that correlation once for each weighting, between 0.70 and 0.97, and so does this site. Rerunning their code on their replication data gives Harris 27 in 100 in 2024, as published, and this site's engine reproduces it.</p>
+      <p>The polls model's own paper gives each state an independent error and shares none. That makes a national miss nearly impossible: its 95% range for the 2024 national vote was 49.4% to 51.9% Democratic, and the result, 49.3%, fell outside it. Its own record shows national misses of 1 to 2 points, which move every state together. So the Nowcast simulates both models with the correlated error above. This site's version of DeSart's equation, run with his independent errors on his 2024 inputs from his replication files, reproduces his published simulation (256 Democratic electoral votes on average, 95% between 218 and 306), which is how it was checked.</p>
+      <p>Maine and Nebraska districts take the statewide forecast plus each district's gap from its state in the previous election, as in the authors' code.</p>
     </div>
     <div>
       <h2 style="margin-bottom:14px">Ratings</h2>
       <p>Solid when a candidate wins more than 98 in 100 simulations, Likely above 75, Lean above 55, Toss-up otherwise.</p>
-      <p>The 2024 scorecard's state forecasts and 90% ranges are read from the paper's Figure A-2, which plots each state's simulated distribution; the recovered values reproduce every call and rating in the paper.</p>
+      <p>The 2024 scorecard's state forecasts, 90% ranges and odds come from rerunning the authors' simulation on their replication data. They match the paper's Figure A-2 to within 0.2 points. The ratings shown are the paper's published ones.</p>
     </div>
   </section>
 
@@ -327,7 +329,7 @@
       <p>State economies come from the Philadelphia Fed State Coincident Indexes via FRED. Trump's national approval is an average of public polls from VoteHub and PollResults.org. State-level approval estimates come from G. Elliott Morris's Trump Approval Explorer (<a href="https://projects.gelliottmorris.com/trump-approval/">projects.gelliottmorris.com/trump-approval</a>). Those estimates were last updated on September 22, 2026, so the gaps between states are from then while the national level is current. It will be replaced by Civiqs or Morning Consult estimates if a data-sharing agreement is reached.</p>
       <p>Nominees, running mates and their home states are read from Wikipedia each morning. The vice-president adjustment uses job-approval polls of the vice president from VoteHub, or favorability when there are none, as the authors did for 1988. The list of possible candidates follows national 2028 primary polls from PollResults.org.</p>
       <p>Head-to-head polls are national general-election polls between two people on the candidate list, from PollResults.org, over the last 180 days. A poll that tests several pairings counts once for each.</p>
-      <p>The 2024 scorecard uses the paper's own published forecasts, untouched. The Nowcast differs from the two papers in the ways listed below.</p>
+      <p>The 2024 scorecard is the paper's own forecast, recomputed exactly from the authors' replication files. The Nowcast differs from the two papers in the ways listed below.</p>
     </div>
     <div>
       <h2 style="margin-bottom:14px">Sources</h2>
@@ -339,7 +341,7 @@
 
   <section class="stack" id="divergences">
     <h2>Everything that differs from the Enns model</h2>
-    <p class="small">The 2024 scorecard is the Enns model's own published forecast, unchanged. The 2028 Nowcast starts from the same equation and coefficients. These are all the places where it does something the paper does not, or fills in something the paper does not publish. Each is a setting in <code>pipeline/config.json</code> or a line in the site's code.</p>
+    <p class="small">The 2024 scorecard is the Enns model's own forecast. The 2028 Nowcast runs the same model, refitted with 2024 from the authors' replication files. These are all the places where it does something the authors did not, or fills in something their files do not give. Each is a setting in <code>pipeline/config.json</code> or a line in the site's code.</p>
   </section>
 
   <section class="cols2">
@@ -347,20 +349,30 @@
       <h2 style="margin-bottom:14px">Changed or added on purpose</h2>
       <p><b>A second model is averaged in.</b> Each state's forecast is half the Enns model and half DeSart's head-to-head polls model, then simulated together. The paper uses its model alone. Why: see "How they are combined" above.</p>
       <p><b>Each party's field is weighted until its nominee is known.</b> The paper forecasts once the nominees are set, so it has no rule for this. Following DeSart, home-state effects are spread across the possible nominees by their share of primary polling. The vice-president adjustment is applied in the same proportion: if the sitting vice president has 38% of his party's primary polling, 38% of the adjustment applies.</p>
-      <p><b>The vice-president adjustment is phased in.</b> The paper applies the gap between the vice president's and the president's net approval in full. Here it is scaled by the number of polls of the vice president and reaches full size at 20 polls, so a handful of polls cannot move every state at once. When there are too few polls in the last 120 days, the window widens to 240 and then 365 days, and as a last resort a single poll is used.</p>
-      <p><b>The home-state fade is halved.</b> The paper takes 3.49 points back in the previous nominees' home states. The Nowcast takes 1.7 in both California and Florida. In 2024 the full fade looked too large everywhere it could be checked: Delaware, where Biden's boost was faded, came in 5.5 points more Democratic than the paper forecast, its largest miss; California moved toward Republicans with Harris on the ballot; Florida kept moving right between 2020 and 2024 and stayed Republican in the 2026 governor's race without Trump. Trump had moved his residence to Florida before 2020, though forecasters disagree on whether 2020 counts as a Florida run; DeSart codes it as New York.</p>
+      <p><b>The vice-president adjustment is phased in.</b> The authors apply the gap between the vice president's and the president's net approval in full, from a handful of July polls. Here it is scaled by the number of polls of the vice president and reaches full size at 20 polls, so a few polls cannot move every state at once. When there are too few polls in the last 120 days, the window widens to 240 and then 365 days, and as a last resort a single poll is used.</p>
       <p><b>It runs every day.</b> The paper forecasts once, about 100 days before the election, from approval polls taken in June and July and the economy through June. The Nowcast uses today's polls and the latest economic month, so it describes today, not November 2028. The official forecast on the countdown will follow the paper's timing.</p>
+      <p><b>National vote.</b> The authors add up the national vote by weighting each state by its 2020 population. The Nowcast weights states by the votes cast in 2024.</p>
     </div>
     <div>
-      <h2 style="margin-bottom:14px">Filled in because the paper does not publish it</h2>
-      <p><b>State approval.</b> The paper estimates approval in each state itself from national surveys. The Nowcast uses G. Elliott Morris's state estimates of September 22, 2026, shifted so they agree with today's national average. The District of Columbia is not in that source and is set to 15%.</p>
+      <h2 style="margin-bottom:14px">From other sources, or inferred</h2>
+      <p><b>State approval.</b> The authors estimate approval in each state themselves from national surveys, some of which cannot be shared. The Nowcast uses G. Elliott Morris's state estimates of September 22, 2026, shifted so they agree with today's national average. The District of Columbia is not in that source and is set to 15%.</p>
       <p><b>National approval.</b> An average of public polls from VoteHub and PollResults.org over the last 30 days: each pollster's latest poll, weighted by sample size and by age, with recent polls counting more. Internal and partisan polls are left out.</p>
-      <p><b>Approval baseline.</b> The paper subtracts a fitted constant from approval before it enters the equation and does not report it. The Nowcast uses 50.</p>
-      <p><b>Economic weighting.</b> The paper uses 0.55 for 2024: its appendix computes California's 2024 value with it. It also repeats each forecast with the three weights above and three below, without saying how far apart they are. The Nowcast uses steps of 0.05, from 0.40 to 0.70. Economic growth is counted against the Democrat while a Republican is president, the same way approval is; the paper does not spell this out for a Republican incumbent.</p>
-      <p><b>How errors are shared.</b> The paper adds one model-error draw of 3.46 points to each simulation, which reads as a single error shared by every state. Applied that way here, it gives Harris 30% in 2024 instead of the published 27%, and almost no exact ties instead of about one in 500. Splitting the error into a shared part of 3.1 points and a state part of 1.5 reproduces both, so that is what the site uses.</p>
-      <p><b>Coefficient draws.</b> The paper draws its coefficients together, from their full covariance. That needs the replication data, so here each is drawn on its own from its published standard error.</p>
-      <p><b>Maine and Nebraska districts.</b> Each district takes the statewide forecast plus its gap from the state in 2024.</p>
-      <p class="small">These will be checked against the paper's replication data.</p>
+      <p><b>Approval baseline: 44.</b> The model reads approval minus a baseline. The replication data stores approval with the baseline already taken off, without stating it, but it is 44. The authors' surveys average 44.2% approval, the stored values shift by whole points from one forecast year to the next, and comparing them with national approval in each election from 1980 to 2024 gives 43.6, give or take 0.6. The site used 50 before these files arrived, which overstated the Democrat's share in the approval and economy model by about 2 points.</p>
+    </div>
+  </section>
+
+  <section class="stack">
+    <h2>Settled by the authors' replication files</h2>
+    <p class="small">These were guesses until the files arrived. Each now follows the authors' data and code.</p>
+    <div class="cols2">
+      <div>
+        <p><b>Refitted with 2024.</b> The coefficients come from refitting the authors' data with the 2024 results added. This lowers the fade in the previous nominees' home states from 3.49 to 3.07 points. Until now the site halved the fade, because it looked too large in 2024; the refit now learns that from the 2024 results, so halving it as well would count the same evidence twice. The authors code Trump's 2020 run as Florida; DeSart codes it as New York.</p>
+        <p><b>Economic weighting.</b> 0.55, the median fitted value for 2008 to 2016, simulated from 0.52 to 0.58 in steps of 0.01. The site used 0.40 to 0.70. Economic growth is counted against the Democrat while a Republican is president, as the site assumed.</p>
+      </div>
+      <div>
+        <p><b>Uncertainty.</b> Coefficients are drawn together from their covariance, and the correlation of state errors is drawn between 0.70 and 0.97 for each weighting. The site drew coefficients one at a time and used a fixed split of the error.</p>
+        <p><b>District of Columbia economy and Maine and Nebraska districts.</b> DC uses the average of Maryland and Virginia, and each district follows its state's swing, as the site assumed.</p>
+      </div>
     </div>
   </section>
 
@@ -368,8 +380,9 @@
     <h2>Where the polls model differs from DeSart's paper</h2>
     <div class="cols2">
       <div>
+        <p><b>Refitted with 2024.</b> The coefficients come from refitting his replication data with 2024 added: his October 2023 poll average (49.53%), the actual nominees' home states and the result. That lowers the home-state effect from 2.54 to 1.91 points.</p>
         <p><b>Timing.</b> DeSart forecasts once, from polls taken in October of the year before the election, which will be October 2027. The Nowcast uses the last 180 days of polls.</p>
-        <p><b>Error.</b> It is simulated with the shared error described above, not his independent state errors.</p>
+        <p><b>Error.</b> It is simulated with the correlated error described above, not his independent state errors.</p>
         <p><b>Chosen nominees.</b> If you pick a nominee with at least five head-to-head polls, those polls are used, as DeSart did for each pairing in 2016 and 2020. With fewer, a wider set is used and the page says so.</p>
       </div>
       <div>
