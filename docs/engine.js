@@ -78,13 +78,17 @@
    *                                                 statewide Dem share, previous election
    * econVariants (optional): array of per-state econ maps, one per weight parameter
    *            (the paper uses the chosen weight plus three above and three below).
+   * mix (optional, not in the paper): { weight, point: {abbr: share} }. Each state's share becomes
+   *            weight x this model + (1 - weight) x another model's forecast, before the model error
+   *            is added. Used to average in the head-to-head polls model (docs/combine.js).
+   *            weight 1 (the default) is this model alone, with the same random draws.
    *
    * Parameter draws are independent normals from the Table 1 SEs. The paper's
    * CLARIFY draws use the full covariance matrix, which needs the replication data.
    * Model error: one draw per simulation shared by every state, plus a smaller
    * state-specific draw (see SHARED_SD above).
    */
-  function simulate({ states, districts = [], n = 10000, seed = 2028, econVariants = null }) {
+  function simulate({ states, districts = [], n = 10000, seed = 2028, econVariants = null, mix = null }) {
     const rand = mulberry32(seed);
     const variants = econVariants && econVariants.length ? econVariants : [null];
     const all = states.concat(districts);
@@ -98,6 +102,7 @@
     const base = states.map(s => VARS.map(v => s.inputs[v] || 0));
     const nS = states.length, nV = VARS.length, b = new Float64Array(nV), share = new Float64Array(nS);
     const dIdx = districts.map(d => states.findIndex(s => s.abbr === d.parent));
+    const w = mix ? mix.weight : 1, other = states.map(s => mix ? mix.point[s.abbr] : 0);
     for (const variant of variants) {
       const X = variant ? base.map((row, i) => { const r = row.slice(); r[ie] = variant[states[i].abbr]; return r; }) : base;
       for (let it = 0; it < n; it++) {
@@ -107,9 +112,9 @@
         let ev = 0, pop = 0;
         for (let i = 0; i < nS; i++) {
           const row = X[i];
-          let y = b0 + shared;
+          let y = b0;
           for (let j = 0; j < nV; j++) y += b[j] * row[j];
-          y += STATE_SD * normal(rand);
+          y = w * y + (1 - w) * other[i] + shared + STATE_SD * normal(rand);
           share[i] = y;
           pop += y * (states[i].pop || 1);
           if (y > 50) { ev += states[i].ev; wins[states[i].abbr]++; }
@@ -124,7 +129,7 @@
       }
     }
     const total = n * variants.length;
-    const point = Object.fromEntries(states.map(s => [s.abbr, predict(s.inputs)]));
+    const point = Object.fromEntries(states.map((s, i) => [s.abbr, w * predict(s.inputs) + (1 - w) * other[i]]));
     for (const d of districts) point[d.abbr] = point[d.parent] + d.offset;
     const byState = all.map(s => {
       const p = wins[s.abbr] / total;
