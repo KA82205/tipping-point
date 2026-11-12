@@ -1,15 +1,9 @@
-// Runs the model engine (docs/engine.js) on pipeline-built inputs.
+// Runs both Nowcast models (docs/combine.js) on the payload built by update.py.
 // Usage: node pipeline/run_forecast.js inputs.json > result.json
 const fs = require('fs');
 const path = require('path');
-const E = require(path.join(__dirname, '..', 'docs', 'engine.js'));
+const TP = require(path.join(__dirname, '..', 'docs', 'combine.js'));
 
 const inp = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-const res = E.simulate({
-  states: inp.states,
-  districts: inp.districts,
-  n: inp.n_per_delta,
-  seed: inp.seed,
-  econVariants: inp.econ_variants,
-});
-process.stdout.write(JSON.stringify(res));
+const out = TP.run(inp.N, inp.picks || {}, { n: inp.n, seed: inp.seed, forceVpShift: inp.force_vp_shift });
+process.stdout.write(JSON.stringify(out));
