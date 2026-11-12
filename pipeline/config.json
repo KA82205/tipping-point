@@ -7,6 +7,7 @@
     "forecast_day": "2028-07-30",
     "incumbent_president": "Donald Trump",
     "incumbent_party": "R",
+    "incumbent_party_terms": 1,
     "term_start_month": "2025-01",
     "economy_end_month": "2028-06",
     "approval_window": ["2028-06-01", "2028-07-30"],
@@ -67,5 +68,12 @@
     "vote_swing_k": 1.0
   },
 
+  "head_to_head": {
+    "_comment": "Second model: DeSart (2025), doi:10.1017/S1049096524000805. National head-to-head general-election polls between listed candidates, from PollResults.org.",
+    "window_days": 180,
+    "_window_note": "DEPARTURE: DeSart uses polls from October of the year before the election (October 2027). The Nowcast uses the last window_days days instead.",
+    "min_polls": 5,
+    "_min_polls_note": "A chosen nominee or pairing needs at least this many polls to be judged on its own polls; otherwise a wider set is used."
+  },
   "simulation": { "n_per_delta": 10000, "seed": 2028 }
 }
