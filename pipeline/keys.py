@@ -25,15 +25,14 @@ Each key is scored by Lichtman's own rule (as set out on Wikipedia, "The Keys to
 
 The vote: incumbent party's share of the national two-party vote = a + b x (number of the five keys false),
 fitted on every election 1864-2024 (keys_history.csv: Lichtman's ratings as tabulated on Wikipedia; the
-two-party vote from the Gov 1347 course data, certified results for 2024). It is spread to the states by
-shifting the 2024 state results by the change in the national vote. Lichtman forecasts only the winner, not
-states; this state-by-state spread is the Nowcast's.
+two-party vote from the Gov 1347 course data, certified results for 2024). Lichtman forecasts no states,
+and neither does this model: in the Nowcast (docs/combine.js) it sets a third of the national level only.
 
-Back-test (each election forecast from earlier elections only, 2008-2024): adding this model to the other
-two with equal weights lowered the average state miss from 2.10 to 1.85 points and the national miss from
-0.98 to 0.90 points. Against the same model with key 4 included: state miss 1.85 vs 1.87, national 0.90 vs
-0.78; forecasting each of 1996-2024 from all other elections, state 2.09 vs 2.15, national 1.01 vs 1.13; the
-keys alone over all 41 elections, national 3.64 vs 3.68.
+Back-test (each election forecast from earlier elections only, 2008-2024), with the state map from the other
+two models and the national level from all three: state miss 1.90 points (2.10 for the other two alone),
+states called 95.6%, national miss 0.90 (0.98). Against the same with key 4 included: national 0.90 vs 0.78
+from 2008 to 2024, but forecasting each of 1996-2024 from all other elections 1.01 vs 1.13, and the keys
+alone over all 41 elections 3.64 vs 3.68.
 """
 import csv
 import math
