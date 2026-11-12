@@ -1,6 +1,5 @@
 {
   "_comment": "Settings for the 2028 cycle. Values marked FROM REPLICATION come from the authors' replication files (Enns et al., doi:10.7910/DVN/PBGFOF); values marked ASSUMPTION are this site's own.",
-
   "election": {
     "year": 2028,
     "election_day": "2028-11-07",
@@ -10,10 +9,12 @@
     "incumbent_party_terms": 1,
     "term_start_month": "2025-01",
     "economy_end_month": "2028-06",
-    "approval_window": ["2028-06-01", "2028-07-30"],
+    "approval_window": [
+      "2028-06-01",
+      "2028-07-30"
+    ],
     "wiki_article": "2028 United States presidential election"
   },
-
   "candidates": {
     "_comment": "Nominees, running mates and their home states are detected automatically (pipeline/candidates.py). Fill any of the four *_home fields only to override detection. home_lag = the previous election's nominees (2024: Harris CA, Trump FL).",
     "dem_president_home": null,
@@ -29,7 +30,6 @@
     "primary_min_pct": 3,
     "_primary_note": "Possible candidates in the ticket picker are ordered by their average in national 2028 primary polls (PollResults.org) over the last primary_window_days. Anyone at primary_min_pct or more who is not in candidates.json is added automatically."
   },
-
   "vp_adjustment": {
     "_comment": "auto: applied when the sitting vice president (read from Wikipedia) is a nominee. Uses VoteHub job-approval polls of the vice president (VP net minus president net), or favorability if there are none in the window. Set mode to manual and fill vp_net/president_net to override.",
     "mode": "auto",
@@ -39,17 +39,26 @@
     "full_weight_polls": 20,
     "_full_weight_note": "ASSUMPTION, not in the paper: the gap is scaled by (polls of the vice president / full_weight_polls), capped at 1, so a handful of polls cannot swing the result. Set to 0 to always use the full gap."
   },
-
   "economy": {
     "fred_series_template": "{state}PHCI",
     "delta": 0.55,
-    "delta_grid": [0.52, 0.53, 0.54, 0.55, 0.56, 0.57, 0.58],
+    "delta_grid": [
+      0.52,
+      0.53,
+      0.54,
+      0.55,
+      0.56,
+      0.57,
+      0.58
+    ],
     "_delta_note": "FROM REPLICATION: 0.55, the median fitted weight for 2008-2016, simulated from 0.52 to 0.58 in steps of 0.01 (Figures1andA2_2024.do). One model fit per value; docs/engine.js holds the fits in this order.",
     "signed_by_incumbent_party": true,
     "_signed_note": "FROM REPLICATION: economic growth is multiplied by -1 under a Republican president (Figures1andA2_2024.do).",
-    "dc_from": ["MD", "VA"]
+    "dc_from": [
+      "MD",
+      "VA"
+    ]
   },
-
   "approval": {
     "constant": 44,
     "_constant_note": "FROM REPLICATION (inferred): the authors' data stores approval already centered, and the center is 44. Their approval surveys average 44.2% approve (ReadMe), the centered variable moves by whole points between forecast years, and comparing it with national approval in each election from 1980 to 2024 gives 43.6 +/- 0.6.",
@@ -67,7 +76,6 @@
     "_state_source_note": "state_polls (default): vote_swing, pulled toward any state approval polls from the window plus 60 days. vote_swing: state = national + k * (Trump 2024 two-party share in state - national). csv: read pipeline/state_approval.csv (columns state,approve) from Civiqs, Morning Consult or your own MRP; the CSV's state differences are kept and re-centered on the national average.",
     "vote_swing_k": 1.0
   },
-
   "head_to_head": {
     "_comment": "Second model: DeSart (2025), doi:10.1017/S1049096524000805. National head-to-head general-election polls between listed candidates, from PollResults.org.",
     "window_days": 180,
@@ -75,5 +83,38 @@
     "min_polls": 5,
     "_min_polls_note": "A chosen nominee or pairing needs at least this many polls to be judged on its own polls; otherwise a wider set is used."
   },
-  "simulation": { "n_per_delta": 10000, "seed": 2028 }
+  "simulation": {
+    "n_per_delta": 10000,
+    "seed": 2028
+  },
+  "keys": {
+    "_comment": "Third model: Lichtman's six objective keys, counted (pipeline/keys.py). key1-key4 are set by hand when known: false = true means the key is FALSE (bad for the party holding the White House); null = not known yet, counted as half false. Keys 5 and 6 are scored daily from FRED.",
+    "term_start": "2025-01",
+    "fred_gdp_per_capita": "A939RX0Q048SBEA",
+    "fred_sahm": "SAHMREALTIME",
+    "key1": {
+      "false": true,
+      "why": "Democrats won the House in the November 2026 midterms, so Republicans hold fewer seats than the 222 they won in 2022."
+    },
+    "key2": {
+      "false": null,
+      "why": "Not known until the 2028 Republican primaries."
+    },
+    "key3": {
+      "false": true,
+      "why": "Trump cannot run for a third term, so the Republican candidate will not be the sitting president."
+    },
+    "key4": {
+      "false": null,
+      "why": "Not known until the 2028 campaign."
+    }
+  },
+  "ensemble": {
+    "_comment": "Each state's Nowcast is the equal-weight average of the three models (approval and economy, polls, keys). Equal weights: in back-tests every mix from 25% to 40% for each model did about equally well.",
+    "weights": {
+      "enns": 1,
+      "desart": 1,
+      "keys": 1
+    }
+  }
 }
