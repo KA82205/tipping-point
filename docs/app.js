@@ -155,7 +155,7 @@
     setTimeout(() => { arm.style.transform = `rotate(${tiltOf(pDem - pRep).toFixed(2)}deg)`; }, 80);
   }
   // The models and their average, side by side. m: { enns, desart, keys, now }, each { pDemWin, demPopular } or null.
-  const MODELS = [['enns', 'Approval and economy', 'Enns, Colner, Kumar and Lagodny'], ['desart', 'Long-range polls', 'DeSart'], ['keys', 'Six objective keys', 'Lichtman']];
+  const MODELS = [['enns', 'Approval and economy', 'Enns, Colner, Kumar and Lagodny'], ['desart', 'Long-range polls', 'DeSart'], ['keys', 'Five objective keys', 'Lichtman']];
   function ensemble(el, m) {
     const card = (cls, name, by, x) => `<div class="ens ${cls}"><span class="nm">${name}</span><span class="by">${by}</span>
       <span class="odds"><b>${Math.round(100 * x.pDemWin)}</b> in 100 for the Democrat</span><span class="split" aria-hidden="true"><i style="width:${(100 * x.pDemWin).toFixed(1)}%"></i></span>
@@ -239,7 +239,7 @@
     const tabs = document.querySelectorAll('[data-snake]');
     const show = k => { const v = views[k] || views.fc; tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.snake === k)); snake(document.getElementById('snake-home'), document.getElementById('snake-home-read'), v[0], v[1]); };
     tabs.forEach(t => { if (t.dataset.snake === 'today' && !views.today) t.disabled = true; t.addEventListener('click', () => show(t.dataset.snake)); });
-    show('fc');
+    show(views.today ? 'today' : 'fc');
   }
 
   // ================= 2024 =================
@@ -644,11 +644,11 @@
       jump.forEach(b => io.observe(document.getElementById(b.dataset.to)));
     }
     const hp = (N.h2h && N.h2h.polls) || [];
-    // Lichtman's six objective keys, as scored today.
+    // Five of Lichtman's objective keys, as scored today.
     const KB = N.keys, kel = document.getElementById('keys-list');
     if (KB && kel) {
       kel.innerHTML = KB.keys.map(k => `<li class="${k.false === true ? 'f' : k.false === false ? 't' : 'p'}"><span class="st">${k.false === true ? 'False' : k.false === false ? 'True' : 'Not known yet'}</span><b>${k.n}. ${esc(k.name)}</b><p>${esc(k.why)}</p></li>`).join('');
-      document.getElementById('keys-sum').innerHTML = `A true key helps the party in the White House, now the Republicans; a false key hurts it. <b>${KB.false % 1 ? KB.false.toFixed(1) : KB.false} of 6 keys false</b>${KB.pending ? (KB.pending === 1 ? ', counting the one not yet known as half false' : `, counting each of the ${KB.pending} not yet known as half false`) : ''}. Since 1864 each false key has cost the party in the White House about ${Math.abs(KB.fit.b).toFixed(1)} points, which puts the Democrat at ${fmt(KB.demNational)} of the national vote in this model.`;
+      document.getElementById('keys-sum').innerHTML = `A true key helps the party in the White House, now the Republicans; a false key hurts it. <b>${KB.false % 1 ? KB.false.toFixed(1) : KB.false} of ${KB.count || KB.keys.length} keys false</b>${KB.pending ? (KB.pending === 1 ? ', counting the one not yet known as half false' : `, counting each of the ${KB.pending} not yet known as half false`) : ''}. Since 1864 each false key has cost the party in the White House about ${Math.abs(KB.fit.b).toFixed(1)} points, which puts the Democrat at ${fmt(KB.demNational)} of the national vote in this model.`;
     } else if (kel) document.getElementById('keys-wrap').hidden = true;
     const tb = document.getElementById('h2h-2028'), more = document.getElementById('h2h-more');
     const showPolls = all => {

@@ -5,7 +5,7 @@
  *   2. DeSart (2025), "Long-Range State-Level 2024 Presidential Election Forecast",
  *      PS: Political Science & Politics 58(2), doi:10.1017/S1049096524000805:
  *      previous result, national head-to-head polls, home state, consecutive terms.
- *   3. Lichtman's six objective Keys to the White House, counted and turned into a national vote
+ *   3. Five of Lichtman's objective Keys to the White House, counted and turned into a national vote
  *      (pipeline/keys.py), spread to the states by shifting the 2024 results.
  *
  * The site (app.js) and the daily run (pipeline/run_forecast.js) both call run(),
