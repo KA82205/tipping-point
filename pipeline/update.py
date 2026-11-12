@@ -260,12 +260,11 @@ def main():
     matchups, h_skipped = candidates.general_matchups(pres_raw, h_lo, today, approval._iso, registry)
     terms = (1 if cfg["election"]["incumbent_party"] == "D" else -1) * cfg["election"].get("incumbent_party_terms", 1)
 
-    # Third model: Lichtman's six objective keys (pipeline/keys.py). Economy keys from FRED.
+    # Third model: five of Lichtman's objective keys (pipeline/keys.py). Economy keys from FRED.
     st24 = [v for k, v in results.items() if len(k) == 2]
     base_dem = sum(v["share"] * v["votes"] for v in st24) / sum(v["votes"] for v in st24)
     try:
-        keys_block = lichtman.build(cfg, fred, None if fx else key, base_dem, polls=pres_raw, standing=standing,
-                                    today=today, iso=approval._iso)
+        keys_block = lichtman.build(cfg, fred, None if fx else key, base_dem, standing=standing)
     except Exception as e:  # the Nowcast runs on two models if the keys cannot be scored today
         print(f"WARNING: keys model not scored ({e}); running without it")
         keys_block = None
@@ -360,7 +359,7 @@ def main():
     print(f"Models: approval/economy {m['enns']['pDemWin']:.1%}; head-to-head polls "
           + (f"{m['desart']['pDemWin']:.1%} from {m['polls']['n']} polls averaging {m['polls']['avg']:.1f}% Democratic"
              if m["desart"] else "not run (no polls)") + f"; {len(matchups)} matchups in window, {h_skipped} skipped"
-          + (f"; keys {m['keys']['pDemWin']:.1%} ({keys_block['false']} of 6 false, {keys_block['pending']} pending)" if m.get("keys") else "; keys not run"))
+          + (f"; keys {m['keys']['pDemWin']:.1%} ({keys_block['false']} of {keys_block['count']} false, {keys_block['pending']} pending)" if m.get("keys") else "; keys not run"))
 
 
 if __name__ == "__main__":
