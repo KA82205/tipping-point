@@ -323,6 +323,12 @@
 
   // ================= 2028 Nowcast =================
   let layer28 = 'tracker', pinned28 = null, map28, cur = null;   // cur = current simulation result
+  // The polls model's vote is not the polls' average: DeSart's equation starts from the last result and moves it by
+  // about half of the polls' margin (coefficient 0.52), so the two are shown side by side to avoid misreading.
+  const SHRINK = 'The polls model starts from the 2024 result and moves it by about half of the polls\' margin, because polls this far out are only partly predictive (DeSart\'s estimate).';
+  const POLLS_NOTE = info => info && info.polls
+    ? `The polls themselves: the Democrat gets ${(Math.round(info.polls.avg * 10) / 10).toFixed(1)}% of the two-party vote on average in ${info.polls.n} head-to-head poll${info.polls.n === 1 ? '' : 's'}. ${SHRINK}`
+    : '';
   const ROLES = { 'dem-p': ['D', 'Democratic nominee'], 'dem-vp': ['D', 'Running mate'], 'rep-p': ['R', 'Republican nominee'], 'rep-vp': ['R', 'Running mate'] };
   const TICKET_KEY = { 'dem-p': ['dem', 'president'], 'dem-vp': ['dem', 'vp'], 'rep-p': ['rep', 'president'], 'rep-vp': ['rep', 'vp'] };
   const norm = s => (s || '').toLowerCase().replace(/[^a-z]/g, '');
@@ -455,7 +461,7 @@
         q.basis === 'matchup' ? `the Democrat gets ${share} of the two-party vote on average in ${q.n} polls of ${esc(d)} against ${esc(r)}.`
         : q.basis === 'either' ? `the Democrat gets ${share} of the two-party vote on average in the ${q.n} polls that test ${esc(d)} or ${esc(r)}. Fewer than ${h.min_polls} test them against each other.`
         : q.basis === 'one' ? `the Democrat gets ${share} of the two-party vote on average in the ${q.n} polls that test ${esc(d || r)}.`
-        : `the Democrat gets ${share} of the two-party vote on average across all ${q.n} national head-to-head polls from the last ${h.days} days.${short}`));
+        : `the Democrat gets ${share} of the two-party vote on average across all ${q.n} national head-to-head polls from the last ${h.days} days.${short}`) + ` ${SHRINK}`);
     } else out.push(`<b>Head-to-head polls:</b> none are available today, so the Nowcast is the approval and economy model on its own.`);
     const lw = N.scenario.homeLagWeight || { dem: 1, rep: 1 };
     out.push(`<b>2024 home states fade:</b> Harris's California and Trump's Florida give back part of their 2024 boost, whether or not they run again: about ${pts(-E('homeLag') * lw.dem)} points in the approval and economy model${cur.desart ? ` and ${pts(DH)} in the polls model` : ''}.`);
@@ -482,7 +488,7 @@
     document.getElementById('waffle-cap').textContent = `Out of 100 simulated elections held today, the Democrat wins ${nD} and the Republican wins ${100 - nD - nT}${nT ? `, with ${nT} tied` : ''}. A simulation is one possible outcome given how far off the models have been in the past.`;
     const mo = document.getElementById('models-28');
     if (mo) mo.innerHTML = s.desart
-      ? `Each state's number is the average of two models, and the map is then simulated as a whole. Each model on its own, simulated the same way: <b>approval and economy</b>, Democrat wins ${Math.round(100 * s.enns.pDemWin)} in 100 with ${fmt(s.enns.demPopular)} of the two-party vote; <b>head-to-head polls</b>, ${Math.round(100 * s.desart.pDemWin)} in 100 with ${fmt(s.desart.demPopular)}. <a href="#method">How they work</a>`
+      ? `Each state's number is the average of two models, and the map is then simulated as a whole. Each model on its own, simulated the same way: <b>approval and economy</b>, Democrat wins ${Math.round(100 * s.enns.pDemWin)} in 100 with ${fmt(s.enns.demPopular)} of the two-party vote; <b>polls model</b>, ${Math.round(100 * s.desart.pDemWin)} in 100 with ${fmt(s.desart.demPopular)}. ${POLLS_NOTE(s.info)} <a href="#method">How they work</a>`
       : `Today's Nowcast is the approval and economy model on its own, because no head-to-head polls are available. <a href="#method">How it works</a>`;
     document.getElementById('figs-2028').innerHTML = [
       [fmt(s.demPopular), 'Democratic share of the two-party vote'],
@@ -523,7 +529,8 @@
           <div><dt>Economy data through</dt><dd>${monthName(N.economy.through)}</dd></div>
         </dl>
         <div class="strip">${strip({ f: cur.demPopular })}</div>
-        ${cur.desart ? modelTable([['Approval and economy', cur.enns.demPopular, cur.enns.pDemWin], ['Head-to-head polls', cur.desart.demPopular, cur.desart.pDemWin], ['Nowcast', cur.demPopular, cur.pDemWin, 'avg']], 'the election') : ''}
+        ${cur.desart ? modelTable([['Approval and economy', cur.enns.demPopular, cur.enns.pDemWin], ['Polls model', cur.desart.demPopular, cur.desart.pDemWin], ['Nowcast', cur.demPopular, cur.pDemWin, 'avg']], 'the election') : ''}
+        ${cur.info && cur.info.polls ? `<p class="hint">${POLLS_NOTE(cur.info)}</p>` : ''}
         <p class="hint">Not the forecast. The Nowcast averages the two models state by state, so its odds are not the average of theirs. Hover a state for its numbers.</p>`;
       return;
     }
@@ -538,7 +545,7 @@
       </dl>
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>
-      ${s.desart != null ? modelTable([['Approval and economy', s.enns, s.ennsP], ['Head-to-head polls', s.desart, s.desartP], ['Nowcast', s.demShare, s.pDem, 'avg']], 'the state') : ''}
+      ${s.desart != null ? modelTable([['Approval and economy', s.enns, s.ennsP], ['Polls model', s.desart, s.desartP], ['Nowcast', s.demShare, s.pDem, 'avg']], 'the state') : ''}
       ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models take back part of the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(-window.SPASE.coef('homeLag') * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the approval and economy model${s.desart != null ? `, ${window.TP.DESART.home.toFixed(1)} in the polls model` : ''}.</p>` : ''}`;
   }
   function fill28(a) {
