@@ -161,7 +161,9 @@ section + section { border-top: 1px solid var(--line); }
 .snake .seg { position: relative; height: 100%; border-right: 1px solid rgba(7, 12, 21, .7); display: flex; align-items: center; justify-content: center; font: 600 11px var(--font-num); color: rgba(240,244,250,.88); cursor: pointer; transition: transform .16s, filter .16s; min-width: 0; overflow: hidden; }
 .snake .seg:first-child { border-radius: 9px 0 0 9px; } .snake .seg:last-child { border-radius: 0 9px 9px 0; border-right: 0; }
 .snake .seg:hover, .snake .seg:focus-visible { filter: brightness(1.35); transform: translateY(-5px); z-index: 4; outline: none; }
+.snake .seg.toss { color: #1c1503; }
 .snake .seg.tp { filter: brightness(1.3); outline: 2px solid var(--accent); outline-offset: -2px; z-index: 2; }
+.snake .seg.toss.tp { filter: none; outline-color: #fff; }
 .snake .mark270 { position: absolute; top: -10px; bottom: -10px; width: 2px; background: var(--ink); z-index: 3; pointer-events: none; }
 .snake .mark270::after { content: "270"; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font: 600 12px var(--font-num); color: var(--ink); }
 .snake-read { margin: 0; font-size: 14px; color: var(--muted); min-height: 3.2em; max-width: none; }
@@ -211,6 +213,7 @@ svg.usmap path.st:focus { outline: none; }
 svg.usmap .sel { fill: none; stroke: var(--accent); stroke-width: 2.2; pointer-events: none; }
 svg.usmap text.lbl { font: 600 10px var(--font-num); fill: rgba(240, 244, 250, 0.84); pointer-events: none; text-anchor: middle; }
 svg.usmap text.lbl.big { font-size: 13px; }
+svg.usmap text.lbl.dark, svg.usmap g.box.dark text { fill: #1c1503; }
 svg.usmap .leader { stroke: rgba(141, 153, 171, 0.35); stroke-width: 0.8; }
 svg.usmap g.box { cursor: pointer; }
 svg.usmap g.box rect { stroke: var(--line-2); stroke-width: 1; }
@@ -219,8 +222,11 @@ svg.usmap g.box text { font: 600 10px var(--font-num); fill: rgba(240,244,250,.9
 svg.usmap text.grp { font: 11px var(--font-body); fill: var(--muted); }
 svg.usmap path.st.called, svg.usmap g.box.called rect { stroke: #fff; stroke-width: 2; stroke-dasharray: 5 3; }
 .map-foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; padding: 6px 6px 2px; }
-.ramp { display: flex; align-items: center; gap: 8px; font: 12px var(--font-num); color: var(--muted); }
+.ramp { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; font: 12px var(--font-num); color: var(--muted); }
 .ramp i { display: block; width: 180px; height: 8px; border-radius: 4px; }
+.ramp .toss-key { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; white-space: nowrap; }
+@media (max-width: 560px) { .ramp i { width: 110px; } .ramp .toss-key { margin-left: 0; } }
+.ramp .toss-key i { width: 12px; height: 12px; border-radius: 3px; }
 
 /* What-ifs and single simulated elections, above the map */
 .mapbar { border: 1px solid var(--line-2); background: var(--panel-2); border-radius: 13px; padding: 12px 14px; margin-bottom: 10px; display: grid; gap: 9px; font-size: 14px; color: var(--muted); }
@@ -261,6 +267,7 @@ svg.usmap path.st.called, svg.usmap g.box.called rect { stroke: #fff; stroke-wid
 .mt caption { text-align: left; font-size: 13px; color: var(--muted); padding-bottom: 6px; }
 .mt th, .mt td { padding: 7px 0; border-bottom: 1px solid var(--line); }
 .mt thead th { font-size: 12px; font-weight: 400; color: var(--faint); text-align: right; padding-top: 0; padding-left: 16px; }
+.mt thead th:first-child { text-align: left; padding-left: 0; }
 .mt tbody th { font-weight: 400; color: var(--muted); text-align: left; padding-right: 10px; }
 .mt td { text-align: right; font-family: var(--font-num); font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 16px; }
 .mt tr.avg th, .mt tr.avg td { color: var(--ink); border-bottom: 0; }
@@ -360,6 +367,8 @@ svg.usmap path.st.called, svg.usmap g.box.called rect { stroke: #fff; stroke-wid
 .board .hd span { color: var(--muted); font-size: 13px; }
 .board .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .board .chips button { all: unset; cursor: pointer; font: 600 12px var(--font-num); color: rgba(240, 244, 250, .92); padding: 5px 0; width: 38px; text-align: center; border-radius: 6px; transition: transform .12s, filter .12s; }
+.board .chips button.toss { color: #1c1503; }
+.board .col.TOSS { box-shadow: inset 0 3px 0 #d9b23f; }
 .board .chips button:hover { filter: brightness(1.3); transform: translateY(-2px); }
 .board .chips button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .board .none { color: var(--faint); font-size: 12px; }

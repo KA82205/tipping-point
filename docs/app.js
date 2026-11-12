@@ -5,6 +5,19 @@
   const N = window.NOWCAST;
   const byAbbr = Object.fromEntries(R.map(r => [r.abbr, r]));
   const natActual = 100 * NAT.dem / (NAT.dem + NAT.rep);
+  // The 2024 scorecard has two forecasts to score: 'pub', the approval and economy model's forecast as its
+  // authors published it, and 'bt', the Nowcast's method applied to 2024 (docs/backtest2024.js).
+  const BT = window.BACKTEST_2024 || null, F24 = ['fc', 'lo', 'hi', 'pDem', 'rating'];
+  R.forEach(r => { r.pub = Object.fromEntries(F24.map(k => [k, r[k]])); r.bt = BT && BT.states[r.abbr] ? BT.states[r.abbr] : null; });
+  NAT.pub = { fc: NAT.fc, pDemWin: NAT.pDemWin }; NAT.bt = BT ? BT.national : null;
+  let src24 = 'pub';
+  function useSrc24(k) {
+    src24 = k === 'bt' && BT ? 'bt' : 'pub';
+    R.forEach(r => F24.forEach(f => { r[f] = (r[src24] || r.pub)[f]; }));
+    NAT.fc = NAT[src24].fc; NAT.pDemWin = NAT[src24].pDemWin;
+  }
+  const TOSS = '#d9b23f';   // toss-ups in the Nowcast are gold, not the color of whoever is a hair ahead
+  const isToss = p => Math.max(p, 1 - p) <= 0.55;
   const RATING = { SR: 'Solid R', LR: 'Likely R', TR: 'Lean R', TD: 'Lean D', LD: 'Likely D', SD: 'Solid D', TOSS: 'Toss-up' };
   const SMALL = ['VT', 'NH', 'MA', 'RI', 'CT', 'NJ', 'DE', 'MD', 'DC'];
   const DISTRICTS = ['ME1', 'ME2', 'NE1', 'NE2', 'NE3'];
@@ -27,6 +40,7 @@
   function ramp(el, kind) {
     if (kind === 'error') el.innerHTML = `<span>0</span><i style="background:linear-gradient(90deg,${errColor(0)},${errColor(2.5)},${errColor(5)})"></i><span>5+ pts</span>`;
     else if (kind === 'none') el.innerHTML = '';
+    else if (kind === 'nowcast') { ramp(el, 'share'); el.innerHTML += `<span class="toss-key"><i style="background:${TOSS}"></i>Toss-up</span>`; }
     else el.innerHTML = `<span class="r-ink">R</span><i style="background:linear-gradient(90deg,${shareColor(28)},${shareColor(44)},${shareColor(50)},${shareColor(56)},${shareColor(72)})"></i><span class="d-ink">D</span><span style="margin-left:4px">Democratic share</span>`;
   }
 
@@ -53,7 +67,7 @@
   function snake(el, readEl, items, label, onPick) {
     const { rows, tp } = tippingOf(items);
     const demEV = rows.filter(r => r.share > 50).reduce((a, r) => a + r.ev, 0);
-    el.innerHTML = rows.map(r => `<div class="seg${r === tp ? ' tp' : ''}${r.ev < 19 ? ' sm' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${shareColor(r.share)}" tabindex="0" aria-label="${esc(byAbbr[r.abbr].name)} ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`).join('') +
+    el.innerHTML = rows.map(r => `<div class="seg${r === tp ? ' tp' : ''}${r.ev < 19 ? ' sm' : ''}${r.toss ? ' toss' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${r.toss ? TOSS : shareColor(r.share)}" tabindex="0" aria-label="${esc(byAbbr[r.abbr].name)} ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`).join('') +
       `<div class="mark270" style="left:${270 / 538 * 100}%"></div>`;
     const tpName = byAbbr[tp.abbr].name.replace(' District', '');
     const winner = tp.share > 50 ? 'Democrats' : 'Republicans';
@@ -107,7 +121,7 @@
     }
     let o = '';
     for (const a of Object.keys(SHAPES)) o += `<path class="st" data-a="${a}" d="${shape[a]}" fill="${fill(a)}" tabindex="0" aria-label="${byAbbr[a].name}"></path>`;
-    for (const a of Object.keys(SHAPES)) if (hex || !SMALL.includes(a)) o += `<text class="lbl${hex ? ' big' : ''}" x="${at[a][0]}" y="${at[a][1] + (hex ? 5 : 3)}">${a}</text>`;
+    for (const a of Object.keys(SHAPES)) if (hex || !SMALL.includes(a)) o += `<text class="lbl${hex ? ' big' : ''}" data-l="${a}" x="${at[a][0]}" y="${at[a][1] + (hex ? 5 : 3)}">${a}</text>`;
     const bx = 1005, bw = 54, bh = 21, dy0 = hex ? 232 : 392;
     if (!hex) SMALL.forEach((a, i) => {
       const y = 118 + i * 27, c = SHAPES[a].c;
@@ -135,7 +149,14 @@
       el.addEventListener('focus', () => onHover(a));
     });
     mark(selected);
-    return { mark, recolor: f => svg.querySelectorAll('[data-a]').forEach(el => { const t = el.tagName === 'g' ? el.querySelector('rect') : el; t.setAttribute('fill', f(el.dataset.a)); }) };
+    // Labels turn dark on a gold (toss-up) state so they stay readable.
+    const ink = () => {
+      svg.querySelectorAll('text[data-l]').forEach(t => t.classList.toggle('dark', fillOf[t.dataset.l] === TOSS));
+      svg.querySelectorAll('g.box').forEach(g => g.classList.toggle('dark', fillOf[g.dataset.a] === TOSS));
+    };
+    const fillOf = Object.fromEntries(Object.keys(SHAPES).concat(DISTRICTS).map(a => [a, fill(a)]));
+    ink();
+    return { mark, recolor: f => { svg.querySelectorAll('[data-a]').forEach(el => { const t = el.tagName === 'g' ? el.querySelector('rect') : el; fillOf[el.dataset.a] = f(el.dataset.a); t.setAttribute('fill', fillOf[el.dataset.a]); }); ink(); } };
   }
 
   // ---------- the balance: the path to 270 as a beam on a fulcrum ----------
@@ -190,7 +211,7 @@
   function board(el, states, onPick) {
     el.innerHTML = BOARD.map(([k, label]) => {
       const rows = states.filter(s => s.rating === k).sort((a, b) => b.demShare - a.demShare);
-      const chips = rows.map(s => `<button type="button" data-a="${s.abbr}" style="background:${shareColor(s.demShare)}" title="${esc(byAbbr[s.abbr].name)}: ${fmt(s.demShare)} Democratic, ${s.ev} EV">${dname(s.abbr)}</button>`).join('');
+      const chips = rows.map(s => `<button type="button" data-a="${s.abbr}"${k === 'TOSS' ? ' class="toss"' : ''} style="background:${k === 'TOSS' ? TOSS : shareColor(s.demShare)}" title="${esc(byAbbr[s.abbr].name)}: ${fmt(s.demShare)} Democratic, ${s.ev} EV">${dname(s.abbr)}</button>`).join('');
       return `<div class="col ${k}"><div class="hd"><b>${label}</b><span class="num">${rows.reduce((a, s) => a + s.ev, 0)} EV</span></div><div class="chips">${chips || '<span class="none">None</span>'}</div></div>`;
     }).join('');
     el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => onPick(b.dataset.a)));
@@ -218,9 +239,9 @@
   // ================= HOME =================
   function renderHome() {
     const views = {
-      fc: [R.map(r => ({ abbr: r.abbr, ev: r.ev, share: r.fc })), '2024 forecast'],
+      fc: [R.map(r => ({ abbr: r.abbr, ev: r.ev, share: r.pub.fc })), '2024 forecast'],
       actual: [R.map(r => ({ abbr: r.abbr, ev: r.ev, share: r.share })), '2024 result'],
-      today: N ? [N.states.map(s => ({ abbr: s.abbr, ev: s.ev, share: s.demShare })), '2028 Nowcast'] : null,
+      today: N ? [N.states.map(s => ({ abbr: s.abbr, ev: s.ev, share: s.demShare, toss: s.rating === 'TOSS' })), '2028 Nowcast'] : null,
     };
     const hb = document.getElementById('bal-home');
     if (N && !N.fixture_run) {
@@ -231,7 +252,7 @@
       document.getElementById('hero-date').textContent = `Updated ${niceDate(N.generated_at)}. Not the forecast, which publishes July 30, 2028.`;
       setGlow(s.pDemWin, rep);
     } else {
-      balance(hb, views.fc[0], '2024 forecast', NAT.pDemWin, 1 - NAT.pDemWin);
+      balance(hb, views.fc[0], '2024 forecast', NAT.pub.pDemWin, 1 - NAT.pub.pDemWin);
       document.getElementById('hero-live').textContent = 'The 2024 forecast, as published in July 2024';
       document.getElementById('hero-date').textContent = 'The 2028 Nowcast starts with its first daily data run.';
       document.getElementById('ens-home').hidden = true;
@@ -245,6 +266,7 @@
   // ================= 2024 =================
   let layer24 = 'forecast', pinned24 = null, map24;
   const err = r => r.fc - r.share;
+  const repEV24 = () => 538 - R.filter(r => r.fc > 50).reduce((a, r) => a + r.ev, 0);
 
   function insp24(a) {
     const el = document.getElementById('insp-2024');
@@ -256,11 +278,12 @@
           <div><dt>Actual D share</dt><dd class="d-ink">${fmt(natActual, 2)}</dd></div>
           <div><dt>Forecast R share</dt><dd class="r-ink">${fmt(100 - NAT.fc, 2)}</dd></div>
           <div><dt>Signed error (pred − actual)</dt><dd class="a-ink">${sgn(e)} pts</dd></div>
-          <div><dt>Electoral votes</dt><dd>Trump 312 · actual 312</dd></div>
+          <div><dt>Electoral votes</dt><dd>Trump ${repEV24()} · actual 312</dd></div>
           <div><dt>Trump win chance</dt><dd>${Math.round(100 * (1 - NAT.pDemWin))}%</dd></div>
         </dl>
         <div class="stack" style="gap:6px"><div class="strip-scale num"><span>30%</span><span>50%</span><span>70%</span></div><div class="strip">${strip({ f: NAT.fc, a: natActual })}</div></div>
         <div class="strip-legend"><span><i class="f"></i>Forecast</span><span><i class="a"></i>Actual</span></div>
+        ${src24 === 'bt' ? `<p class="hint">A back-test, not a forecast anyone published. State by state it averages two forecasts that were published: approval and economy (July 2024) and DeSart's polls model (November 2023). Their national votes were ${fmt(NAT.bt.enns)} and ${fmt(NAT.bt.desart)}; the keys model's ${fmt(NAT.bt.keys)} lifts every state by ${NAT.bt.shift.toFixed(1)} points.</p>` : ''}
         <p class="hint">Hover or click a state for its numbers.</p>`;
       return;
     }
@@ -269,7 +292,7 @@
       <dl class="kv">
         <div><dt>Forecast D share</dt><dd class="d-ink">${fmt(r.fc, 2)}</dd></div>
         <div><dt>Actual D share</dt><dd class="d-ink">${fmt(r.share, 2)}</dd></div>
-        <div><dt>Forecast R share</dt><dd class="r-ink">${fmt(100 - r.fc, 2)}</dd></div>
+        ${src24 === 'bt' ? `<div><dt>Approval and economy, published</dt><dd>${fmt(r.pub.fc, 2)}</dd></div>${r.bt.desart != null ? `<div><dt>DeSart polls model, published</dt><dd>${fmt(r.bt.desart, 2)}</dd></div>` : ''}` : `<div><dt>Forecast R share</dt><dd class="r-ink">${fmt(100 - r.fc, 2)}</dd></div>`}
         <div><dt>Signed error (pred − actual)</dt><dd class="a-ink">${sgn(e)} pts</dd></div>
         <div><dt>Rating</dt><dd>${RATING[r.rating]}</dd></div>
         <div><dt>Harris win chance</dt><dd>${Math.round(100 * r.pDem)}%</dd></div>
@@ -316,17 +339,35 @@
 
   const draw24 = () => drawUS(document.getElementById('map-2024'), { fill: fill24, selected: pinned24, onPick: pick24, onHover: a => { insp24(a || pinned24); map24.mark(a || pinned24); } });
 
-  function render2024() {
+  const LEDE24 = {
+    bt: 'What the Nowcast\'s method would have said in 2024. State by state it averages two forecasts published before the election: the approval and economy forecast from July 2024 and Jay DeSart\'s polls forecast from November 2023. The keys model then sets a third of the national level. Nobody published this combination at the time, so it is a back-test.',
+    pub: 'The approval and economy forecast as Enns, Colner, Kumar and Lagodny published it in July 2024, with data from 100 days before the election.',
+  };
+  function figs24() {
     const st = R.filter(r => r.abbr.length === 2);
     const mae = st.reduce((s, r) => s + Math.abs(err(r)), 0) / st.length;
     const inside = R.filter(r => r.share >= r.lo && r.share <= r.hi).length;
-    const correct = R.filter(r => (r.fc > 50) === (r.share > 50)).length;
+    const correct = R.filter(r => (r.fc > 50) === (r.share > 50)).length, ev = repEV24();
     document.getElementById('figs-2024').innerHTML = [
       [`${correct}/${R.length}`, 'States and districts called'],
-      ['312 = 312', 'Trump electoral votes, forecast and actual'],
+      [ev === 312 ? '312 = 312' : `${ev} vs 312`, 'Trump electoral votes, forecast and actual'],
       [`${mae.toFixed(1)} pts`, 'Average state miss'],
       [`${inside}/${R.length}`, 'Results inside the 90% range'],
     ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
+    document.getElementById('lede-2024').textContent = LEDE24[src24] + ' Pick a state on the map or in the list to compare its forecast and result.';
+    document.querySelector('[data-layer="forecast"]').textContent = src24 === 'bt' ? 'Back-test forecast' : 'Published forecast';
+    document.querySelectorAll('[data-src24]').forEach(x => x.setAttribute('aria-selected', x.dataset.src24 === src24));
+  }
+
+  function render2024() {
+    useSrc24('bt');
+    figs24();
+    const srcTabs = document.querySelectorAll('[data-src24]');
+    if (!BT) srcTabs.forEach(x => { x.parentElement.hidden = true; });
+    srcTabs.forEach(b => b.addEventListener('click', () => {
+      useSrc24(b.dataset.src24); figs24();
+      map24.recolor(fill24); insp24(pinned24); snake24(); rows24();
+    }));
 
     map24 = draw24();
     ramp(document.getElementById('ramp-2024'), 'share');
@@ -412,7 +453,7 @@
     const nD = Math.round(100 * s.pDemWin), nT = Math.round(100 * s.pTie), rep = (100 - nD - nT) / 100;
     let cum = 0, median = 0;
     for (let i = 0; i < s.evHistogram.length; i++) { cum += s.evHistogram[i]; if (cum >= 0.5) { median = i; break; } }
-    const items = s.states.map(x => ({ abbr: x.abbr, ev: x.ev, share: x.demShare }));
+    const items = s.states.map(x => ({ abbr: x.abbr, ev: x.ev, share: x.demShare, toss: x.rating === 'TOSS' }));
     const tp = tippingOf(items).tp;
     const toMap = a => {
       setLayer28('tracker');
@@ -441,15 +482,6 @@
 
   function insp28(a) {
     const el = document.getElementById('insp-2028');
-    const natShare = 100 * NAT.dem / (NAT.dem + NAT.rep);
-    if (layer28 === 'lean') {
-      const r = a ? byAbbr[a] : null;
-      el.innerHTML = r ? `<span class="tag">${dname(a)} · ${r.ev} electoral vote${r.ev > 1 ? 's' : ''}</span><h3>${r.name}</h3>
-        <dl class="kv"><div><dt>2024 D share</dt><dd class="d-ink">${fmt(r.share, 2)}</dd></div><div><dt>Lean vs. nation</dt><dd>${sgn(r.share - natShare)} pts</dd></div><div><dt>Model weight</dt><dd>0.82 × lean</dd></div></dl>
-        <div class="strip">${strip({ a: r.share })}</div>`
-        : `<span class="tag">The one input already known</span><h3>2024 lean</h3><p class="small">Each state's Democratic share in 2024 relative to the nation (${fmt(natShare, 2)}). The model carries 82% of this lean into 2028.</p>`;
-      return;
-    }
     if (!cur) { el.innerHTML = `<span class="tag">2028 Nowcast</span><h3>Waiting for data</h3><p class="small">This fills in after the first daily data run.</p>`; return; }
     const s = a ? cur.byAbbr[a] : null;
     if (!s) {
@@ -485,12 +517,12 @@
     el.querySelectorAll('[data-call]').forEach(b => b.addEventListener('click', () => setCall(a, calls[a] === b.dataset.call ? null : b.dataset.call)));
   }
   function fill28(a) {
-    if (layer28 === 'lean') return shareColor(50 + (byAbbr[a].share - 100 * NAT.dem / (NAT.dem + NAT.rep)));
     if (sim) return sim.shown[a] ? winColor(sim.share[a]) : greyColor();
     const s = cur && cur.byAbbr[a];
     if (!s) return greyColor();
     if (calls[a]) return calls[a] === 'D' ? '#4f8de0' : '#de6a5f';
-    return shareColor(cond && cond.n ? cond.by[a].share : s.demShare);
+    const on = cond && cond.n;
+    return isToss(on ? cond.by[a].pDem : s.pDem) ? TOSS : shareColor(on ? cond.by[a].share : s.demShare);
   }
   // A click on the map looks a state up, or, while "Call states yourself" is on, calls it. force: always look it up.
   function pick28(a, force) {
@@ -597,7 +629,7 @@
   }
   const draw28 = () => drawUS(document.getElementById('map-2028'), { fill: fill28, selected: pinned28, onPick: pick28, onHover: a => { insp28(a || pinned28); map28.mark(a || pinned28); } });
 
-  // Map layers. "Real forecast" shows a countdown, not a map, until July 30, 2028.
+  // Map layers. "Forecast" shows a countdown, not a map, until July 30, 2028.
   function setLayer28(l) {
     layer28 = l;
     document.querySelectorAll('[data-layer28]').forEach(x => x.setAttribute('aria-selected', x.dataset.layer28 === l));
@@ -619,7 +651,7 @@
     document.getElementById('cd-days').textContent = days;
     tickCountdown(); setInterval(tickCountdown, 1000);
     map28 = draw28();
-    ramp(document.getElementById('ramp-2028'), 'share');
+    ramp(document.getElementById('ramp-2028'), 'nowcast');
     document.querySelectorAll('[data-layer28]').forEach(b => b.addEventListener('click', () => setLayer28(b.dataset.layer28)));
     document.getElementById('btn-to-nowcast').addEventListener('click', () => setLayer28('tracker'));
     if (!N) {
