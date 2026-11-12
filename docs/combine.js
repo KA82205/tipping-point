@@ -1,5 +1,5 @@
 /*
- * The 2028 Nowcast: two published models, run side by side and averaged.
+ * The 2028 Nowcast: two published models, averaged state by state and simulated together.
  *
  *   1. Enns, Colner, Kumar & Lagodny (2024): state approval and state economy (engine.js).
  *   2. DeSart (2025), "Long-Range State-Level 2024 Presidential Election Forecast",
@@ -40,12 +40,10 @@
   }
 
   /*
-   * DeSart's simulation: each state's forecast plus its own normal error with the model's standard
-   * error (3.08). No error is shared between states and the coefficients are not redrawn, as in the
-   * paper. Run on the paper's 2024 inputs this reproduces its published results (mean 256 Democratic
+   * DeSart's own simulation, kept to check this code against his paper; the Nowcast does not use it.
+   * Each state's forecast gets its own normal error of 3.08 points, nothing shared between states.
+   * Run on the paper's 2024 inputs this reproduces its published results (mean 256 Democratic
    * electoral votes, 95% range 218 to 306, a Democratic win in about 1 simulation in 4).
-   * The paper awards Maine and Nebraska statewide; here their districts follow the state plus each
-   * district's gap from it in the previous election, the same rule the other model uses.
    */
   function desartSimulate({ states, districts = [], polls, terms, n = 20000, seed = 2028 }) {
     const rand = mulberry32(seed), nS = states.length;
@@ -76,19 +74,9 @@
     return { simulations: n, pDemWin: demWins / n, pTie: ties / n, demPopular: popSum / n, evHistogram: evHist.map(c => c / n), states: byState };
   }
 
-  // The Nowcast is the plain average of the two models: odds, vote shares and the spread of electoral votes.
-  function pool(a, b) {
-    const avg = (x, y) => (x + y) / 2, other = Object.fromEntries(b.states.map(s => [s.abbr, s]));
-    return {
-      simulations: a.simulations + b.simulations,
-      pDemWin: avg(a.pDemWin, b.pDemWin), pTie: avg(a.pTie, b.pTie), demPopular: avg(a.demPopular, b.demPopular),
-      evHistogram: a.evHistogram.map((v, i) => avg(v, b.evHistogram[i])),
-      states: a.states.map(s => {
-        const o = other[s.abbr], p = avg(s.pDem, o.pDem);
-        return { abbr: s.abbr, ev: s.ev, demShare: avg(s.demShare, o.demShare), pDem: p, rating: SPASE.rate(p), enns: s.demShare, desart: o.demShare };
-      }),
-    };
-  }
+  // The two models get equal weight in every state. Equal weights, because averaging forecasts from
+  // different methods usually beats any one of them, and two elections are too few to fit weights.
+  const WEIGHT_ENNS = 0.5;
 
   // Before the nominees are known, DeSart spreads each party's home-state effect over its possible
   // nominees. For his model the weights are how often each candidate appears in the head-to-head
@@ -126,10 +114,11 @@
   /*
    * N      the daily payload (window.NOWCAST)
    * picks  { dp, rp, dv, rv }: nominee and running mate per party as { name, state }, or null if not chosen
-   * Returns { combined, enns, desart, info }. desart is null when there are no head-to-head polls,
-   * and combined is then the approval and economy model alone.
+   * Returns { combined, enns, desart, info }: the average and each model alone, all simulated the same way.
+   * desart is null when there are no head-to-head polls, and combined is then the approval and economy
+   * model alone. With parts: false only combined is run (faster).
    */
-  function run(N, picks = {}, { n = 10000, seed = 2028, forceVpShift = null } = {}) {
+  function run(N, picks = {}, { n = 10000, seed = 2028, forceVpShift = null, parts = true } = {}) {
     const S = N.scenario, { dp, rp, dv, rv } = picks;
     const lagW = S.homeLagWeight || { dem: 1, rep: 1 };
     const fieldD = primaryField(S.candidates, 'D'), fieldR = primaryField(S.candidates, 'R');
@@ -143,39 +132,44 @@
     const vpShift = forceVpShift != null ? forceVpShift : gap * vpWeight;
     const homeD = st => dp ? (dp.state === st ? 1 : 0) : fieldAt(fieldD, st);
     const homeR = st => rp ? (rp.state === st ? 1 : 0) : fieldAt(fieldR, st);
-    const mid = S.econVariants[Math.floor(S.econVariants.length / 2)];
-    const enns = SPASE.simulate({
-      states: S.states.map(s => ({
-        abbr: s.abbr, ev: s.ev, pop: s.pop,
-        inputs: {
-          lagDev: s.lagDev, approval: S.sign * (s.approve + vpShift - S.constant), econ: mid[s.abbr],
-          home: homeD(s.abbr) - homeR(s.abbr),
-          homeLag: (s.abbr === S.homeLag.dem ? lagW.dem : 0) - (s.abbr === S.homeLag.rep ? lagW.rep : 0),
-          vpHome: (dv && dv.state === s.abbr ? 1 : 0) - (rv && rv.state === s.abbr ? 1 : 0), anderson: 0, perot: 0,
-        },
-      })),
-      districts: S.districts, n, seed, econVariants: S.econVariants,
-    });
+    const states = S.states.map(s => ({
+      abbr: s.abbr, ev: s.ev, pop: s.pop,
+      inputs: {
+        lagDev: s.lagDev, approval: S.sign * (s.approve + vpShift - S.constant), econ: S.econVariants[Math.floor(S.econVariants.length / 2)][s.abbr],
+        home: homeD(s.abbr) - homeR(s.abbr),
+        homeLag: (s.abbr === S.homeLag.dem ? lagW.dem : 0) - (s.abbr === S.homeLag.rep ? lagW.rep : 0),
+        vpHome: (dv && dv.state === s.abbr ? 1 : 0) - (rv && rv.state === s.abbr ? 1 : 0), anderson: 0, perot: 0,
+      },
+    }));
+    // Every run uses the approval and economy model's simulation: its coefficient draws, its seven economic
+    // weightings, and its model error, most of it shared by every state. mix sets how much of each state's
+    // forecast comes from the polls model instead.
+    const sim = (weight, point) => SPASE.simulate({ states, districts: S.districts, n, seed, econVariants: weight === 0 ? null : S.econVariants,
+      mix: point ? { weight, point } : null });
     const info = { vpNom, vpShift, vpWeight, fieldD, fieldR, polls: null };
     const h = N.h2h;
-    if (!h || !h.polls || !h.polls.length || S.states.some(s => s.prior == null)) return { combined: enns, enns, desart: null, info };
+    if (!h || !h.polls || !h.polls.length || S.states.some(s => s.prior == null)) {
+      const enns = sim(1);
+      return { combined: enns, enns, desart: null, info };
+    }
 
     const sel = pickPolls(h, dp, rp);
     const pollD = pollField(h.polls, S.candidates, 'd'), pollR = pollField(h.polls, S.candidates, 'r');
     const hD = st => dp ? (dp.state === st ? 1 : 0) : fieldAt(pollD, st);
     const hR = st => rp ? (rp.state === st ? 1 : 0) : fieldAt(pollR, st);
-    const desart = desartSimulate({
-      states: S.states.map(s => ({
-        abbr: s.abbr, ev: s.ev, pop: s.pop, prior: s.prior,
-        home: hD(s.abbr) - hR(s.abbr) - (s.abbr === S.homeLag.dem ? 1 : 0) + (s.abbr === S.homeLag.rep ? 1 : 0),
-      })),
-      districts: S.districts, polls: sel.avg, terms: h.terms, n: 2 * n, seed,
-    });
+    const dPoint = Object.fromEntries(S.states.map(s => [s.abbr, desartPredict(s.prior, sel.avg,
+      hD(s.abbr) - hR(s.abbr) - (s.abbr === S.homeLag.dem ? 1 : 0) + (s.abbr === S.homeLag.rep ? 1 : 0), h.terms)]));
     info.polls = { avg: sel.avg, n: sel.polls.length, basis: sel.basis, total: h.polls.length, pollD, pollR };
-    return { combined: pool(enns, desart), enns, desart, info };
+    const combined = sim(WEIGHT_ENNS, dPoint);
+    if (!parts) return { combined, enns: null, desart: null, info };
+    const enns = sim(1), desart = sim(0, dPoint);
+    const eBy = Object.fromEntries(enns.states.map(x => [x.abbr, x.demShare]));
+    const dBy = Object.fromEntries(desart.states.map(x => [x.abbr, x.demShare]));
+    combined.states.forEach(x => { x.enns = eBy[x.abbr]; x.desart = dBy[x.abbr]; });
+    return { combined, enns, desart, info };
   }
 
-  const api = { DESART, desartPredict, desartSimulate, pool, pickPolls, pollField, primaryField, run };
+  const api = { DESART, WEIGHT_ENNS, desartPredict, desartSimulate, pickPolls, pollField, primaryField, run };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.TP = api;
 })(typeof window !== 'undefined' ? window : globalThis);
