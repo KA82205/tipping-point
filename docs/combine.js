@@ -9,10 +9,9 @@
  * Nothing in the combination is fitted: both models run with their authors' equations and each gets half.
  * Back-tests 2008-2024 (one step ahead): state miss 2.10, states called 240 of 250, national miss 0.99.
  *
- * Five of Lichtman's objective Keys to the White House, counted and turned into a national vote
- * (pipeline/keys.py), are reported beside the Nowcast for comparison. They are not part of it: several
- * third models were tried and the back-tests could not show that any of them reliably helps (see the
- * Method page). The method was frozen on 2026-11-12.
+ * No third model: several were tried (Lichtman's Keys, Norpoth's Primary Model, Abramowitz's Time for
+ * Change) and the back-tests could not show that any of them reliably helps (see the Method page).
+ * The method was frozen on 2026-11-12.
  *
  * The site (app.js) and the daily run (pipeline/run_forecast.js) both call run(),
  * so the published numbers and the ones in the browser are the same.
@@ -27,12 +26,6 @@
   // refits before each forecast. Refitting on 1996-2020 reproduces Table 2 exactly.
   const DESART = { constant: -26.91544, prior: 1.00662, polls: 0.52232, home: 1.90685, terms: -0.9966, se: 2.93309 };
   const norm = s => (s || '').toLowerCase().replace(/[^a-z]/g, '');
-  // Standard normal distribution function (Abramowitz and Stegun 26.2.17; error under 1e-7).
-  function phi(x) {
-    const t = 1 / (1 + 0.2316419 * Math.abs(x)), d = 0.3989422804014327 * Math.exp(-x * x / 2);
-    const p = d * t * (0.319381530 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
-    return x > 0 ? 1 - p : p;
-  }
 
   function mulberry32(seed) {
     return function () {
@@ -129,9 +122,8 @@
   /*
    * N      the daily payload (window.NOWCAST)
    * picks  { dp, rp, dv, rv }: nominee and running mate per party as { name, state }, or null if not chosen
-   * Returns { combined, enns, desart, keys, info }: the average and each model alone, all simulated the same
-   * way. desart is null without head-to-head polls and keys is null when the keys are not scored; the average
-   * is then taken over the models that are available. With parts: false only combined is run (faster). keep: how many of the combined
+   * Returns { combined, enns, desart, info }: the average and each model alone, all simulated the same
+   * way. desart is null without head-to-head polls; the Nowcast is then the approval and economy model alone. With parts: false only combined is run (faster). keep: how many of the combined
    * simulations to keep draw by draw (see docs/engine.js), returned as combined.draws.
    */
   function run(N, picks = {}, { n = 10000, seed = 2028, forceVpShift = null, parts = true, keep = 0 } = {}) {
@@ -162,12 +154,9 @@
     // forecast comes from the polls model instead.
     const sim = (weight, point, kp = 0) => SPASE.simulate({ states, districts: S.districts, n, seed, econVariants: weight === 0 ? null : S.econVariants,
       mix: point ? { weight, point } : null, keep: kp });
-    // National two-party share of a map of state shares, weighted as the simulation weights them.
-    const popTotal = S.states.reduce((a, s) => a + (s.pop || 1), 0);
-    const national = byAbbr => S.states.reduce((a, s) => a + byAbbr[s.abbr] * (s.pop || 1), 0) / popTotal;
-    const info = { vpNom, vpShift, vpWeight, fieldD, fieldR, polls: null, keys: null };
-    const h = N.h2h, K = N.keys, priors = !S.states.some(s => s.prior == null);
-    let dPoint = null, kNat = null;
+    const info = { vpNom, vpShift, vpWeight, fieldD, fieldR, polls: null };
+    const h = N.h2h, priors = !S.states.some(s => s.prior == null);
+    let dPoint = null;
     if (priors && h && h.polls && h.polls.length) {
       const sel = pickPolls(h, dp, rp);
       const pollD = pollField(h.polls, S.candidates, 'd'), pollR = pollField(h.polls, S.candidates, 'r');
@@ -177,22 +166,13 @@
         hD(s.abbr) - hR(s.abbr) - (s.abbr === S.homeLag.dem ? 1 : 0) + (s.abbr === S.homeLag.rep ? 1 : 0), h.terms)]));
       info.polls = { avg: sel.avg, n: sel.polls.length, basis: sel.basis, total: h.polls.length, pollD, pollR };
     }
-    // The keys give one national vote, measured against the 2024 national vote on the same states. For comparison only.
-    let keys = null;
-    if (priors && K && K.demNational != null) {
-      kNat = national(Object.fromEntries(S.states.map(s => [s.abbr, s.prior]))) + K.demNational - K.base;
-      const se = K.fit && K.fit.se ? K.fit.se : 4.94;
-      // The keys' own odds are of winning the national vote: they forecast no states, so no Electoral College.
-      keys = { demPopular: kNat, pDemWin: phi((K.demNational - 50) / se), pTie: 0, nationalOnly: true };
-      info.keys = { false: K.false, pending: K.pending, demNational: K.demNational };
-    }
     if (!dPoint) {
       const enns = sim(1, null, keep);
-      return { combined: enns, enns, desart: null, keys, info };
+      return { combined: enns, enns, desart: null, info };
     }
     // Equal weights, state by state: half the approval and economy model, half the polls model.
     const combined = sim(0.5, dPoint, keep);
-    if (!parts) return { combined, enns: null, desart: null, keys, info };
+    if (!parts) return { combined, enns: null, desart: null, info };
     const enns = sim(1), desart = sim(0, dPoint);
     const by = m => m && Object.fromEntries(m.states.map(x => [x.abbr, x]));
     const eBy = by(enns), dBy = by(desart);
@@ -200,7 +180,7 @@
       x.enns = eBy[x.abbr].demShare; x.ennsP = eBy[x.abbr].pDem;
       if (dBy) { x.desart = dBy[x.abbr].demShare; x.desartP = dBy[x.abbr].pDem; }
     });
-    return { combined, enns, desart, keys, info };
+    return { combined, enns, desart, info };
   }
 
   const api = { DESART, DESART_PAPER, desartPredict, desartSimulate, pickPolls, pollField, primaryField, run };

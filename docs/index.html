@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tipping Point</title>
-<meta name="description" content="A daily Nowcast of the 2028 presidential race: the average of two published models, the Enns et al. state approval and economy model and DeSart's long-range polls model, with Lichtman's keys alongside and the 2024 scorecard.">
+<meta name="description" content="A daily Nowcast of the 2028 presidential race: the average of two published models, the Enns et al. state approval and economy model and DeSart's long-range polls model, with the 2024 scorecard.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261112g">
+<link rel="stylesheet" href="styles.css?v=20261112h">
 </head>
 <body>
 
@@ -35,7 +35,7 @@
     <div class="hero-copy">
       <h1>Which way is 2028 tipping?</h1>
       <div class="stack">
-        <p class="lede">A daily Nowcast of the presidential race, built as the average of two published models: the State Presidential Approval/State Economy Model by Peter K. Enns and colleagues, and Jay DeSart's long-range polls model. One reads how voters rate the president and how state economies are doing; the other reads early head-to-head polls. Five of Allan Lichtman's Keys to the White House are tracked alongside as a separate check.</p>
+        <p class="lede">A daily Nowcast of the presidential race, built as the average of two published models: the State Presidential Approval/State Economy Model by Peter K. Enns and colleagues, and Jay DeSart's long-range polls model. One reads how voters rate the president and how state economies are doing; the other reads early head-to-head polls.</p>
         <div class="btns">
           <a class="btn primary" href="#nowcast">Explore the Nowcast</a>
           <a class="btn" href="#results-2024">See how 2024 went</a>
@@ -66,12 +66,12 @@
     <h2>About this site</h2>
     <div class="cols2">
       <div class="stack">
-        <p>Tipping Point is a personal, non-commercial project. It runs the State Presidential Approval/State Economy Model created by Peter K. Enns (Cornell University and Verasight), Jonathan Colner, Anusha Kumar and Julius Lagodny, published in <em>PS: Political Science &amp; Politics</em>. The model and its published forecasts are theirs. The 2028 Nowcast also runs a second published model from the same journal, Jay A. DeSart's long-range state-level forecast, which reads head-to-head polls. Five of Allan Lichtman's Keys to the White House are tracked beside it for comparison. This site is not affiliated with or endorsed by any of the authors, and any errors in the code are its own.</p>
+        <p>Tipping Point is a personal, non-commercial project. It runs the State Presidential Approval/State Economy Model created by Peter K. Enns (Cornell University and Verasight), Jonathan Colner, Anusha Kumar and Julius Lagodny, published in <em>PS: Political Science &amp; Politics</em>. The model and its published forecasts are theirs. The 2028 Nowcast also runs a second published model from the same journal, Jay A. DeSart's long-range state-level forecast, which reads head-to-head polls.  This site is not affiliated with or endorsed by any of the authors, and any errors in the code are its own.</p>
         <p>The idea: presidential elections are largely decided by fundamentals that are knowable months ahead. The authors publish their forecast about 100 days before Election Day. The name comes from the state that decides the Electoral College, and the logo is that idea drawn as districts on a balance beam.</p>
       </div>
       <div class="stack">
         <p><strong>The 2024 scorecard</strong> checks the Nowcast's method against the certified 2024 results, state by state: a back-test that averages the two forecasts published before that election. The approval and economy forecast, as its authors published it in July 2024, can be scored on its own there too. Both published forecasts are recomputed from their authors' replication files.</p>
-        <p><strong>The 2028 Nowcast</strong> runs that model every morning on the latest Trump approval polls and state economic data, runs DeSart's model on the latest head-to-head polls, scores the keys, and averages the three. Until the nominees are confirmed, each party's possible nominees are averaged by their standing in the polls. It shows what the models say if the election were held today. It is not the forecast, which needs the nominees and June–July 2028 surveys and is due July 30, 2028.</p>
+        <p><strong>The 2028 Nowcast</strong> runs that model every morning on the latest Trump approval polls and state economic data, runs DeSart's model on the latest head-to-head polls, and averages the two. Until the nominees are confirmed, each party's possible nominees are averaged by their standing in the polls. It shows what the models say if the election were held today. It is not the forecast, which needs the nominees and June–July 2028 surveys and is due July 30, 2028.</p>
         <p class="small">Everything updates automatically: polls, state economies, and the nominees, running mates and home states once the conventions pick them. Data: FRED (Philadelphia Fed state coincident indexes), VoteHub and PollResults.org (poll data, CC BY 4.0), Wikipedia, certified 2024 returns.</p>
       </div>
     </div>
@@ -79,13 +79,12 @@
 
   <section class="stack-lg">
     <div class="stack">
-      <h2>What the models read</h2>
-      <p class="lede">The first two predict the Democratic share of the vote in every state from different evidence, and the Nowcast gives each half the weight. The keys give a national vote only and are shown for comparison. The big number is how often the Democrat wins in that model today, out of 100.</p>
+      <h2>What the two models read</h2>
+      <p class="lede">Each predicts the Democratic share of the vote in every state from different evidence, and the Nowcast gives each half the weight. The big number is how often the Democrat wins in that model today, out of 100.</p>
     </div>
-    <div class="inputs3">
+    <div class="inputs3 two">
       <div><span class="coef" id="odds-enns">–</span><h3>Approval and economy</h3><p class="small">Enns, Colner, Kumar and Lagodny. How each state rates the president, how its economy has grown, and how it voted last time.</p></div>
       <div><span class="coef" id="odds-desart">–</span><h3>Long-range polls</h3><p class="small">DeSart. National head-to-head polls between possible nominees, counted at about half, on top of each state's last result.</p></div>
-      <div><span class="coef" id="odds-keys">–</span><h3>Five objective keys</h3><p class="small">Lichtman. The midterm result, a primary contest, a sitting president running, and the short- and long-term economy. Not part of the Nowcast. National vote only: its odds are of winning the national vote.</p></div>
     </div>
   </section>
 
@@ -215,11 +214,6 @@
         <div class="board" id="board-28"></div>
         <p class="small">Solid means a party wins the state in more than 98 of 100 simulations, Likely more than 75, Lean more than 55. Pick a state to see it on the map.</p>
       </div>
-      <div class="stack" id="keys-wrap">
-        <h3>The five keys today</h3>
-        <p class="small" id="keys-sum"></p>
-        <ul class="keys" id="keys-list"></ul>
-      </div>
       <div class="cols2">
         <div class="stack">
           <h3>Electoral votes across all simulations</h3>
@@ -251,7 +245,6 @@
           <div><span class="s ok" id="need-econ">Daily</span><h3>State economies</h3><p>Philadelphia Fed coincident indexes via FRED, through June 2028.</p></div>
           <div><span class="s ok">Daily</span><h3>Trump approval</h3><p>The national average updates every day. How far each state sits from it comes from G. Elliott Morris's state estimates, last updated by him on September 22, 2026, so state differences lag the national number. Civiqs or Morning Consult estimates will replace it if either grants permission.</p></div>
           <div><span class="s ok" id="need-h2h">Daily</span><h3>Head-to-head polls</h3><p>National general-election polls between possible nominees, from PollResults.org, over the last 180 days. They feed the second model.</p></div>
-          <div><span class="s ok">Daily</span><h3>Keys</h3><p>The two economy keys are scored every morning from FRED: the real-time Sahm rule recession indicator and real GDP per person. The midterm and sitting-president keys are settled; the primary key is settled at the 2028 convention.</p></div>
           <div><span class="s ok" id="need-tickets">Watching</span><h3>Nominees and home states</h3><p>Read from Wikipedia every morning. Each nominee and running mate locks in as soon as they are confirmed, and the home-state bonuses switch on.</p></div>
           <div><span class="s ok" id="need-cands">Daily</span><h3>Possible candidates</h3><p>Ordered by national 2028 primary polls from PollResults.org. Anyone new who polls at 3% or more is added.</p></div>
           <div><span class="s ok" id="need-vp">Daily</span><h3>Vice-president adjustment</h3><p>If the sitting vice president is a nominee, approval shifts by his net job approval minus the president's.</p></div>
@@ -266,7 +259,7 @@
   <section class="stack-lg" style="padding-top:44px">
     <div class="stack">
       <h1 style="font-size:clamp(34px,4.4vw,52px)">How the models work</h1>
-      <p class="lede">The 2024 scorecard grades one published model. The 2028 Nowcast runs that model and two more, and averages the three. Each predicts the Democratic share of the two-party vote in every state; the Electoral College is then simulated from their average.</p>
+      <p class="lede">The 2028 Nowcast runs two published models and averages them. Each predicts the Democratic share of the two-party vote in every state; the Electoral College is then simulated from their average. The 2024 scorecard grades that same average on 2024, and the first model's published forecast on its own.</p>
     </div>
     <h2>Approval and economy</h2>
     <p>The State Presidential Approval/State Economy Model, by Peter K. Enns, Jonathan Colner, Anusha Kumar and Julius Lagodny.</p>
@@ -293,55 +286,22 @@
     (counted as positive for Democrats, negative for Republicans)</div>
     <p class="small">Fitted on seven elections × 50 states, 1996–2020 (N = 350). R² 0.90, standard error 3.08 points.</p>
     <p>The Nowcast runs it refitted on 1996–2024 from DeSart's replication data, with 2024 added. Refitting on 1996–2020 reproduces the numbers above exactly. With 2024 added: previous share 1.007, polls 0.522, home state 1.91, terms −1.00, standard error 2.93.</p>
-    <h2>Five objective keys, for comparison</h2>
-    <p>Allan Lichtman's Keys to the White House are thirteen true-or-false statements about the party holding the White House. Seven of them, such as scandal and charisma, are his judgment calls. Six can be scored from the record. The Nowcast uses five of them and counts how many are false. The sixth, no significant third-party campaign, is clear after an election (a candidate with 5% of the vote) but before one it rests on polls of candidates who may never run, and the tests cannot tell five keys from six (see Why five keys and not six). Lichtman forecasts only who wins, never states, and neither does this model: it gives one national vote share. It is shown beside the Nowcast as a separate check and is not part of the Nowcast's number (see Why there is no third model).</p>
-<div class="eq">Two-party share of the party in the White House =
-    <span class="c">57.83</span>
-  − <span class="c">2.96</span> × number of the five keys that are false
-  1 Party mandate: more House seats after the midterms than after the previous midterms
-  2 No primary contest: the nominee wins two-thirds of first-ballot delegates, without deep party divisions
-  3 The party's candidate is the sitting president
-  5 No recession, real or widely believed, during the campaign
-  6 Real growth per person this term at least the average of the previous two terms</div>
-    <p class="small">Fitted on 41 elections, 1864–2024, with Lichtman's own ratings as tabulated on Wikipedia. Standard error 4.94 points.</p>
-    <p>The share is for the party holding the White House, whichever party that is. In 2028 it is the Republicans, so the Democrat's share is 100 minus it. With 2 keys false the equation gives the Republican 51.9% and the Democrat 48.1%. With 3 false it gives the Republican 49.0% and the Democrat 51.0%. Today's count is 2.5, which puts the Democrat at 49.6%. Each key is worth about 3 points of the national vote in this model.</p>
-    <div class="scroll-x"><table class="mt">
-      <caption>What the count has meant, 1864 to 2024: the party holding the White House</caption>
-      <thead><tr><th scope="col">Keys false, of five</th><th scope="col">Elections</th><th scope="col">Its average share</th><th scope="col">The equation</th><th scope="col">Won the national vote</th></tr></thead>
-      <tbody>
-        <tr><th scope="row">0</th><td>3</td><td>60.0</td><td>57.8</td><td>3 of 3</td></tr>
-        <tr><th scope="row">1</th><td>15</td><td>55.4</td><td>54.9</td><td>15 of 15</td></tr>
-        <tr><th scope="row">2</th><td>9</td><td>50.7</td><td>51.9</td><td>5 of 9</td></tr>
-        <tr><th scope="row">3</th><td>8</td><td>46.8</td><td>49.0</td><td>1 of 8</td></tr>
-        <tr><th scope="row">4 or 5</th><td>6</td><td>46.4</td><td>46.0 and 43.0</td><td>0 of 6</td></tr>
-      </tbody>
-    </table></div>
-    <p class="small">The count sorts elections well at the ends. In the middle it is far less sure: with 2 keys false the party in power won the national vote 5 times in 9, with 3 it won once in 8, and 2028 stands between the two. It explains about two-fifths of the differences in the vote from one election to the next. Forecasting each of the 41 elections from the other 40, it misses the national vote by 3.6 points on average (2.7 since 1948) and picks the national-vote winner 36 times. That is a larger miss than the other two models make.</p>
-    <p>Each key is scored by Lichtman's own rule, and each updates as soon as its evidence does:</p>
-    <ul class="small rules">
-      <li><b>1, party mandate:</b> false. Democrats won the House in November 2026, so Republicans hold fewer seats than the 222 they won in 2022. Fixed until the next midterm.</li>
-      <li><b>2, no primary contest:</b> Lichtman's rule is that the nominee wins at least two-thirds of the delegates on the first ballot at the convention, with no deep and vocal party divisions. That cannot be known until 2028, so it counts as half false: in the 16 elections since 1864 with no sitting president running, it was false in 8. The note beside it updates each morning with the Republican leader's share in national primary polls.</li>
-      <li><b>3, sitting president running:</b> false. Trump cannot run for a third term.</li>
-      <li><b>5, short-term economy:</b> scored each morning from FRED. Lichtman counts a recession that is officially under way or that the public believes is happening. The official dating comes months late, so the real-time Sahm rule stands in for it: the key is false if that indicator reaches 0.5 or real GDP per person falls two quarters in a row. A recession the public clearly believes in, as in 1992, is set by hand.</li>
-      <li><b>6, long-term economy:</b> scored each morning from FRED, by Lichtman's rule: yearly growth in real GDP per person this term against the average of the previous two terms.</li>
-    </ul>
-    <p>The model gives one national number and no states. Its odds on the Nowcast page are of winning the national vote, from that number and the model's standard error.</p>
     <h2>How they are combined</h2>
     <p>The two models read different things: how people rate the president and how state economies are doing, and what voters say when asked to choose between named candidates. Each state's Nowcast is the average of the two models' forecasts for that state, half each. The Electoral College is then simulated once from those averages, the way the approval and economy model simulates it.</p>
     <p>Equal weights, because the back-tests found no mix that does reliably better: the best one moved around depending on how the test was run. Research on election forecasting has long found that a plain average of forecasts from different methods beats relying on one, and is hard to improve on by fitting weights. Nothing in the combination is fitted to past results: both models run with their authors' equations, and each gets half. The method was fixed on November 12, 2026, and will not be changed on the strength of these same back-tests again, so that 2028 is a fair test of it.</p>
     <h3 style="margin-top:22px">Track record</h3>
-    <p>Each election below was forecast the way each model would have forecast it at the time: refitted on the earlier elections only, with that year's inputs. Every number is computed from the two papers' replication files and the 2024 results. The Keys column is there for comparison: Lichtman's ratings of the five keys for that year, counted and turned into a national vote share with the elections before it. It is not Lichtman's own forecast and not part of the Nowcast, and it appears only in the national table because the keys forecast no states.</p>
+    <p>Each election below was forecast the way each model would have forecast it at the time: refitted on the earlier elections only, with that year's inputs. Every number is computed from the two papers' replication files and the 2024 results.</p>
     <div class="cols2">
       <table class="mt">
         <caption>National vote, Democratic share</caption>
-        <thead><tr><th scope="col"></th><th scope="col">Result</th><th scope="col">Approval and economy</th><th scope="col">Polls</th><th scope="col">Nowcast</th><th scope="col">Keys, for comparison</th></tr></thead>
+        <thead><tr><th scope="col"></th><th scope="col">Result</th><th scope="col">Approval and economy</th><th scope="col">Polls</th><th scope="col">Nowcast</th></tr></thead>
         <tbody>
-          <tr><th scope="row">2008</th><td>53.7</td><td>55.7</td><td>52.7</td><td>54.2</td><td>54.0</td></tr>
-          <tr><th scope="row">2012</th><td>51.9</td><td>49.9</td><td>53.6</td><td>51.8</td><td>51.8</td></tr>
-          <tr><th scope="row">2016</th><td>51.0</td><td>51.3</td><td>50.1</td><td>50.7</td><td>49.0</td></tr>
-          <tr><th scope="row">2020</th><td>52.2</td><td>56.0</td><td>54.8</td><td>55.4</td><td>50.9</td></tr>
-          <tr><th scope="row">2024</th><td>49.2</td><td>49.4</td><td>50.6</td><td>50.0</td><td>51.7</td></tr>
-          <tr class="avg"><th scope="row">Average miss</th><td></td><td>1.7</td><td>1.5</td><td>1.0</td><td>1.2</td></tr>
+          <tr><th scope="row">2008</th><td>53.7</td><td>55.7</td><td>52.7</td><td>54.2</td></tr>
+          <tr><th scope="row">2012</th><td>51.9</td><td>49.9</td><td>53.6</td><td>51.8</td></tr>
+          <tr><th scope="row">2016</th><td>51.0</td><td>51.3</td><td>50.1</td><td>50.7</td></tr>
+          <tr><th scope="row">2020</th><td>52.2</td><td>56.0</td><td>54.8</td><td>55.4</td></tr>
+          <tr><th scope="row">2024</th><td>49.2</td><td>49.4</td><td>50.6</td><td>50.0</td></tr>
+          <tr class="avg"><th scope="row">Average miss</th><td></td><td>1.7</td><td>1.5</td><td>1.0</td></tr>
         </tbody>
       </table>
       <table class="mt">
@@ -359,20 +319,17 @@
     </div>
     <p class="small">2008 to 2024 are the elections both models can be tested on fairly: the polls model's data starts in 1996, and with fewer than three past elections its equation cannot be estimated properly. The national figures add up the 50 states by turnout, leaving out the District of Columbia, so they differ slightly from the papers' own. The Nowcast called four of the five winners; like both models on their own, it called 2016 wrong, giving Clinton 285 electoral votes. Its average miss in a state was 2.1 points, against 2.6 and 2.2 for the two models alone, and it called 240 of the 250 state results, against 236 and 238. Its national miss is smaller than either model's because their misses often point in opposite directions and partly cancel: in 2012 approval and economy was 2.0 points too low and the polls model 1.7 too high, so the average was off by 0.2. When both miss the same way, as in 2020, the average does too. A second test, which forecasts each election from 1996 to 2024 using all the other elections, gives the Nowcast a state miss of 2.2 points and a national miss of 1.0, with seven of eight winners called. The polls model is tested here on polls from October of the year before the election, as DeSart designed it. The Nowcast feeds it polls from even earlier, so today it is probably less accurate than this record shows.</p>
     <h3 style="margin-top:22px">Why there is no third model</h3>
-    <p>Several well-known forecasts were tried as a third member of the average, in the same back-tests: versions of Lichtman's Keys, Helmut Norpoth's Primary Model and Alan Abramowitz's Time for Change model. Each gives one national number, so each was tested the same way: the state map from the first two models, the national level from all three.</p>
+    <p>Several well-known forecasts were tried as a third member of the average, in the same back-tests: counts of Allan Lichtman's Keys to the White House, Helmut Norpoth's Primary Model and Alan Abramowitz's Time for Change model. Each gives one national number, so each was tested the same way: the state map from the first two models, the national level from all three.</p>
     <div class="cols2">
       <table class="mt">
         <caption>Back-tests of 2008 to 2024 (250 state results)</caption>
         <thead><tr><th scope="col">Third model</th><th scope="col">State miss</th><th scope="col">States called</th><th scope="col">National miss</th></tr></thead>
         <tbody>
-          <tr><th scope="row">6 objective keys</th><td>1.92</td><td>239</td><td>0.78</td></tr>
-          <tr><th scope="row">All 13 keys</th><td>2.04</td><td>238</td><td>1.31</td></tr>
-          <tr><th scope="row">6 keys, weighted by their own record</th><td>2.09</td><td>235</td><td>1.33</td></tr>
-          <tr><th scope="row">6 keys, weighted by importance</th><td>2.00</td><td>238</td><td>1.17</td></tr>
-          <tr><th scope="row">13 keys, weighted by importance</th><td>2.09</td><td>235</td><td>1.27</td></tr>
+          <tr><th scope="row">Lichtman's 6 objective keys, counted</th><td>1.92</td><td>239</td><td>0.78</td></tr>
+          <tr><th scope="row">All 13 of Lichtman's keys, counted</th><td>2.04</td><td>238</td><td>1.31</td></tr>
           <tr><th scope="row">Primary Model</th><td>2.00</td><td>238</td><td>0.90</td></tr>
           <tr><th scope="row">Time for Change</th><td>1.89</td><td>240</td><td>0.91</td></tr>
-          <tr><th scope="row">5 objective keys</th><td>1.90</td><td>239</td><td>0.90</td></tr>
+          <tr><th scope="row">5 of them, without the third-party key</th><td>1.90</td><td>239</td><td>0.90</td></tr>
           <tr class="avg"><th scope="row">None: the first two alone (used)</th><td>2.10</td><td>240</td><td>0.99</td></tr>
         </tbody>
       </table>
@@ -380,53 +337,30 @@
         <caption>The same, leaving out 2020 (200 state results)</caption>
         <thead><tr><th scope="col">Third model</th><th scope="col">State miss</th><th scope="col">States called</th><th scope="col">National miss</th></tr></thead>
         <tbody>
-          <tr><th scope="row">6 objective keys</th><td>1.98</td><td>192</td><td>0.60</td></tr>
-          <tr><th scope="row">All 13 keys</th><td>2.10</td><td>191</td><td>1.11</td></tr>
-          <tr><th scope="row">6 keys, weighted by their own record</th><td>2.19</td><td>188</td><td>1.27</td></tr>
-          <tr><th scope="row">6 keys, weighted by importance</th><td>2.09</td><td>191</td><td>1.08</td></tr>
-          <tr><th scope="row">13 keys, weighted by importance</th><td>2.18</td><td>188</td><td>1.14</td></tr>
+          <tr><th scope="row">Lichtman's 6 objective keys, counted</th><td>1.98</td><td>192</td><td>0.60</td></tr>
+          <tr><th scope="row">All 13 of Lichtman's keys, counted</th><td>2.10</td><td>191</td><td>1.11</td></tr>
           <tr><th scope="row">Primary Model</th><td>1.99</td><td>191</td><td>1.07</td></tr>
           <tr><th scope="row">Time for Change</th><td>1.95</td><td>192</td><td>0.81</td></tr>
-          <tr><th scope="row">5 objective keys</th><td>1.96</td><td>192</td><td>0.69</td></tr>
+          <tr><th scope="row">5 of them, without the third-party key</th><td>1.96</td><td>192</td><td>0.69</td></tr>
           <tr class="avg"><th scope="row">None: the first two alone (used)</th><td>1.99</td><td>192</td><td>0.43</td></tr>
         </tbody>
       </table>
     </div>
     <p class="small">Misses are average misses in points of Democratic vote share.</p>
-    <p>Some third models look a little better than none in the first table: the five keys, the six keys and Time for Change all lower the state miss by about 0.2 points and the national miss by 0.1 to 0.2. That is not enough to act on, for three reasons.</p>
+    <p>Some third models look a little better than none in the first table: the objective keys and Time for Change all lower the state miss by about 0.2 points and the national miss by 0.1 to 0.2. That is not enough to act on, for three reasons.</p>
     <ul class="small rules">
       <li><b>The whole gain is one election.</b> In 2020 both models overshot the Democrat by about 3 points, and anything that pulled the other way helped. Leave 2020 out (second table) and no third model beats none on the national vote.</li>
       <li><b>Choosing by the back-test does not survive a fair test.</b> For each of the five elections, the third model with the best national record in the other four was picked and then scored on the one left out. The pick changed almost every time (Time for Change, six keys, the Primary Model, none, six keys) and the result was a national miss of 1.46 points, worse than the 0.99 from using no third model at all.</li>
-      <li><b>The longer test does not back the keys either.</b> Forecasting each election from 1996 to 2024 from all the others, adding the five keys leaves the national miss unchanged at 1.0 and calls one fewer winner.</li>
+      <li><b>The longer test does not back a third model either.</b> Forecasting each election from 1996 to 2024 from all the others, adding the keys leaves the national miss unchanged at 1.0 and calls one fewer winner.</li>
     </ul>
-    <p>So the Nowcast uses the two published models and nothing else. The other findings still stand as descriptions of the record. Counting the objective keys beat every way of weighting them: each key has flipped only a handful of times since 1864, so weights fitted to history mostly fit its accidents. All 13 keys did worse than five or six, because the seven judgment keys add noise. Weights taken from a published machine-learning ranking of the keys (Virtual Tout's relative importance) did worse as well, and that ranking was learned from the same elections it would be tested on.</p>
-    <h3 style="margin-top:22px">The keys shown: why five and not six</h3>
-    <p>Six of Lichtman's keys can be scored from the record, and in the table above six looks better than five: a national miss of 0.78 points against 0.90. The keys shown beside the Nowcast are still five, for three reasons.</p>
-    <ul class="small rules">
-      <li><b>The edge does not come from the third-party key.</b> That key was true in all five elections from 2008 to 2024, so it never changed a count. Six did better only because fitting the equation with it gives the party in power about 0.6 points more, which happened to suit those five years.</li>
-      <li><b>Every longer test has five level or slightly ahead.</b> The table below scores the keys on their own over far more elections.</li>
-      <li><b>Before an election the key cannot be scored the way the record scores it.</b> In the record it is false when a third candidate won 5% of the vote. In advance, Lichtman's rule is a candidate consistently polling at 10%, and until someone does the key counts as true. Scored that way through history, six does no better than five (last column).</li>
-    </ul>
-    <div class="scroll-x"><table class="mt">
-      <caption>Average miss on the national vote, in points</caption>
-      <thead><tr><th scope="col">Test</th><th scope="col">Five keys</th><th scope="col">Six keys</th><th scope="col">Six, third-party key true until known</th></tr></thead>
-      <tbody>
-        <tr><th scope="row">Keys alone: each of 41 elections from the other 40</th><td>3.64</td><td>3.68</td><td>3.70</td></tr>
-        <tr><th scope="row">Keys alone: 1916 to 2024, from earlier elections only</th><td>3.58</td><td>3.72</td><td>3.60</td></tr>
-        <tr><th scope="row">Keys alone: 1948 to 2024, from earlier elections only</th><td>2.78</td><td>2.99</td><td>2.94</td></tr>
-        <tr><th scope="row">Keys alone: 1984 to 2024, from earlier elections only</th><td>2.20</td><td>2.37</td><td>2.56</td></tr>
-        <tr><th scope="row">As a third model: 1996 to 2024, each from the others</th><td>1.01</td><td>1.13</td><td></td></tr>
-        <tr><th scope="row">As a third model: 2008 to 2024, from earlier elections only</th><td>0.90</td><td>0.78</td><td>0.78</td></tr>
-      </tbody>
-    </table></div>
-    <p class="small">None of these gaps is large enough to be sure of. Over the 41 elections five's miss is 0.04 points smaller than six's, give or take 0.18, and five was closer in 24 of the 41. The fair reading is that the record cannot tell five from six. Five is shown because it does no worse and every one of its keys can be scored from hard data today.</p>
+    <p>So the Nowcast uses the two published models and nothing else.</p>
     <h3 style="margin-top:22px">Guarding against fitting the past too closely</h3>
-    <p>A method can be made to look good on past elections by trying many versions and keeping the best. With five elections to test on, that is a real risk, and an earlier version of this Nowcast ran it: it added the keys as a third model after comparing eight candidates on the same five elections. The check above showed that kind of choosing does not hold up, so it was undone.</p>
+    <p>A method can be made to look good on past elections by trying many versions and keeping the best. With five elections to test on, that is a real risk, and an earlier version of this Nowcast ran it: it added a third model, a count of Lichtman's keys, after comparing eight candidates on the same five elections. The check above showed that kind of choosing does not hold up, so it was undone.</p>
     <p>What is left involves no choosing. The two state models are published models run with their authors' equations; nothing in them was tuned here. They are averaged with equal weights, the default when there is no strong reason for anything else. The record quoted on this site is that plain average's record. Each back-test forecast uses only the elections before it. And the method is now fixed: it was frozen on November 12, 2026, before any 2028 result could inform it.</p>
     <p>The evidence is still thinner than it looks. There are 250 state results, but states move together in any one year, so they amount to about five independent tests. A 1.0-point national miss and 96% of states is what the method did on those five; 2020 shows it can miss by 3 points when both models err the same way.</p>
     <p><b>Primary Model.</b> Norpoth's forecasts as he published them: 50.1% for Obama in 2008, 53.2% for Obama in 2012 and 47.5% for Clinton in 2016, then electoral votes only, 362 for Trump in 2020 and 315 for the Democrat in 2024. The last two were turned into the national vote that would produce them on the previous map. On its own the model missed the national vote by 3.8 points on average and the electoral vote by 64, against 1.0 and 22 for the Nowcast's average. It cannot run until the first primaries in early 2028, so it was left out.</p>
-    <p><b>Time for Change.</b> Abramowitz's model predicts the national vote from the president's June net approval, second-quarter economic growth and whether the president's party is seeking a second term. Refitted from public data (Gallup's June approval and the government's growth figures, as compiled for Harvard's Gov 1347 forecasting course), it reproduces his 2024 forecast to within 0.3 points. It needs a judgment call whenever the economy has a shock like the 2020 lockdown quarter, which is handled here as he handled it, without the growth term. Tested like for like it matches the five keys from 2008 to 2024 (1.89 points against 1.90 on states, 0.91 against 0.90 nationally) and does worse without 2020. It reads mostly the same things as the approval and economy model, and it cannot run until late July 2028, so it was left out.</p>
-    <p>The Nowcast page shows each model on its own next to the average, simulated the same way, and the five keys as they stand.</p>
+    <p><b>Time for Change.</b> Abramowitz's model predicts the national vote from the president's June net approval, second-quarter economic growth and whether the president's party is seeking a second term. Refitted from public data (Gallup's June approval and the government's growth figures, as compiled for Harvard's Gov 1347 forecasting course), it reproduces his 2024 forecast to within 0.3 points. It needs a judgment call whenever the economy has a shock like the 2020 lockdown quarter, which is handled here as he handled it, without the growth term. As a third model it lowers the state miss from 2.10 points to 1.89 and the national miss from 0.99 to 0.91 over 2008 to 2024, but does worse than no third model without 2020. It reads mostly the same things as the approval and economy model, and it cannot run until late July 2028, so it was left out.</p>
+    <p>The Nowcast page shows each model on its own next to the average, simulated the same way.</p>
   </section>
 
   <section class="cols2">
@@ -448,7 +382,6 @@
     <div>
       <h2 style="margin-bottom:14px">Data behind the Nowcast</h2>
       <p>State economies come from the Philadelphia Fed State Coincident Indexes via FRED. Trump's national approval is an average of public polls from VoteHub and PollResults.org. State-level approval estimates come from G. Elliott Morris's Trump Approval Explorer (<a href="https://projects.gelliottmorris.com/trump-approval/">projects.gelliottmorris.com/trump-approval</a>). Those estimates were last updated on September 22, 2026, so the gaps between states are from then while the national level is current. It will be replaced by Civiqs or Morning Consult estimates if a data-sharing agreement is reached.</p>
-      <p>The keys: real GDP per person (FRED series A939RX0Q048SBEA) and the real-time Sahm rule recession indicator (SAHMREALTIME), read each morning; the 2026 House result from Associated Press calls.</p>
       <p>The 2024 back-test on the scorecard: DeSart's published state forecasts for 2024, from the file dated November 5, 2023 in his replication data (doi:10.7910/DVN/HZGLY9), averaged with the approval and economy forecast published in July 2024.</p>
       <p>Nominees, running mates and their home states are read from Wikipedia each morning. The vice-president adjustment uses job-approval polls of the vice president from VoteHub, or favorability when there are none, as the authors did for 1988. The list of possible candidates follows national 2028 primary polls from PollResults.org.</p>
       <p>Head-to-head polls are national general-election polls between two people on the candidate list, over the last 180 days. They come from the PollResults.org feed behind its <a href="https://pollresults.org/races/president-2028/">2028 presidential polls page</a>, which carries the New York Times poll data, and every record in it is read each morning. A poll that tests several pairings counts once for each. Left out: state polls, generic party ballots, questions that name a third candidate, and pairings with anyone not on the candidate list. VoteHub supplies the approval polls; it does not publish general-election pairings yet.</p>
@@ -458,7 +391,7 @@
       <h2 style="margin-bottom:14px">Sources</h2>
       <p>Enns, Colner, Kumar &amp; Lagodny (2024), <a href="https://doi.org/10.1017/S1049096524000994">“Understanding Biden's Exit and the 2024 Election”</a>, <em>PS: Political Science &amp; Politics</em>, CC BY-NC 4.0. Replication data: <a href="https://doi.org/10.7910/DVN/PBGFOF">Harvard Dataverse</a>.</p>
       <p>DeSart (2025), <a href="https://doi.org/10.1017/S1049096524000805">“Long-Range State-Level 2024 Presidential Election Forecast: How Can You Forecast an Election When You Don't Know Who the Candidates Are Yet?”</a>, <em>PS: Political Science &amp; Politics</em>. Replication data: <a href="https://doi.org/10.7910/DVN/HZGLY9">Harvard Dataverse</a>.</p>
-      <p>Lichtman, <em>The Keys to the White House</em>; his ratings for 1864–2024 as tabulated on <a href="https://en.wikipedia.org/wiki/The_Keys_to_the_White_House">Wikipedia</a>. Models tested and left out: Norpoth's forecasts from his articles in <em>PS: Political Science &amp; Politics</em> (2008, 2012, 2016, 2020) and, for 2024, Stony Brook University; Abramowitz (2024), <a href="https://centerforpolitics.org/crystalball/">Sabato's Crystal Ball</a>.</p>
+      <p>Models tested and left out: Lichtman, <em>The Keys to the White House</em>, his ratings for 1864–2024 as tabulated on <a href="https://en.wikipedia.org/wiki/The_Keys_to_the_White_House">Wikipedia</a>; Norpoth's forecasts from his articles in <em>PS: Political Science &amp; Politics</em> (2008, 2012, 2016, 2020) and, for 2024, Stony Brook University; Abramowitz (2024), <a href="https://centerforpolitics.org/crystalball/">Sabato's Crystal Ball</a>.</p>
       <p>2024 results: certified state returns. Map outlines: us-atlas (Census cartographic boundaries).</p>
     </div>
   </section>
@@ -520,17 +453,17 @@
 
 <footer>
   <div class="wrap">
-    <p>Tipping Point is a personal, non-commercial project. Models: Enns, Colner, Kumar &amp; Lagodny (2024), <em>PS: Political Science &amp; Politics</em>, doi:10.1017/S1049096524000994, CC BY-NC 4.0; and, in the Nowcast, DeSart (2025), <em>PS: Political Science &amp; Politics</em>, doi:10.1017/S1049096524000805. Shown for comparison: five of Allan Lichtman's Keys to the White House. Shares are of the two-party vote.</p>
+    <p>Tipping Point is a personal, non-commercial project. Models: Enns, Colner, Kumar &amp; Lagodny (2024), <em>PS: Political Science &amp; Politics</em>, doi:10.1017/S1049096524000994, CC BY-NC 4.0; and, in the Nowcast, DeSart (2025), <em>PS: Political Science &amp; Politics</em>, doi:10.1017/S1049096524000805. Shares are of the two-party vote.</p>
   </div>
 </footer>
 
 <script src="us-states.js"></script>
-<script src="backtest2024.js?v=20261112g"></script>
+<script src="backtest2024.js?v=20261112h"></script>
 <script src="data.js"></script>
 <script src="nowcast.js" onerror="void 0"></script>
 <script src="history.js" onerror="void 0"></script>
-<script src="engine.js?v=20261112g"></script>
-<script src="combine.js?v=20261112g"></script>
-<script src="app.js?v=20261112g"></script>
+<script src="engine.js?v=20261112h"></script>
+<script src="combine.js?v=20261112h"></script>
+<script src="app.js?v=20261112h"></script>
 </body>
 </html>
