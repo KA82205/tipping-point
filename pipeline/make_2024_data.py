@@ -57,7 +57,9 @@ Wisconsin,WI,10,1668229,1697626,LR
 Wyoming,WY,3,69527,192633,SR"""
 import os
 root=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..')
-FC=json.load(open(os.path.join(root,'pipeline','forecast_2024_figA2.json')))
+# Exact 2024 forecasts (mean, 90% range, share of simulations won) from rerunning the authors' simulation on their
+# replication data (doi:10.7910/DVN/PBGFOF). Ratings and the national figures stay as published.
+FC=json.load(open(os.path.join(root,'pipeline','forecast_2024.json')))
 rows=[]
 for line in csv.splitlines():
     n,a,ev,d,r,cat=line.split(','); d=int(d); r=int(r)
