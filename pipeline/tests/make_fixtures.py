@@ -59,7 +59,20 @@ json.dump(appr(39, 49), open(os.path.join(out, "appr_jd-vance.json"), "w"))
 # PollResults.org 2028 primary polls in its real format. NOT real data.
 prim = lambda who, sub, rows: {"pollster": who, "state": "US", "endDate": "11/2/26", "questions": [  # noqa: E731
     {"stage": "primary", "subpopulation": sub, "answers": [{"candidateName": n, "pct": v, "party": sub.upper()} for n, v in rows]}]}
+# General-election pairings in the same format: one question per pairing. NOT real data.
+gen = lambda who, day, pop, rows: {"pollster": who, "state": "US", "endDate": day, "internal": "", "questions": [  # noqa: E731
+    {"stage": "general", "population": pop, "answers": [
+        {"candidateName": d, "pct": dp, "party": "DEM"}, {"candidateName": r, "pct": rp, "party": "REP"},
+        {"candidateName": "", "answer": "Don't know", "pct": 100 - dp - rp, "party": "NONE"}] + extra}
+    for d, dp, r, rp, extra in rows]}
 json.dump({"results": [
+    gen("Pollster A", "11/2/26", "lv", [("Gavin Newsom", 46, "JD Vance", 44, []), ("Gavin Newsom", 45, "Marco Rubio", 43, []),
+                                        ("Alexandria Ocasio-Cortez", 42, "J.D. Vance", 46, [])]),
+    gen("Pollster B", "10/20/26", "rv", [("Gavin Newsom", 47, "JD Vance", 45, []), ("Pete Buttigieg", 44, "JD Vance", 44, []),
+                                         ("Democrat", 48, "Republican", 40, []),
+                                         ("Gavin Newsom", 40, "JD Vance", 38, [{"candidateName": "Some Independent", "pct": 9, "party": "IND"}])]),
+    gen("Pollster C", "9/15/26", "lv", [("Gavin Newsom", 48, "JD Vance", 45, []), ("Barack Obama", 52, "Donald Trump", 42, [])]),
+    gen("Pollster C", "1/5/26", "lv", [("Gavin Newsom", 50, "JD Vance", 40, [])]),
     prim("Pollster A", "d", [("Gavin Newsom", 24), ("Pete Buttigieg", 14), ("Josh Shapiro", 9), ("Undecided", 20)]),
     prim("Pollster B", "d", [("Gavin Newsom", 22), ("Pete Buttigieg", 16), ("Josh Shapiro", 7)]),
     prim("Pollster A", "r", [("JD Vance", 48), ("Marco Rubio", 12), ("Donald Trump Jr.", 10)]),
