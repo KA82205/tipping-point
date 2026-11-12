@@ -3,19 +3,21 @@
 const path = require('path');
 global.window = {};
 require(path.join(__dirname, '..', '..', 'docs', 'data.js'));
-const { simulate, COEFS } = require(path.join(__dirname, '..', '..', 'docs', 'engine.js'));
+const { simulate } = require(path.join(__dirname, '..', '..', 'docs', 'engine.js'));
 const R = window.RESULTS_2024;
 const by = Object.fromEntries(R.map(r => [r.abbr, r]));
-// Inputs chosen so the central estimate equals the published forecast for each state.
-const states = R.filter(r => r.abbr.length === 2).map(r => ({
-  abbr: r.abbr, ev: r.ev, pop: r.dem + r.rep,
-  inputs: { lagDev: (r.fc - COEFS.constant.b) / COEFS.lagDev.b },
-}));
+// A stand-in model whose forecast for each state is the published one, with the paper's model error
+// (SD 3.463, the 1980-2020 fit) and no coefficient uncertainty. The authors' own simulation, rerun from their
+// replication files, gives Harris 27.1%; coefficient uncertainty adds little.
+const zero = Array.from({ length: 9 }, (_, i) => Array.from({ length: i + 1 }, () => 0));
+const model = { vars: ['constant', 'lagDev', 'approval', 'econ', 'home', 'homeLag', 'vpHome', 'anderson', 'perot'],
+  variants: [{ b: [0, 1, 0, 0, 0, 0, 0, 0, 0], L: zero, rmse: 3.463 }] };
+const states = R.filter(r => r.abbr.length === 2).map(r => ({ abbr: r.abbr, ev: r.ev, pop: r.dem + r.rep, inputs: { lagDev: r.fc } }));
 const districts = R.filter(r => r.abbr.length === 3).map(d => {
   const parent = d.abbr.slice(0, 2);
   return { abbr: d.abbr, parent, ev: d.ev, offset: d.fc - by[parent].fc };
 });
-const res = simulate({ states, districts, n: 40000, seed: 2024 });
+const res = simulate({ states, districts, n: 40000, seed: 2024, model });
 const harris = res.pDemWin;
 console.log(`Harris wins ${(100 * harris).toFixed(1)}% of simulations (paper: about 27%); ties ${(100 * res.pTie).toFixed(2)}%`);
 if (harris < 0.23 || harris > 0.31) { console.error('FAIL: outside 23-31%'); process.exit(1); }
