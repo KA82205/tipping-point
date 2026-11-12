@@ -425,7 +425,7 @@
 
   // Both models and their average, for a set of picks (docs/combine.js). n is draws per economic weighting.
   const pk = o => ({ dp: o['dem-p'] || null, rp: o['rep-p'] || null, dv: o['dem-vp'] || null, rv: o['rep-vp'] || null });
-  const runModels = (o, n) => window.TP.run(N, pk(o), { n: n || 10000, keep: 14000 });
+  const runModels = (o, n) => window.TP.run(N, pk(o), { n: n || 10000 });
   const lastName = n => n.replace(/ (Jr\.|Sr\.|II|III)$/, '').split(' ').pop();
 
   // The Nowcast: today's polls and state economies, with the chosen (or confirmed) tickets.
@@ -476,8 +476,8 @@
     ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
     board(document.getElementById('board-28'), s.states, toMap);
     histogram(document.getElementById('hist-2028'), s.evHistogram);
-    stopSim();
-    refreshPlay();
+    if (map28 && layer28 !== 'official') map28.recolor(fill28);
+    insp28(pinned28);
   }
 
   function insp28(a) {
@@ -506,127 +506,21 @@
         <div><dt>Democrat wins</dt><dd>${pct(s.pDem)} of simulations</dd></div>
         <div><dt>Rating</dt><dd>${RATING[s.rating] || s.rating}</dd></div>
         ${base ? `<div><dt>Trump approval in state</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
-        ${cond && cond.n && !calls[a] ? `<div><dt>With your calls</dt><dd>Democrat wins ${pct(cond.by[a].pDem)}</dd></div>` : ''}
-        ${sim && sim.shown[a] ? `<div><dt>In this simulated election</dt><dd>${fmt(sim.share[a])} Democratic</dd></div>` : ''}
       </dl>
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>
       ${s.desart != null ? modelTable([['Approval and economy', s.enns, s.ennsP], ['Polls model', s.desart, s.desartP], ['Nowcast', s.demShare, s.pDem, 'avg']], 'the state') : ''}
-      ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models take back part of the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(-window.SPASE.coef('homeLag') * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the approval and economy model${s.desart != null ? `, ${window.TP.DESART.home.toFixed(1)} in the polls model` : ''}.</p>` : ''}
-      ${cur.draws ? `<div class="callrow"><span>What if this one goes</span><button type="button" class="D" data-call="D" aria-pressed="${calls[a] === 'D'}">Democratic</button><button type="button" class="R" data-call="R" aria-pressed="${calls[a] === 'R'}">Republican</button></div>` : ''}`;
-    el.querySelectorAll('[data-call]').forEach(b => b.addEventListener('click', () => setCall(a, calls[a] === b.dataset.call ? null : b.dataset.call)));
+      ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models take back part of the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(-window.SPASE.coef('homeLag') * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the approval and economy model${s.desart != null ? `, ${window.TP.DESART.home.toFixed(1)} in the polls model` : ''}.</p>` : ''}`;
   }
   function fill28(a) {
-    if (sim) return sim.shown[a] ? winColor(sim.share[a]) : greyColor();
     const s = cur && cur.byAbbr[a];
     if (!s) return greyColor();
-    if (calls[a]) return calls[a] === 'D' ? '#4f8de0' : '#de6a5f';
-    const on = cond && cond.n;
-    return isToss(on ? cond.by[a].pDem : s.pDem) ? TOSS : shareColor(on ? cond.by[a].share : s.demShare);
+    return isToss(s.pDem) ? TOSS : shareColor(s.demShare);
   }
-  // A click on the map looks a state up, or, while "Call states yourself" is on, calls it. force: always look it up.
-  function pick28(a, force) {
-    if (callMode && !force && layer28 === 'tracker' && !sim) { pinned28 = a; cycleCall(a); map28.mark(a); return; }
+  function pick28(a) {
     pinned28 = a === pinned28 ? null : a; map28.mark(pinned28); insp28(pinned28);
   }
 
-  // ---------- playing with the map: call states yourself, or watch one simulated election ----------
-  // Both read the 14,000 simulated elections kept from the current run (cur.draws).
-  let calls = {}, callMode = false, cond = null, sim = null;
-  const simRuns = { n: 0, dem: 0 };
-  const SIDE = { D: 'Democrat', R: 'Republican' };
-  const winColor = sh => { const t = Math.min(1, Math.abs(sh - 50) / 12); return sh > 50 ? mix('#2f5fa3', '#5b9cf0', t) : mix('#9c4138', '#ee7a6d', t); };
-  const anyCalls = () => Object.keys(calls).length > 0;
-  // The kept simulations in which every called state went the way it was called.
-  function matching() {
-    const D = cur.draws, nU = D.units.length, ix = Object.entries(calls).map(([a, side]) => [D.units.indexOf(a), side === 'D']), out = [];
-    for (let k = 0; k < D.n; k++) { let ok = true; for (const [i, d] of ix) if ((D.shares[k * nU + i] > 5000) !== d) { ok = false; break; } if (ok) out.push(k); }
-    return out;
-  }
-  function condStats() {
-    if (!cur || !cur.draws || !anyCalls()) return null;
-    const D = cur.draws, nU = D.units.length, ks = matching(), wins = new Float64Array(nU), sum = new Float64Array(nU);
-    let dem = 0, tie = 0, ev = 0;
-    for (const k of ks) {
-      const e = D.ev[k]; ev += e; if (e >= 270) dem++; else if (e === 269) tie++;
-      for (let i = 0; i < nU; i++) { const v = D.shares[k * nU + i]; sum[i] += v; if (v > 5000) wins[i]++; }
-    }
-    const n = ks.length;
-    return { n, total: D.n, pDemWin: n ? dem / n : 0, pTie: n ? tie / n : 0, ev: n ? ev / n : 0,
-      by: Object.fromEntries(D.units.map((a, i) => [a, { pDem: n ? wins[i] / n : 0, share: n ? sum[i] / n / 100 : 50 }])) };
-  }
-  function setCall(a, side) { if (side) calls[a] = side; else delete calls[a]; stopSim(); refreshPlay(); }
-  function cycleCall(a) { setCall(a, !calls[a] ? 'D' : calls[a] === 'D' ? 'R' : null); }
-  function markCalled() {
-    document.querySelectorAll('#map-2028 [data-a]').forEach(el => el.classList.toggle('called', !sim && layer28 === 'tracker' && !!calls[el.dataset.a]));
-  }
-  function refreshPlay() {
-    cond = condStats();
-    if (map28 && layer28 !== 'official') { map28.recolor(fill28); markCalled(); }
-    drawBar();
-    insp28(pinned28);
-  }
-  // The bar above the map: the result of your calls, or the count of one simulated election.
-  function drawBar() {
-    const el = document.getElementById('mapbar'), n100 = v => Math.round(100 * v);
-    document.getElementById('btn-calls').setAttribute('aria-pressed', callMode);
-    if (layer28 !== 'tracker' || !cur || !cur.draws || (!sim && !callMode && !anyCalls())) { el.hidden = true; return; }
-    el.hidden = false;
-    if (sim) {
-      const p = cond && cond.n ? cond.pDemWin : cur.pDemWin;
-      const line = !sim.done ? 'Counting one simulated election, safest states first.'
-        : (sim.dem >= 270 ? `<b class="d-ink">The Democrat wins this one</b>, ${sim.dem} to ${sim.rep}.` : sim.rep >= 270 ? `<b class="r-ink">The Republican wins this one</b>, ${sim.rep} to ${sim.dem}.` : '<b>A tie, 269 to 269.</b> The House would decide.') +
-          ` The Democrat has won ${simRuns.dem} of your ${simRuns.n} run${simRuns.n > 1 ? 's' : ''}. Over many runs it comes to about ${n100(p)} in 100${anyCalls() ? ' with your calls' : ''}.`;
-      el.innerHTML = `<div class="tally-nums"><span class="d-ink" id="sim-d">${sim.dem}</span><small>270 to win</small><span class="r-ink" id="sim-r">${sim.rep}</span></div>
-        <div class="tally"><i class="d" id="sim-db" style="width:${sim.dem / 5.38}%"></i><i class="r" id="sim-rb" style="width:${sim.rep / 5.38}%"></i></div>
-        <p>${line}</p>${sim.done ? '<div class="row"><button class="btn primary" type="button" id="sim-again">Run another</button><button class="btn" type="button" id="sim-exit">Back to the Nowcast</button></div>' : ''}`;
-      if (sim.done) {
-        document.getElementById('sim-again').addEventListener('click', runOne);
-        document.getElementById('sim-exit').addEventListener('click', () => { stopSim(); refreshPlay(); });
-      }
-      return;
-    }
-    const chips = Object.entries(calls).map(([a, side]) => `<span class="chip ${side}">${esc(byAbbr[a].name)}: ${SIDE[side]}<button type="button" data-clear="${a}" aria-label="Clear ${esc(byAbbr[a].name)}">×</button></span>`).join('');
-    let res;
-    if (!anyCalls()) res = '<p>Click a state once to give it to the Democrat, twice for the Republican, a third time to clear it. The odds then come from the simulated elections where that happens.</p>';
-    else if (!cond.n) res = `<p class="res">None of the ${cond.total.toLocaleString()} simulated elections went that way.</p>`;
-    else res = `<p class="res">Then the Democrat wins <b class="d-ink">${n100(cond.pDemWin)} in 100</b> and the Republican <b class="r-ink">${100 - n100(cond.pDemWin) - n100(cond.pTie)} in 100</b>${n100(cond.pTie) ? `, with ${n100(cond.pTie)} in 100 tied at 269` : ''}.</p>
-      <p>Without your calls the Democrat wins ${n100(cur.pDemWin)} in 100. ${cond.n.toLocaleString()} of ${cond.total.toLocaleString()} simulated elections went the way you called, and the Democrat averages ${Math.round(cond.ev)} electoral votes in them.${cond.n < 150 ? ' So few match that these odds are rough.' : ''}</p>`;
-    el.innerHTML = `${anyCalls() ? `<div class="row">${chips}<button class="btn" type="button" data-clear="all">Clear all</button></div>` : ''}${res}`;
-    el.querySelectorAll('[data-clear]').forEach(b => b.addEventListener('click', () => { if (b.dataset.clear === 'all') calls = {}; else delete calls[b.dataset.clear]; refreshPlay(); }));
-  }
-  // One simulated election, counted state by state on the map. With calls in place it is one where they hold.
-  function stopSim() { if (sim) { clearTimeout(sim.timer); sim = null; } }
-  function runOne() {
-    if (!cur || !cur.draws) return;
-    if (layer28 !== 'tracker') setLayer28('tracker');
-    stopSim();
-    const D = cur.draws, nU = D.units.length, pool = anyCalls() ? matching() : null;
-    if (pool && !pool.length) { refreshPlay(); return; }
-    const k = pool ? pool[Math.floor(Math.random() * pool.length)] : Math.floor(Math.random() * D.n);
-    const share = Object.fromEntries(D.units.map((a, i) => [a, D.shares[k * nU + i] / 100]));
-    const order = D.units.slice().sort((a, b) => Math.abs(share[b] - 50) - Math.abs(share[a] - 50));
-    sim = { share, shown: {}, dem: 0, rep: 0, done: false, timer: null };
-    const bar = document.getElementById('mapbar');
-    bar.setAttribute('aria-live', 'off');
-    map28.recolor(fill28); markCalled(); drawBar();
-    let i = 0;
-    const count = () => {
-      const a = order[i++], ev = cur.byAbbr[a].ev;
-      sim.shown[a] = true;
-      if (share[a] > 50) sim.dem += ev; else sim.rep += ev;
-    };
-    const finish = () => { sim.done = true; simRuns.n++; if (sim.dem >= 270) simRuns.dem++; bar.setAttribute('aria-live', 'polite'); map28.recolor(fill28); drawBar(); insp28(pinned28); };
-    if (still) { while (i < order.length) count(); finish(); return; }
-    const step = () => {
-      count();
-      map28.recolor(fill28);
-      document.getElementById('sim-d').textContent = sim.dem; document.getElementById('sim-r').textContent = sim.rep;
-      document.getElementById('sim-db').style.width = sim.dem / 5.38 + '%'; document.getElementById('sim-rb').style.width = sim.rep / 5.38 + '%';
-      if (i < order.length) sim.timer = setTimeout(step, 18 + 150 * Math.pow(i / order.length, 3)); else finish();
-    };
-    step();
-  }
   const draw28 = () => drawUS(document.getElementById('map-2028'), { fill: fill28, selected: pinned28, onPick: pick28, onHover: a => { insp28(a || pinned28); map28.mark(a || pinned28); } });
 
   // Map layers. "Forecast" shows a countdown, not a map, until July 30, 2028.
@@ -635,9 +529,6 @@
     document.querySelectorAll('[data-layer28]').forEach(x => x.setAttribute('aria-selected', x.dataset.layer28 === l));
     document.getElementById('desk-28').hidden = l === 'official';
     document.getElementById('official-28').hidden = l !== 'official';
-    document.getElementById('play-tools').hidden = l !== 'tracker';
-    stopSim();
-    refreshPlay();
   }
   function tickCountdown() {
     const ms = Math.max(0, FORECAST_DATE - new Date());
@@ -655,14 +546,12 @@
     document.querySelectorAll('[data-layer28]').forEach(b => b.addEventListener('click', () => setLayer28(b.dataset.layer28)));
     document.getElementById('btn-to-nowcast').addEventListener('click', () => setLayer28('tracker'));
     if (!N) {
-      ['hero-28', 'jump-28', 'results-detail', 'tracker-detail', 'play-tools'].forEach(id => { document.getElementById(id).hidden = true; });
+      ['hero-28', 'jump-28', 'results-detail', 'tracker-detail'].forEach(id => { document.getElementById(id).hidden = true; });
       document.getElementById('live-pill').textContent = 'Waiting for the first data run';
       setLayer28('official'); return;
     }
     document.getElementById('live-pill').textContent = `Live · updated ${niceDate(N.generated_at)}`;
     document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> National approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])} · state-by-state differences from ${N.approval.state_data && N.approval.state_data.as_of ? `<a href="${N.approval.state_data.url}">Civiqs</a> through ${niceDate(N.approval.state_data.as_of)}` : 'Civiqs'} · state economies through ${monthName(N.economy.through)}.`;
-    document.getElementById('btn-sim').addEventListener('click', runOne);
-    document.getElementById('btn-calls').addEventListener('click', () => { callMode = !callMode; if (callMode && layer28 !== 'tracker') setLayer28('tracker'); else { stopSim(); refreshPlay(); } });
     // Jump links, with the section on screen marked.
     const jump = [...document.querySelectorAll('#jump-28 button')];
     jump.forEach(b => b.addEventListener('click', () => document.getElementById(b.dataset.to).scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' })));
@@ -715,7 +604,7 @@
     mapMode = b.dataset.mapmode;
     document.querySelectorAll('[data-mapmode]').forEach(x => x.setAttribute('aria-pressed', x.dataset.mapmode === mapMode));
     if (map24) map24 = draw24();
-    if (map28) { map28 = draw28(); markCalled(); }
+    if (map28) map28 = draw28();
   }));
 
   // ================= routing =================
