@@ -23,7 +23,8 @@
   const RATING = { SR: 'Solid R', LR: 'Likely R', TR: 'Lean R', TD: 'Lean D', LD: 'Likely D', SD: 'Solid D', TOSS: 'Toss-up' };
   const SMALL = ['VT', 'NH', 'MA', 'RI', 'CT', 'NJ', 'DE', 'MD', 'DC'];
   const DISTRICTS = ['ME1', 'ME2', 'NE1', 'NE2', 'NE3'];
-  const LABEL_NUDGE = { FL: [14, 6], MI: [8, 14], LA: [-8, 0], KY: [6, 2], HI: [6, 6], CA: [-8, 0], ID: [0, 14], MN: [-4, 6], TX: [6, 0], NY: [6, 0], VA: [8, 2], WV: [-2, 4] };
+  const LABEL_NUDGE = { FL: [14, 6], MI: [8, 14], LA: [-8, 0], KY: [6, 2], CA: [-8, 0], ID: [0, 14], MN: [-4, 6], TX: [6, 0], NY: [6, 0], VA: [8, 2], WV: [-2, 4] };
+  const OFFSHORE = { HI: [343, 589] };   // Hawaii's islands are too small to hold a label, so it sits just beside the Big Island
   const STATE_LIST = R.filter(r => r.abbr.length === 2).map(r => [r.abbr, r.name]).sort((a, b) => a[1].localeCompare(b[1]));
   const dname = a => a.length === 3 ? `${a.slice(0, 2)}-${a[2]}` : a;
   const fmt = (x, d = 1) => x.toFixed(d) + '%';
@@ -119,11 +120,11 @@
     const shape = {}, at = {};
     for (const a of Object.keys(SHAPES)) {
       if (hex) { const [c, r] = HEX[a]; at[a] = [96 + c * 69.3, 76 + r * 60]; shape[a] = hexD(at[a][0], at[a][1], 39); }
-      else { const [dx, dy] = LABEL_NUDGE[a] || [0, 0]; at[a] = [SHAPES[a].c[0] + dx, SHAPES[a].c[1] + dy]; shape[a] = SHAPES[a].d; }
+      else { const [dx, dy] = LABEL_NUDGE[a] || [0, 0]; at[a] = OFFSHORE[a] || [SHAPES[a].c[0] + dx, SHAPES[a].c[1] + dy]; shape[a] = SHAPES[a].d; }
     }
     let o = '';
     for (const a of Object.keys(SHAPES)) o += `<path class="st" data-a="${a}" d="${shape[a]}" fill="${fill(a)}" tabindex="0" aria-label="${byAbbr[a].name}"></path>`;
-    for (const a of Object.keys(SHAPES)) if (hex || !SMALL.includes(a)) o += `<text class="lbl${hex ? ' big' : ''}" data-l="${a}" x="${at[a][0]}" y="${at[a][1] + (hex ? 5 : 3)}">${a}</text>`;
+    for (const a of Object.keys(SHAPES)) if (hex || !SMALL.includes(a)) o += `<text class="lbl${hex ? ' big' : !hex && OFFSHORE[a] ? ' off' : ''}" data-l="${a}" x="${at[a][0]}" y="${at[a][1] + (hex ? 5 : 3)}">${a}</text>`;
     const bx = 1005, bw = 54, bh = 21, dy0 = hex ? 232 : 392;
     if (!hex) SMALL.forEach((a, i) => {
       const y = 118 + i * 27, c = SHAPES[a].c;
@@ -153,7 +154,7 @@
     mark(selected);
     // Labels turn dark on a gold (toss-up) state so they stay readable.
     const ink = () => {
-      svg.querySelectorAll('text[data-l]').forEach(t => t.classList.toggle('dark', fillOf[t.dataset.l] === TOSS));
+      svg.querySelectorAll('text[data-l]').forEach(t => t.classList.toggle('dark', fillOf[t.dataset.l] === TOSS && !t.classList.contains('off')));
       svg.querySelectorAll('g.box').forEach(g => g.classList.toggle('dark', fillOf[g.dataset.a] === TOSS));
     };
     const fillOf = Object.fromEntries(Object.keys(SHAPES).concat(DISTRICTS).map(a => [a, fill(a)]));
