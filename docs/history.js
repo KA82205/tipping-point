@@ -1,1 +1,1 @@
-window.NOWCAST_HISTORY = [{"v": 4, "date": "2026-11-12", "pDemWin": 0.5048, "demPopular": 50.4, "approve": 37.1, "econThrough": "2026-09"}];
+window.NOWCAST_HISTORY = [{"v": 4, "date": "2026-11-12", "pDemWin": 0.5048, "demPopular": 50.4, "approve": 37.1, "econThrough": "2026-09"}, {"v": 4, "date": "2026-11-13", "pDemWin": 0.5048, "demPopular": 50.4, "approve": 37.1, "econThrough": "2026-09"}];
