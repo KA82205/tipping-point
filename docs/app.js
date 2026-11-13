@@ -20,6 +20,12 @@
   }
   const TOSS = '#d9b23f';   // toss-ups in the Nowcast are gold, not the color of whoever is a hair ahead
   const isToss = p => Math.max(p, 1 - p) <= 0.55;
+  // The 2028 map is colored by rating: darker means safer, and the light shades and gold mark the close states.
+  const RATE_COLOR = { SD: '#2e64b0', LD: '#4f8de0', TD: '#a9c8f0', TOSS: TOSS, TR: '#f2aaa1', LR: '#d8665b', SR: '#a63f37' };
+  const LIGHT = new Set([RATE_COLOR.TD, TOSS, RATE_COLOR.TR]);   // fills that need dark text
+  const rateOf = p => window.SPASE.rate(p);
+  // The leader's win chance, shown on every state that is not Solid.
+  const chance = p => { const r = rateOf(p); return r[0] === 'S' ? '' : `${p >= 0.5 ? 'D' : 'R'} ${Math.round(100 * Math.max(p, 1 - p))}%`; };
   const RATING = { SR: 'Solid R', LR: 'Likely R', TR: 'Lean R', TD: 'Lean D', LD: 'Likely D', SD: 'Solid D', TOSS: 'Toss-up' };
   const SMALL = ['VT', 'NH', 'MA', 'RI', 'CT', 'NJ', 'DE', 'MD', 'DC'];
   const DISTRICTS = ['ME1', 'ME2', 'NE1', 'NE2', 'NE3'];
@@ -43,7 +49,7 @@
   function ramp(el, kind) {
     if (kind === 'error') el.innerHTML = `<span>0</span><i style="background:linear-gradient(90deg,${errColor(0)},${errColor(2.5)},${errColor(5)})"></i><span>5+ pts</span>`;
     else if (kind === 'none') el.innerHTML = '';
-    else if (kind === 'nowcast') { ramp(el, 'share'); el.innerHTML += `<span class="toss-key"><i style="background:${TOSS}"></i>Toss-up</span>`; }
+    else if (kind === 'nowcast') el.innerHTML = `<span class="rate-keys">${['SD', 'LD', 'TD', 'TOSS', 'TR', 'LR', 'SR'].map(k => `<span class="rk"><i style="background:${RATE_COLOR[k]}"></i>${RATING[k]}</span>`).join('')}</span><span class="rate-note">Percent: the leader's chance of winning the state</span>`;
     else el.innerHTML = `<span class="r-ink">R</span><i style="background:linear-gradient(90deg,${shareColor(28)},${shareColor(44)},${shareColor(50)},${shareColor(56)},${shareColor(72)})"></i><span class="d-ink">D</span><span style="margin-left:4px">Democratic share</span>`;
   }
 
@@ -70,7 +76,7 @@
   function snake(el, readEl, items, label, onPick) {
     const { rows, tp } = tippingOf(items);
     const demEV = rows.filter(r => r.share > 50).reduce((a, r) => a + r.ev, 0);
-    el.innerHTML = rows.map(r => `<div class="seg${r === tp ? ' tp' : ''}${r.ev < 19 ? ' sm' : ''}${r.toss ? ' toss' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${r.toss ? TOSS : shareColor(r.share)}" tabindex="0" aria-label="${esc(byAbbr[r.abbr].name)} ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`).join('') +
+    el.innerHTML = rows.map(r => `<div class="seg${r === tp ? ' tp' : ''}${r.ev < 19 ? ' sm' : ''}${r.toss || LIGHT.has(r.col) ? ' toss' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${r.col || (r.toss ? TOSS : shareColor(r.share))}" tabindex="0" aria-label="${esc(byAbbr[r.abbr].name)} ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`).join('') +
       `<div class="mark270" style="left:${270 / 538 * 100}%"></div>`;
     const tpName = byAbbr[tp.abbr].name.replace(' District', '');
     const winner = tp.share > 50 ? 'Democrats' : 'Republicans';
@@ -114,7 +120,7 @@
   };
   const hexD = (cx, cy, r) => 'M' + [0, 1, 2, 3, 4, 5].map(k => { const t = Math.PI / 180 * (60 * k - 90); return (cx + r * Math.cos(t)).toFixed(1) + ',' + (cy + r * Math.sin(t)).toFixed(1); }).join('L') + 'Z';
 
-  function drawUS(svg, { fill, onPick, onHover, selected }) {
+  function drawUS(svg, { fill, sub, onPick, onHover, selected }) {
     const W = 1075, H = 610, hex = mapMode === 'hex';
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     const shape = {}, at = {};
@@ -124,17 +130,18 @@
     }
     let o = '';
     for (const a of Object.keys(SHAPES)) o += `<path class="st" data-a="${a}" d="${shape[a]}" fill="${fill(a)}" tabindex="0" aria-label="${byAbbr[a].name}"></path>`;
-    for (const a of Object.keys(SHAPES)) if (hex || !SMALL.includes(a)) o += `<text class="lbl${hex ? ' big' : !hex && OFFSHORE[a] ? ' off' : ''}" data-l="${a}" x="${at[a][0]}" y="${at[a][1] + (hex ? 5 : 3)}">${a}</text>`;
+    for (const a of Object.keys(SHAPES)) if (hex || !SMALL.includes(a)) o += `<text class="lbl${hex ? ' big' : !hex && OFFSHORE[a] ? ' off' : ''}" data-l="${a}" x="${at[a][0]}" y="${at[a][1] + (hex ? 5 : 3)}">${a}</text>` +
+      (sub ? `<text class="lbl pc${hex ? ' big' : OFFSHORE[a] ? ' off' : ''}" data-l="${a}" data-p="${a}" x="${at[a][0]}" y="${at[a][1] + (hex ? 21 : 14)}"></text>` : '');
     const bx = 1005, bw = 54, bh = 21, dy0 = hex ? 232 : 392;
     if (!hex) SMALL.forEach((a, i) => {
       const y = 118 + i * 27, c = SHAPES[a].c;
       o += `<line class="leader" x1="${c[0]}" y1="${c[1]}" x2="${bx}" y2="${y + bh / 2}"></line>`;
-      o += `<g class="box" data-a="${a}" tabindex="0" aria-label="${byAbbr[a].name}"><rect x="${bx}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${fill(a)}"></rect><text x="${bx + bw / 2}" y="${y + 14.5}">${a}</text></g>`;
+      o += `<g class="box" data-a="${a}" tabindex="0" aria-label="${byAbbr[a].name}"><rect x="${bx}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${fill(a)}"></rect><text x="${bx + bw / 2}" y="${y + 14.5}">${a}<tspan class="bp" data-bp="${a}"></tspan></text></g>`;
     });
     o += `<text class="grp" x="${bx}" y="${dy0 - 8}">Districts</text>`;
     DISTRICTS.forEach((a, i) => {
       const y = dy0 + i * 27;
-      o += `<g class="box" data-a="${a}" tabindex="0" aria-label="${byAbbr[a].name}"><rect x="${bx}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${fill(a)}"></rect><text x="${bx + bw / 2}" y="${y + 14.5}">${dname(a)}</text></g>`;
+      o += `<g class="box" data-a="${a}" tabindex="0" aria-label="${byAbbr[a].name}"><rect x="${bx}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${fill(a)}"></rect><text x="${bx + bw / 2}" y="${y + 14.5}">${dname(a)}<tspan class="bp" data-bp="${a}"></tspan></text></g>`;
     });
     o += '<path class="sel" d=""></path>';
     svg.innerHTML = o;
@@ -152,14 +159,21 @@
       el.addEventListener('focus', () => onHover(a));
     });
     mark(selected);
-    // Labels turn dark on a gold (toss-up) state so they stay readable.
+    // Labels turn dark on light fills (gold toss-ups and the Lean shades) so they stay readable.
+    const dark = c => c === TOSS || LIGHT.has(c);
     const ink = () => {
-      svg.querySelectorAll('text[data-l]').forEach(t => t.classList.toggle('dark', fillOf[t.dataset.l] === TOSS && !t.classList.contains('off')));
-      svg.querySelectorAll('g.box').forEach(g => g.classList.toggle('dark', fillOf[g.dataset.a] === TOSS));
+      svg.querySelectorAll('text[data-l]').forEach(t => t.classList.toggle('dark', dark(fillOf[t.dataset.l]) && !t.classList.contains('off')));
+      svg.querySelectorAll('g.box').forEach(g => g.classList.toggle('dark', dark(fillOf[g.dataset.a])));
+    };
+    // Win chances under the labels (and inside the side boxes), when the map has them.
+    const relabel = f => {
+      if (!f) return;
+      svg.querySelectorAll('text[data-p]').forEach(t => { t.textContent = f(t.dataset.p); });
+      svg.querySelectorAll('tspan[data-bp]').forEach(t => { const v = f(t.dataset.bp); t.textContent = v ? ' ' + v.split(' ')[1] : ''; });
     };
     const fillOf = Object.fromEntries(Object.keys(SHAPES).concat(DISTRICTS).map(a => [a, fill(a)]));
-    ink();
-    return { mark, recolor: f => { svg.querySelectorAll('[data-a]').forEach(el => { const t = el.tagName === 'g' ? el.querySelector('rect') : el; fillOf[el.dataset.a] = f(el.dataset.a); t.setAttribute('fill', fillOf[el.dataset.a]); }); ink(); } };
+    ink(); relabel(sub);
+    return { mark, recolor: (f, sb) => { relabel(sb); svg.querySelectorAll('[data-a]').forEach(el => { const t = el.tagName === 'g' ? el.querySelector('rect') : el; fillOf[el.dataset.a] = f(el.dataset.a); t.setAttribute('fill', fillOf[el.dataset.a]); }); ink(); } };
   }
 
   // ---------- the balance: the path to 270 as a beam on a fulcrum ----------
@@ -214,7 +228,7 @@
   function board(el, states, onPick) {
     el.innerHTML = BOARD.map(([k, label]) => {
       const rows = states.filter(s => s.rating === k).sort((a, b) => b.demShare - a.demShare);
-      const chips = rows.map(s => `<button type="button" data-a="${s.abbr}"${k === 'TOSS' ? ' class="toss"' : ''} style="background:${k === 'TOSS' ? TOSS : shareColor(s.demShare)}" title="${esc(byAbbr[s.abbr].name)}: ${fmt(s.demShare)} Democratic, ${s.ev} EV">${dname(s.abbr)}</button>`).join('');
+      const chips = rows.map(s => `<button type="button" data-a="${s.abbr}"${LIGHT.has(RATE_COLOR[k]) ? ' class="toss"' : ''} style="background:${RATE_COLOR[k]}" title="${esc(byAbbr[s.abbr].name)}: ${fmt(s.demShare)} Democratic, ${s.ev} EV">${dname(s.abbr)}</button>`).join('');
       return `<div class="col ${k}"><div class="hd"><b>${label}</b><span class="num">${rows.reduce((a, s) => a + s.ev, 0)} EV</span></div><div class="chips">${chips || '<span class="none">None</span>'}</div></div>`;
     }).join('');
     el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => onPick(b.dataset.a)));
@@ -244,7 +258,7 @@
     const views = {
       fc: [R.map(r => ({ abbr: r.abbr, ev: r.ev, share: r.pub.fc })), '2024 forecast'],
       actual: [R.map(r => ({ abbr: r.abbr, ev: r.ev, share: r.share })), '2024 result'],
-      today: N ? [N.states.map(s => ({ abbr: s.abbr, ev: s.ev, share: s.demShare, toss: s.rating === 'TOSS' })), '2028 Nowcast'] : null,
+      today: N ? [N.states.map(s => ({ abbr: s.abbr, ev: s.ev, share: s.demShare, toss: s.rating === 'TOSS', col: RATE_COLOR[s.rating] })), '2028 Nowcast'] : null,
     };
     const hb = document.getElementById('bal-home');
     if (N && !N.fixture_run) {
@@ -461,7 +475,7 @@
     const nD = Math.round(100 * s.pDemWin), nT = Math.round(100 * s.pTie), rep = (100 - nD - nT) / 100;
     let cum = 0, median = 0;
     for (let i = 0; i < s.evHistogram.length; i++) { cum += s.evHistogram[i]; if (cum >= 0.5) { median = i; break; } }
-    const items = s.states.map(x => ({ abbr: x.abbr, ev: x.ev, share: x.demShare, toss: x.rating === 'TOSS' }));
+    const items = s.states.map(x => ({ abbr: x.abbr, ev: x.ev, share: x.demShare, toss: x.rating === 'TOSS', col: RATE_COLOR[x.rating] }));
     const tp = tippingOf(items).tp;
     const toMap = a => {
       setLayer28('tracker');
@@ -484,7 +498,7 @@
     ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
     board(document.getElementById('board-28'), s.states, toMap);
     histogram(document.getElementById('hist-2028'), s.evHistogram);
-    if (map28 && layer28 !== 'official') map28.recolor(fill28);
+    if (map28 && layer28 !== 'official') map28.recolor(fill28, sub28);
     insp28(pinned28);
   }
 
@@ -523,13 +537,14 @@
   function fill28(a) {
     const s = cur && cur.byAbbr[a];
     if (!s) return greyColor();
-    return isToss(s.pDem) ? TOSS : shareColor(s.demShare);
+    return RATE_COLOR[rateOf(s.pDem)];
   }
+  const sub28 = a => { const s = cur && cur.byAbbr[a]; return s ? chance(s.pDem) : ''; };
   function pick28(a) {
     pinned28 = a === pinned28 ? null : a; map28.mark(pinned28); insp28(pinned28);
   }
 
-  const draw28 = () => drawUS(document.getElementById('map-2028'), { fill: fill28, selected: pinned28, onPick: pick28, onHover: a => { insp28(a || pinned28); map28.mark(a || pinned28); } });
+  const draw28 = () => drawUS(document.getElementById('map-2028'), { fill: fill28, sub: sub28, selected: pinned28, onPick: pick28, onHover: a => { insp28(a || pinned28); map28.mark(a || pinned28); } });
 
   // Map layers. "Forecast" shows a countdown, not a map, until July 30, 2028.
   function setLayer28(l) {
