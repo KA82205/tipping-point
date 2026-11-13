@@ -8,11 +8,13 @@
   // The 2024 scorecard has two forecasts to score: 'pub', the approval and economy model's forecast as its
   // authors published it, and 'bt', the Nowcast's method applied to 2024 (docs/backtest2024.js).
   const BT = window.BACKTEST_2024 || null, F24 = ['fc', 'lo', 'hi', 'pDem', 'rating'];
-  R.forEach(r => { r.pub = Object.fromEntries(F24.map(k => [k, r[k]])); r.bt = BT && BT.states[r.abbr] ? BT.states[r.abbr] : null; });
-  NAT.pub = { fc: NAT.fc, pDemWin: NAT.pDemWin }; NAT.bt = BT ? BT.national : null;
+  // 'ds': DeSart's polls model as he published it (November 2023), also from docs/backtest2024.js.
+  const DS = BT && BT.desartPub ? BT.desartPub : null;
+  R.forEach(r => { r.pub = Object.fromEntries(F24.map(k => [k, r[k]])); r.bt = BT && BT.states[r.abbr] ? BT.states[r.abbr] : null; r.ds = DS && DS.states[r.abbr] ? DS.states[r.abbr] : null; });
+  NAT.pub = { fc: NAT.fc, pDemWin: NAT.pDemWin }; NAT.bt = BT ? BT.national : null; NAT.ds = DS ? DS.national : null;
   let src24 = 'pub';
   function useSrc24(k) {
-    src24 = k === 'bt' && BT ? 'bt' : 'pub';
+    src24 = k === 'bt' && BT ? 'bt' : k === 'ds' && DS ? 'ds' : 'pub';
     R.forEach(r => F24.forEach(f => { r[f] = (r[src24] || r.pub)[f]; }));
     NAT.fc = NAT[src24].fc; NAT.pDemWin = NAT[src24].pDemWin;
   }
@@ -283,6 +285,7 @@
         </dl>
         <div class="stack" style="gap:6px"><div class="strip-scale num"><span>30%</span><span>50%</span><span>70%</span></div><div class="strip">${strip({ f: NAT.fc, a: natActual })}</div></div>
         <div class="strip-legend"><span><i class="f"></i>Forecast</span><span><i class="a"></i>Actual</span></div>
+        ${src24 === 'ds' ? `<p class="hint">The odds are reproduced from DeSart's own simulation script, which draws every state independently around its forecast. His national vote adds the states by his own turnout weights.</p>` : ''}
         ${src24 === 'bt' ? `<p class="hint">A back-test, not a forecast anyone published. State by state it averages two forecasts that were published: approval and economy (July 2024) and DeSart's polls model (November 2023). Their national votes were ${fmt(NAT.bt.enns)} and ${fmt(NAT.bt.desart)}.</p>` : ''}
         <p class="hint">Hover or click a state for its numbers.</p>`;
       return;
@@ -298,6 +301,7 @@
         <div><dt>Harris win chance</dt><dd>${Math.round(100 * r.pDem)}%</dd></div>
         <div><dt>90% range</dt><dd>${r.lo.toFixed(1)}–${r.hi.toFixed(1)}%</dd></div>
         <div><dt>Call</dt><dd style="color:${ok ? 'var(--ok)' : 'var(--rep-ink)'}">${ok ? 'Correct' : 'Missed'}</dd></div>
+        ${src24 === 'ds' && r.ds && r.ds.district ? `<p class="hint" style="grid-column:1/-1">DeSart forecasts states only. This district is his ${byAbbr[a.slice(0, 2)].name} forecast moved by the district's gap from the state in the approval and economy forecast.</p>` : ''}
       </dl>
       <div class="stack" style="gap:6px"><div class="strip-scale num"><span>30%</span><span>50%</span><span>70%</span></div><div class="strip">${strip({ f: r.fc, a: r.share, lo: r.lo, hi: r.hi })}</div></div>
       <div class="strip-legend"><span><i class="f"></i>Forecast</span><span><i class="a"></i>Actual</span><span><i class="b"></i>90% range</span></div>
@@ -342,6 +346,7 @@
   const LEDE24 = {
     bt: 'What the Nowcast\'s method would have said in 2024. State by state it averages two forecasts published before the election: the approval and economy forecast from July 2024 and Jay DeSart\'s polls forecast from November 2023. Nobody published this average at the time, so it is a back-test.',
     pub: 'The approval and economy forecast as Enns, Colner, Kumar and Lagodny published it in July 2024, with data from 100 days before the election.',
+    ds: 'The polls forecast as Jay DeSart published it in November 2023, a year before the election, from head-to-head polls taken the month before. It forecasts the 50 states and DC; the five districts in Maine and Nebraska are filled in from the approval and economy forecast.',
   };
   function figs24() {
     const st = R.filter(r => r.abbr.length === 2);
@@ -356,6 +361,7 @@
     ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
     document.getElementById('lede-2024').textContent = LEDE24[src24] + ' Pick a state on the map or in the list to compare its forecast and result.';
     document.querySelector('[data-layer="forecast"]').textContent = src24 === 'bt' ? 'Back-test forecast' : 'Published forecast';
+    document.getElementById('lede-2024').dataset.src = src24;
     document.querySelectorAll('[data-src24]').forEach(x => x.setAttribute('aria-selected', x.dataset.src24 === src24));
   }
 
@@ -364,6 +370,7 @@
     figs24();
     const srcTabs = document.querySelectorAll('[data-src24]');
     if (!BT) srcTabs.forEach(x => { x.parentElement.hidden = true; });
+    if (!DS) srcTabs.forEach(x => { if (x.dataset.src24 === 'ds') x.hidden = true; });
     srcTabs.forEach(b => b.addEventListener('click', () => {
       useSrc24(b.dataset.src24); figs24();
       map24.recolor(fill24); insp24(pinned24); snake24(); rows24();

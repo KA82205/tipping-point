@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261112i">
+<link rel="stylesheet" href="styles.css?v=20261113a">
 </head>
 <body>
 
@@ -70,7 +70,7 @@
         <p>The idea: presidential elections are largely decided by fundamentals that are knowable months ahead. The authors publish their forecast about 100 days before Election Day. The name comes from the state that decides the Electoral College, and the logo is that idea drawn as districts on a balance beam.</p>
       </div>
       <div class="stack">
-        <p><strong>The 2024 scorecard</strong> checks the Nowcast's method against the certified 2024 results, state by state: a back-test that averages the two forecasts published before that election. The approval and economy forecast, as its authors published it in July 2024, can be scored on its own there too. Both published forecasts are recomputed from their authors' replication files.</p>
+        <p><strong>The 2024 scorecard</strong> checks the Nowcast's method against the certified 2024 results, state by state: a back-test that averages the two forecasts published before that election. The two published forecasts can be scored on their own there too: approval and economy as its authors published it in July 2024, and DeSart's polls model as he published it in November 2023, with his odds reproduced from his own simulation script. Both published forecasts are recomputed from their authors' replication files.</p>
         <p><strong>The 2028 Nowcast</strong> runs that model every morning on the latest Trump approval polls and state economic data, runs DeSart's model on the latest head-to-head polls, and averages the two. Until the nominees are confirmed, each party's possible nominees are averaged by their standing in the polls. It shows what the models say if the election were held today. It is not the forecast, which needs the nominees and June–July 2028 surveys and is due July 30, 2028.</p>
         <p class="small">Everything updates automatically: polls, state economies, and the nominees, running mates and home states once the conventions pick them. Data: FRED (Philadelphia Fed state coincident indexes), VoteHub and PollResults.org (poll data, CC BY 4.0), Wikipedia, certified 2024 returns.</p>
       </div>
@@ -110,6 +110,7 @@
     <div class="tabs" role="tablist" aria-label="Which forecast to score">
       <button class="tab" role="tab" data-src24="bt" aria-selected="true">Nowcast method, back-tested</button>
       <button class="tab" role="tab" data-src24="pub" aria-selected="false">Approval and economy, as published</button>
+      <button class="tab" role="tab" data-src24="ds" aria-selected="false">Polls model, as published</button>
     </div>
     <div class="figs" id="figs-2024"></div>
 
@@ -453,12 +454,12 @@
 </footer>
 
 <script src="us-states.js"></script>
-<script src="backtest2024.js?v=20261112i"></script>
+<script src="backtest2024.js?v=20261113a"></script>
 <script src="data.js"></script>
 <script src="nowcast.js" onerror="void 0"></script>
 <script src="history.js" onerror="void 0"></script>
-<script src="engine.js?v=20261112i"></script>
-<script src="combine.js?v=20261112i"></script>
-<script src="app.js?v=20261112i"></script>
+<script src="engine.js?v=20261113a"></script>
+<script src="combine.js?v=20261113a"></script>
+<script src="app.js?v=20261113a"></script>
 </body>
 </html>
