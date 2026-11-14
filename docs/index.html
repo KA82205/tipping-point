@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261114b">
+<link rel="stylesheet" href="styles.css?v=20261114d">
 </head>
 <body>
 
@@ -52,11 +52,10 @@
   <section class="stack-lg">
     <div class="stack" style="gap:6px">
       <h2>The tipping point</h2>
-      <p class="lede">The balance above lines every state up from most Democratic to most Republican, sized by electoral votes. The state that carries a candidate past 270 is the tipping point. Here is the same line-up for the 2028 Nowcast today, and for 2024, as forecast in July and as it turned out.</p>
+      <p class="lede">The balance above lines every state up from most Democratic to most Republican, sized by electoral votes. The state that carries a candidate past 270 is the tipping point. Here is the same line-up for 2024, as forecast in July and as it turned out.</p>
     </div>
     <div class="tabs" role="tablist" aria-label="Tipping point view">
-      <button class="tab" role="tab" data-snake="today" aria-selected="true">2028 Nowcast</button>
-      <button class="tab" role="tab" data-snake="fc" aria-selected="false">2024 forecast</button>
+      <button class="tab" role="tab" data-snake="fc" aria-selected="true">2024 forecast</button>
       <button class="tab" role="tab" data-snake="actual" aria-selected="false">2024 result</button>
     </div>
     <div class="snake-card"><div class="snake" id="snake-home"></div><p class="snake-read" id="snake-home-read"></p></div>
@@ -80,11 +79,11 @@
   <section class="stack-lg">
     <div class="stack">
       <h2>What the two models read</h2>
-      <p class="lede">Each predicts the Democratic share of the vote in every state from different evidence, and the Nowcast gives each half the weight. The big number is how often the Democrat wins in that model today, out of 100.</p>
+      <p class="lede">Each predicts the Democratic share of the vote in every state from different evidence, and the Nowcast gives each half the weight.</p>
     </div>
     <div class="inputs3 two">
-      <div><span class="coef" id="odds-enns">–</span><h3>State-level approval and fundamentals model</h3><p class="small">Enns, Colner, Kumar and Lagodny. How each state rates the president, how its economy has grown, and how it voted last time.</p></div>
-      <div><span class="coef" id="odds-desart">–</span><h3>Long-range model</h3><p class="small">DeSart. National head-to-head polls between possible nominees, counted at about half, on top of each state's last result.</p></div>
+      <div><h3>State-level approval and fundamentals model</h3><p class="small">Enns, Colner, Kumar and Lagodny. How each state rates the president, how its economy has grown, and how it voted last time.</p></div>
+      <div><h3>Long-range model</h3><p class="small">DeSart. National head-to-head polls between possible nominees, counted at about half, on top of each state's last result.</p></div>
     </div>
   </section>
 
@@ -467,6 +466,6 @@
 <script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261113a"></script>
 <script src="combine.js?v=20261113k"></script>
-<script src="app.js?v=20261114c"></script>
+<script src="app.js?v=20261114d"></script>
 </body>
 </html>

@@ -345,7 +345,7 @@
     const tabs = document.querySelectorAll('[data-snake]');
     const show = k => { const v = views[k] || views.fc; tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.snake === k)); snake(document.getElementById('snake-home'), document.getElementById('snake-home-read'), v[0], v[1]); };
     tabs.forEach(t => { if (t.dataset.snake === 'today' && !views.today) t.disabled = true; t.addEventListener('click', () => show(t.dataset.snake)); });
-    show(views.today ? 'today' : 'fc');
+    show('fc');   // the 2028 line-up is the balance at the top of the page
   }
 
   // ================= 2024 =================
@@ -519,6 +519,14 @@
   const lastName = n => n.replace(/ (Jr\.|Sr\.|II|III)$/, '').split(' ').pop();
   // Names in poll listings: last name, keeping "Jr." (Trump Jr.), and the full name for anyone polled who is
   // not on the candidate list (Hunter Biden, Mark Cuban), so no one is mistaken for a better-known namesake.
+  // Long pollster names, shortened for tables; the full name shows on hover.
+  const SHORT_POLLSTER = {
+    'University of Massachusetts Lowell Center for Public Opinion/YouGov': 'UMass Lowell/YouGov',
+    'Hart Research Associates/Public Opinion Strategies': 'Hart/Public Opinion Strategies',
+    'Impact Research/National Research Inc.': 'Impact/National Research',
+  };
+  const shortPollster = n => SHORT_POLLSTER[n] || n.replace(/University of /, 'U. of ').replace(/ Center for Public Opinion/, '');
+  const pollsterCell = n => { const sh = shortPollster(n); return sh === n ? esc(n) : `<span title="${esc(n)}">${esc(sh)}</span>`; };
   const pollName = n => {
     if (N && ((N.h2h && N.h2h.people) || []).concat((N.desart_final && N.desart_final.people) || []).some(p => p.name === n)) return n;
     const m = n.match(/ (Jr\.|Sr\.)$/);
@@ -591,8 +599,7 @@
         </dl>
         <div class="strip">${strip({ f: cur.demPopular })}</div>
         ${cur.desart ? modelTable([['State-level approval and fundamentals', cur.enns.demPopular, cur.enns.pDemWin], ['Long-range model', cur.desart.demPopular, cur.desart.pDemWin], ['Nowcast', cur.demPopular, cur.pDemWin, 'avg']], 'the election') : ''}
-        ${cur.info && cur.info.polls ? `<p class="hint">${POLLS_NOTE(cur.info)}</p>` : ''}
-        <p class="hint">Not the forecast. The Nowcast simulates the models together, so its odds are not the average of theirs. Hover a state for its numbers.</p>`;
+        <p class="hint">Hover or tap a state for its numbers.</p>`;
       return;
     }
     const r = byAbbr[a], base = N.scenario.states.find(x => x.abbr === a);
@@ -749,7 +756,7 @@
     matchups(document.getElementById('mx-2028'), document.getElementById('mx-note'), hp, !!DF);
     const tb = document.getElementById('h2h-2028'), more = document.getElementById('h2h-more');
     const showPolls = all => {
-      tb.innerHTML = (all ? hp : hp.slice(0, 10)).map(q => `<tr><td class="num">${q.date}</td><td>${esc(q.pollster)}</td><td class="mu">${esc(pollName(q.d))} vs. ${esc(pollName(q.r))}</td><td class="n"><span class="bar" aria-hidden="true"><i class="${q.share > 50 ? 'D' : 'R'}" style="width:${Math.min(50, Math.abs(q.share - 50) * 8).toFixed(1)}%"></i></span>${fmt(q.share)}</td></tr>`).join('');
+      tb.innerHTML = (all ? hp : hp.slice(0, 10)).map(q => `<tr><td class="num">${q.date}</td><td>${pollsterCell(q.pollster)}</td><td class="mu">${esc(pollName(q.d))} vs. ${esc(pollName(q.r))}</td><td class="n"><span class="bar" aria-hidden="true"><i class="${q.share > 50 ? 'D' : 'R'}" style="width:${Math.min(50, Math.abs(q.share - 50) * 8).toFixed(1)}%"></i></span>${fmt(q.share)}</td></tr>`).join('');
       more.hidden = all || hp.length <= 10;
       more.textContent = `Show all ${hp.length} polls`;
     };
@@ -768,7 +775,7 @@
     document.getElementById('need-econ').textContent = `Daily, through ${monthName(N.economy.through)}`;
     document.getElementById('need-cands').textContent = `Daily, ${N.scenario.candidates.filter(c => c.primary).length} names in primary polls`;
     document.getElementById('polls-2028').innerHTML = N.approval.polls.map(p =>
-      `<tr><td>${p.url ? `<a href="${esc(p.url)}">${esc(p.pollster)}</a>` : esc(p.pollster)}</td><td class="num">${p.date}</td><td class="n">${p.approve}</td><td class="n">${p.disapprove}</td></tr>`).join('');
+      `<tr><td>${p.url ? `<a href="${esc(p.url)}">${pollsterCell(p.pollster)}</a>` : pollsterCell(p.pollster)}</td><td class="num">${p.date}</td><td class="n">${Number(p.approve).toFixed(1)}</td><td class="n">${Number(p.disapprove).toFixed(1)}</td></tr>`).join('');
     const H = window.NOWCAST_HISTORY || [];
     trendChart(document.getElementById('trend-2028'), document.getElementById('trend-note'), H);
     schedule();
@@ -783,6 +790,26 @@
     if (map28) map28 = draw28();
     if (mapFc) mapFc();
   }));
+
+  // Method page: a contents list built from its section headings.
+  (function methodContents() {
+    const view = document.getElementById('view-method');
+    if (!view) return;
+    const heads = [...view.querySelectorAll('h2')];
+    const slug = t => 'm-' + t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    heads.forEach(h => { if (!h.id) h.id = slug(h.textContent); });
+    const nav = document.createElement('div');
+    nav.className = 'toc'; nav.setAttribute('role', 'navigation'); nav.setAttribute('aria-label', 'On this page');
+    nav.innerHTML = '<b>On this page</b><ol>' + heads.map(h => `<li><a href="#method" data-to="${h.id}">${esc(h.textContent)}</a></li>`).join('') + '</ol>';
+    const lede = view.querySelector('.lede');
+    (lede ? lede.parentNode : view).appendChild(nav);
+    nav.addEventListener('click', e => {
+      const a = e.target.closest('a[data-to]');
+      if (!a) return;
+      e.preventDefault();
+      document.getElementById(a.dataset.to).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  })();
 
   // ================= routing =================
   const VIEWS = ['home', 'nowcast', 'results-2024', 'method'];

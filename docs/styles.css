@@ -451,3 +451,14 @@ footer p { max-width: none; margin: 4px 0; }
   svg.usmap text.lbl.pc.big { display: none; }
 }
 @media (max-width: 380px) { nav a { font-size: 12.5px; padding: 7px 6px; } }
+
+/* Method page contents */
+.toc { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; max-width: 760px; }
+.toc b { display: block; font: 600 13px var(--font-body); color: var(--muted); margin-bottom: 8px; }
+.toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+.toc li { break-inside: avoid; padding: 2px 0; color: var(--faint); }
+.toc a { color: var(--ink); text-decoration: none; font-size: 14px; padding: 2px 0; display: inline-block; }
+.toc a:hover { color: var(--accent); }
+@media (max-width: 600px) { .toc ol { columns: 1; } }
+.mt thead th { white-space: nowrap; }
+[id^="m-"] { scroll-margin-top: 80px; }
