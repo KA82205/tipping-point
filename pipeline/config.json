@@ -80,7 +80,11 @@
   },
   "head_to_head": {
     "_comment": "Second model: DeSart (2025), doi:10.1017/S1049096524000805. National head-to-head general-election polls between one named Democrat and one named Republican, from PollResults.org.",
-    "cannot_run": ["Barack Obama", "George W. Bush", "Bill Clinton"],
+    "cannot_run": [
+      "Barack Obama",
+      "George W. Bush",
+      "Bill Clinton"
+    ],
     "_cannot_run_note": "Two-term presidents cannot be nominees (22nd Amendment), so matchups naming them are left out. The sitting president is added automatically.",
     "window_days": 180,
     "_window_note": "DEPARTURE: DeSart uses polls from October of the year before the election (October 2027). The Nowcast uses the last window_days days instead.",
@@ -90,28 +94,6 @@
   "simulation": {
     "n_per_delta": 10000,
     "seed": 2028
-  },
-  "keys": {
-    "_comment": "NOT USED. Lichtman's keys were tested as a third model and left out (see the Method page); pipeline/keys.py is kept for reference and is not run. five of Lichtman's objective keys, counted (pipeline/keys.py), each scored by his own rule. false = true means the key is FALSE (bad for the party holding the White House); null = not known yet, counted as half false. key1 and key3 are set by hand. key2 is set by hand once the convention delegates are known. key5 and key6 are scored daily from FRED; key5 can be set here for a recession the public perceives. Key 4 (third party) is not used.",
-    "term_start": "2025-01",
-    "fred_gdp_per_capita": "A939RX0Q048SBEA",
-    "fred_sahm": "SAHMREALTIME",
-    "key1": {
-      "false": true,
-      "why": "Democrats won the House in the November 2026 midterms, so Republicans hold fewer seats than the 222 they won in 2022."
-    },
-    "key2": {
-      "false": null,
-      "why": "Decided at the 2028 Republican convention: true if the nominee wins at least two-thirds of the first-ballot delegates with no deep and vocal party divisions."
-    },
-    "key3": {
-      "false": true,
-      "why": "Trump cannot run for a third term, so the Republican candidate will not be the sitting president."
-    },
-    "key5": {
-      "false": null,
-      "why": "Scored daily from FRED. Set to true here if the public clearly believes the economy is in recession."
-    }
   },
   "ensemble": {
     "_comment": "The Nowcast is the plain average of the approval and economy model and the polls model, state by state (docs/combine.js). No third model. Method frozen 2026-11-12.",
