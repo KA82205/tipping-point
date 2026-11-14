@@ -2,7 +2,9 @@ name: Update data and deploy site
 
 on:
   schedule:
-    - cron: "17 14 * * *"   # daily, 9:17 AM Eastern (standard time)
+    # GitHub starts scheduled runs late, about 7 hours late so far, so this is set for 1:17 AM Eastern
+    # (standard time) to have the day's update in place by the morning.
+    - cron: "17 6 * * *"
   workflow_dispatch: {}      # "Run workflow" button in the Actions tab
   push:
     branches: [main]
