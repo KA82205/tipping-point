@@ -286,15 +286,16 @@
     const views = {
       fc: [R.map(r => ({ abbr: r.abbr, ev: r.ev, share: r.pub.fc })), '2024 forecast'],
       actual: [R.map(r => ({ abbr: r.abbr, ev: r.ev, share: r.share })), '2024 result'],
-      today: N ? [N.states.map(s => ({ abbr: s.abbr, ev: s.ev, share: s.demShare, toss: s.rating === 'TOSS', col: RATE_COLOR[s.rating] })), '2028 Nowcast'] : null,
+      today: N ? [N.states.map(s => ({ abbr: s.abbr, ev: s.ev, share: s.demShare, toss: s.rating === 'TOSS', col: RATE_COLOR[s.rating] })), window.FORECAST ? '2028 forecast' : '2028 Nowcast'] : null,
     };
     const hb = document.getElementById('bal-home');
     if (N && !N.fixture_run) {
       const s = N.summary, M = N.models || {}, nD = Math.round(100 * s.pDemWin), nT = Math.round(100 * s.pTie), rep = (100 - nD - nT) / 100;
-      balance(hb, views.today[0], '2028 Nowcast', s.pDemWin, rep, () => { location.hash = 'nowcast'; });
+      balance(hb, views.today[0], views.today[1], s.pDemWin, rep, () => { location.hash = 'nowcast'; });
       ensemble(document.getElementById('ens-home'), { enns: M.enns || s, desart: M.desart || null, now: s });
       MODELS.forEach(([k]) => { const el = document.getElementById('odds-' + k); if (el && M[k]) el.textContent = Math.round(100 * M[k].pDemWin); });
-      document.getElementById('hero-date').textContent = `Updated ${niceDate(N.generated_at)}. Not the forecast, which publishes August 6, 2028.`;
+      document.getElementById('hero-date').textContent = window.FORECAST ? `Published ${niceDate(window.FORECAST.published)}. Final: it does not change.` : `Updated ${niceDate(N.generated_at)}. Not the forecast, which publishes August 6, 2028.`;
+      if (window.FORECAST) document.getElementById('hero-live').textContent = 'Final 2028 forecast';
       setGlow(s.pDemWin, rep);
     } else {
       balance(hb, views.fc[0], '2024 forecast', NAT.pub.pDemWin, 1 - NAT.pub.pDemWin);
@@ -517,7 +518,7 @@
       if (pinned28 !== a) pick28(a, true);
       document.getElementById('map-2028').scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center' });
     };
-    balance(document.getElementById('bal-28'), items, '2028 Nowcast', s.pDemWin, rep, toMap);
+    balance(document.getElementById('bal-28'), items, window.FORECAST ? '2028 forecast' : '2028 Nowcast', s.pDemWin, rep, toMap);
     ensemble(document.getElementById('ens-28'), { enns: s.enns || s, desart: s.desart, now: s });
     setGlow(s.pDemWin, rep);
     waffle(document.getElementById('waffle-28'), s.pDemWin, s.pTie);
@@ -656,6 +657,24 @@
     mapFc();
   }
 
+  // After the final forecast publishes, the Nowcast is frozen with it (the daily run stops), so the Nowcast
+  // views become the final forecast: relabelled, with the Forecast tab and countdown no longer needed.
+  function finalLabels() {
+    const F = window.FORECAST;
+    if (!F) return;
+    const when = niceDate(F.published);
+    const set = (sel, txt) => document.querySelectorAll(sel).forEach(el => { el.textContent = txt; });
+    set('a[data-view="nowcast"]', '2028 forecast');
+    set('#title-28', '2028 forecast');
+    set('[data-layer28="tracker"]', '2028 forecast');
+    set('[data-snake="today"]', '2028 forecast');
+    set('#hero-live', 'Final 2028 forecast');
+    const lede = document.getElementById('lede-28');
+    if (lede) lede.innerHTML = `The final forecast, published ${when}: two published models, averaged state by state, each on its own paper's data. Approval polls conducted June 1 to July 30, 2028 and the economy through June (Enns et al.); head-to-head polls conducted in October 2027 (DeSart). <strong>It does not change.</strong>`;
+    const tab = document.querySelector('[data-layer28="official"]');
+    if (tab) tab.hidden = true;
+  }
+
   function render2028() {
     const days = daysTo(FORECAST_DATE);
     document.getElementById('d-forecast').textContent = days;
@@ -671,7 +690,8 @@
       document.getElementById('live-pill').textContent = 'Waiting for the first data run';
       setLayer28('official'); return;
     }
-    document.getElementById('live-pill').textContent = `Live · updated ${niceDate(N.generated_at)}`;
+    document.getElementById('live-pill').textContent = window.FORECAST ? `Final · published ${niceDate(window.FORECAST.published)}` : `Live · updated ${niceDate(N.generated_at)}`;
+    finalLabels();
     document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> National approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters through ${niceDate(N.approval.window[1])} · state-by-state differences from ${N.approval.state_data && N.approval.state_data.as_of ? `<a href="${N.approval.state_data.url}">Civiqs</a> through ${niceDate(N.approval.state_data.as_of)}` : 'Civiqs'} · state economies through ${monthName(N.economy.through)}.`;
     // Jump links, with the section on screen marked.
     const jump = [...document.querySelectorAll('#jump-28 button')];
