@@ -275,7 +275,7 @@
   }
 
   // ---------- dates ----------
-  const FORECAST_DATE = new Date('2028-08-06T00:00:00-04:00');   // uses data through July 30, published a week later
+  const FORECAST_DATE = new Date('2028-08-06T09:00:00-04:00');   // 9 AM ET Aug 6, 2028: by then that morning's run has published it
   const ELECTION_DATE = new Date('2028-11-07T00:00:00-05:00');
   const daysTo = d => Math.max(0, Math.floor((d - new Date()) / 86400000));
   const monthName = ym => new Date(ym + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
