@@ -597,8 +597,8 @@
   // ---------- the 2028 forecast, built up as its data arrives ----------
   // Each paper's own cutoff, by the date polls were conducted: DeSart's polls from October 2027 (fixed Nov 7,
   // 2027), Enns et al.'s approval polls from June 1 to July 30, 2028 and the economy through June. Until it
-  // publishes on Aug 6, 2028 the tab shows how far each input has got and, once the polls half exists, a
-  // provisional forecast. The published forecast (docs/forecast.js) is shown as it was and never changes.
+  // publishes on Aug 6, 2028 the tab shows only the countdown and how far each input has got, with no forecast
+  // numbers. The published forecast (docs/forecast.js) is shown as it was and never changes.
   const PUBLISH = '2028-08-06', DS_WIN = ['2027-10-01', '2027-10-31'], DS_FREEZE = '2027-11-07', AP_WIN = ['2028-06-01', '2028-07-30'];
   const todayIso = () => new Date().toISOString().slice(0, 10);
   let mapFc = null;
@@ -609,10 +609,10 @@
     // 1. Polls model: October 2027 head-to-head polls
     if (F || (df && df.frozen)) {
       const n = F ? F.desart_polls.n : df.polls.length, avg = F ? F.desart_polls.avg : df.polls.reduce((a, p) => a + p.share, 0) / df.polls.length;
-      step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'done', `Fixed November 7, 2027: ${n} polls averaging ${fmt(avg)} Democratic.`);
+      step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'done', F ? `Fixed November 7, 2027: ${n} polls averaging ${fmt(avg)} Democratic.` : `Fixed November 7, 2027, with ${n} polls. Its result is shown when the forecast publishes.`);
     } else if (df) {
       const n = df.polls.length;
-      step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'open', n ? `${n} poll${n === 1 ? '' : 's'} so far, averaging ${fmt(df.polls.reduce((a, p) => a + p.share, 0) / n)} Democratic. Fixed November 7, 2027.` : 'No polls from the window yet. Fixed November 7, 2027.');
+      step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'open', `${n ? `${n} poll${n === 1 ? '' : 's'} so far` : 'No polls from the window yet'}. Fixed November 7, 2027.`);
     } else step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'wait', 'Starts October 1, 2027.');
     // 2. Approval polls: June 1 - July 30, 2028
     const apState = F ? 'done' : t < AP_WIN[0] ? 'wait' : 'open';
@@ -630,16 +630,8 @@
     step('Publish', 'August 6, 2028, a week after the last cutoff', F ? 'done' : 'wait', F ? `Published ${niceDate(F.published)}. Final: it does not change.` : 'Polls published a few days late are included. After that, nothing changes.');
     document.getElementById('fc-steps').innerHTML = steps.join('');
 
-    // The forecast itself: final if published, otherwise provisional once the polls half exists.
-    let R = null, label = '';
-    if (F) { R = { ...F.summary, states: F.states, evHistogram: F.evHistogram, models: F.models }; label = 'final'; }
-    else if (df && df.polls.length && N) {
-      const N2 = { ...N, h2h: { ...N.h2h, polls: df.polls, people: df.people, window: df.window },
-        scenario: { ...N.scenario, candidates: N.scenario.candidates.concat((df.people || []).filter(p => !N.scenario.candidates.some(c => c.name === p.name))) } };
-      const picks = Object.fromEntries(Object.keys(ROLES).map(r => [r, readPick(r)]));
-      const out = window.TP.run(N2, pk(picks), { n: 10000, asPublished: true });
-      R = { ...out.combined, models: { enns: out.enns, desart: out.desart } }; label = 'provisional';
-    }
+    // The forecast itself is shown only once published (docs/forecast.js); until then, only the countdown.
+    const R = F ? { ...F.summary, states: F.states, evHistogram: F.evHistogram, models: F.models } : null, label = 'final';
     const body = document.getElementById('fc-body');
     document.getElementById('fc-head').innerHTML = F ? 'The 2028 forecast' : `The official prediction will be made in <span id="cd-days">${daysTo(FORECAST_DATE)}</span> days`;
     document.getElementById('cd-28').hidden = !!F;
@@ -649,7 +641,7 @@
     for (let i = 0; i < R.evHistogram.length; i++) { cum += R.evHistogram[i]; if (cum >= 0.5) { med = i; break; } }
     const nD = Math.round(100 * R.pDemWin), nT = Math.round(100 * (R.pTie || 0));
     const m = R.models || {};
-    body.innerHTML = `<p class="fc-tag ${label}">${label === 'final' ? 'Final forecast' : `Provisional: ${t < AP_WIN[0] ? 'the approval half uses today\'s polls until the June–July window opens' : 'still collecting June–July approval polls'}. Publishes August 6, 2028.`}</p>
+    body.innerHTML = `<p class="fc-tag ${label}">Final forecast, published ${niceDate(F.published)}</p>
       <div class="fc-figs">
         <div><span class="v d-ink">${nD}</span><span class="l">in 100 for the Democrat</span></div>
         <div><span class="v r-ink">${100 - nD - nT}</span><span class="l">in 100 for the Republican</span></div>
