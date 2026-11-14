@@ -56,7 +56,7 @@ jobs:
         run: |
           git config user.name "forecast-bot"
           git config user.email "forecast-bot@users.noreply.github.com"
-          for p in docs/nowcast.js docs/history.js pipeline/history.json pipeline/cache docs/data.js docs/us-states.js pipeline/results_2024.json; do
+          for p in docs/nowcast.js docs/history.js docs/forecast.js pipeline/history.json pipeline/frozen pipeline/cache docs/data.js docs/us-states.js pipeline/results_2024.json; do
             if [ -e "$p" ]; then git add -f "$p"; fi
           done
           if git diff --cached --quiet; then echo "No changes"; else git commit -m "Data update $(date -u +%Y-%m-%d)" && git push; fi
