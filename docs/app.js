@@ -574,7 +574,7 @@
     const mo = document.getElementById('models-28');
     if (mo) mo.innerHTML = s.desart
       ? `Each state's number is the average of the state-level approval and fundamentals model and the long-range model, half each. The whole map is then simulated together, so the Nowcast's odds are not simply the average of the two models' odds. ${nomineesNote()} ${s.desart ? POLLS_NOTE(s.info) : ''} <a href="#method">How they work</a>`
-      : `Today's Nowcast is the state-level approval and fundamentals model on its own, because no head-to-head polls are available. <a href="#method">How it works</a>`;
+      : `Today's Nowcast is the state-level approval and fundamentals model on its own, because no head-to-head polls are available. <a href="#method">How it works</a> · <a href="#models">Each model on its own</a>`;
     document.getElementById('figs-2028').innerHTML = [
       [fmt(s.demPopular), 'Democratic share of the two-party vote'],
       [`${evPoint}`, 'Democratic electoral votes, each state to the candidate ahead in it'],
@@ -582,8 +582,62 @@
     ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
     board(document.getElementById('board-28'), s.states, toMap);
     histogram(document.getElementById('hist-2028'), s.evHistogram);
+    renderModels();
     if (map28 && layer28 !== 'official') map28.recolor(fill28, sub28);
     insp28(pinned28);
+  }
+
+  // ---------- each model on its own (a secondary page) ----------
+  // The two inputs to the Nowcast, each simulated alone, with its own map. Clearly marked as background:
+  // the Nowcast (their average, simulated together) is the site's prediction.
+  const MODEL_PAGE = [
+    ['enns', 'State-level approval and fundamentals model', 'Enns, Colner, Kumar and Lagodny',
+      'Reads how voters rate the president in each state, how each state\'s economy has grown, and home states. Built to forecast about 100 days before the election.'],
+    ['desart', 'Long-range model', 'DeSart',
+      'Reads national head-to-head polls and each state\'s last result. Built to forecast a year out, before the nominees are known.'],
+  ];
+  let modelMaps = [];
+  function renderModels() {
+    const el = document.getElementById('models-each');
+    if (!el || !cur) return;
+    const label = window.FORECAST ? 'the 2028 forecast' : 'the Nowcast';
+    document.getElementById('models-back').textContent = window.FORECAST ? 'Go to the 2028 forecast' : 'Go to the 2028 Nowcast';
+    const now = Object.fromEntries(cur.states.map(s => [s.abbr, s]));
+    modelMaps = [];
+    el.innerHTML = MODEL_PAGE.map(([k, name, by, reads]) => {
+      const m = cur[k];
+      if (!m) return `<section class="model-alone"><div class="ma-head"><div><h2>${name}</h2><span class="by">${by}</span></div></div><p class="small">Not available today: no head-to-head polls could be read, so ${label} uses the other model alone.</p></section>`;
+      const nD = Math.round(100 * m.pDemWin), nT = Math.round(100 * (m.pTie || 0));
+      const ev = m.states.filter(x => x.demShare > 50).reduce((a, x) => a + x.ev, 0);
+      const close = [...m.states].filter(x => byAbbr[x.abbr] && !x.abbr.includes('-')).sort((a, b) => Math.abs(a.pDem - .5) - Math.abs(b.pDem - .5)).slice(0, 6);
+      const diff = [...m.states].filter(x => now[x.abbr] && !x.abbr.includes('-')).sort((a, b) => Math.abs(b.demShare - now[b.abbr].demShare) - Math.abs(a.demShare - now[a.abbr].demShare)).slice(0, 4);
+      const row = x => `<li><span>${esc(byAbbr[x.abbr].name)}</span><b class="${x.demShare > 50 ? 'd-ink' : 'r-ink'}">${chance(x.pDem) || (x.pDem > .5 ? 'D >98%' : 'R >98%')}</b></li>`;
+      const drow = x => { const d = x.demShare - now[x.abbr].demShare; return `<li><span>${esc(byAbbr[x.abbr].name)}</span><b class="${d > 0 ? 'd-ink' : 'r-ink'}">${d > 0 ? 'D' : 'R'} +${Math.abs(d).toFixed(1)}</b></li>`; };
+      return `<section class="model-alone" aria-label="${name}, on its own">
+        <div class="ma-head"><div><h2>${name}</h2><span class="by">${by}</span></div><span class="ma-tag">One half of ${label}</span></div>
+        <p class="ma-reads">${reads}</p>
+        <div class="ma-figs">
+          <div><span class="v d-ink">${nD}</span><span class="l">in 100 for the Democrat</span></div>
+          <div><span class="v r-ink">${100 - nD - nT}</span><span class="l">in 100 for the Republican</span></div>
+          <div><span class="v">${fmt(m.demPopular)}</span><span class="l">Expected Democratic vote</span></div>
+          <div><span class="v">${ev}</span><span class="l">Democratic electoral votes, each state to whoever is ahead</span></div>
+        </div>
+        <div class="ma-grid">
+          <div><p class="ma-read" id="read-${k}" aria-live="polite">Hover or tap a state for this model's numbers.</p><svg class="usmap" id="map-m-${k}" role="img" aria-label="${name}: each state by rating"></svg><div class="ramp" id="ramp-m-${k}"></div></div>
+          <div class="ma-side">
+            <h3>Closest states</h3><ul class="ma-list">${close.map(row).join('')}</ul>
+            <h3>Furthest from ${label}</h3><p class="small">Its vote share minus ${label}'s.</p><ul class="ma-list">${diff.map(drow).join('')}</ul>
+          </div>
+        </div>
+      </section>`;
+    }).join('');
+    MODEL_PAGE.forEach(([k, name]) => {
+      const m = cur[k]; if (!m) return;
+      const by = Object.fromEntries(m.states.map(s => [s.abbr, s])), read = document.getElementById('read-' + k);
+      const show = a => { const s = a && by[a]; read.textContent = s ? `${byAbbr[a] ? byAbbr[a].name : a}: ${fmt(s.demShare)} Democratic, ${Math.round(100 * s.pDem)} in 100 for the Democrat (${RATING[s.rating]}). ${label[0].toUpperCase() + label.slice(1)}: ${fmt(now[a].demShare)}.` : 'Hover or tap a state for this model\'s numbers.'; };
+      const draw = () => drawUS(document.getElementById('map-m-' + k), { fill: a => by[a] ? RATE_COLOR[rateOf(by[a].pDem)] : greyColor(), sub: a => by[a] ? chance(by[a].pDem) : '', selected: null, onPick: show, onHover: show });
+      draw(); modelMaps.push(draw); ramp(document.getElementById('ramp-m-' + k), 'nowcast');
+    });
   }
 
   function insp28(a) {
@@ -790,6 +844,7 @@
     if (map24) map24 = draw24();
     if (map28) map28 = draw28();
     if (mapFc) mapFc();
+    modelMaps.forEach(f => f());
   }));
 
   // Method page: a contents list built from its section headings.
@@ -822,7 +877,7 @@
   })();
 
   // ================= routing =================
-  const VIEWS = ['home', 'nowcast', 'results-2024', 'method'];
+  const VIEWS = ['home', 'nowcast', 'models', 'results-2024', 'method'];
   const done = {};
   function route() {
     let h = location.hash.replace('#', '');
@@ -833,7 +888,9 @@
     if (!done[v]) {
       if (v === 'home') renderHome();
       if (v === 'results-2024') render2024();
-      if (v === 'nowcast') render2028();
+      // The models page reads the same simulation as the Nowcast, so it starts that run too.
+      if ((v === 'nowcast' || v === 'models') && !done.nowcast) { render2028(); done.nowcast = true; }
+      if (v === 'models' && !N) document.getElementById('models-each').innerHTML = '<p class="small">This fills in after the first daily data run.</p>';
       done[v] = true;
     }
     window.scrollTo(0, 0);

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261114g">
+<link rel="stylesheet" href="styles.css?v=20261114i">
 </head>
 <body>
 
@@ -22,6 +22,7 @@
     <nav aria-label="Main">
       <a href="#" data-view="home">Overview</a>
       <a href="#nowcast" data-view="nowcast">2028 Nowcast</a>
+      <a href="#models" data-view="models">Each model</a>
       <a href="#results-2024" data-view="results-2024">2024 scorecard</a>
       <a href="#method" data-view="method">Method</a>
     </nav>
@@ -267,6 +268,16 @@
 </div>
 
 <!-- ================= METHOD ================= -->
+<div id="view-models" class="wrap models-page" hidden>
+  <section class="models-intro">
+    <p class="secondary-flag">Background · not the Nowcast</p>
+    <h1>Each model on its own</h1>
+    <p class="lede" id="models-lede">The 2028 Nowcast averages two published models, state by state. This page shows what each one would predict by itself, so you can see where they agree and where they pull apart. Neither is the site's prediction: for that, use the Nowcast.</p>
+    <a class="btn primary" href="#nowcast" id="models-back">Go to the 2028 Nowcast</a>
+  </section>
+  <div id="models-each"></div>
+</div>
+
 <div id="view-method" class="wrap method" hidden>
   <section class="stack-lg" style="padding-top:44px">
     <div class="stack">
@@ -478,6 +489,6 @@
 <script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261113a"></script>
 <script src="combine.js?v=20261113k"></script>
-<script src="app.js?v=20261114f"></script>
+<script src="app.js?v=20261114i"></script>
 </body>
 </html>
