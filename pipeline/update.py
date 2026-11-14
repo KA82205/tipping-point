@@ -129,6 +129,7 @@ def main():
     registry = json.load(open(os.path.join(HERE, "candidates.json")))["candidates"]
     today = dt.date.fromisoformat(args.today) if args.today else dt.datetime.now(dt.timezone.utc).date()
     cache = os.path.join(HERE, "cache")
+    pres_stale = False   # True when the 2028 polls come from the last good copy, not today's read
     fx = args.fixtures
 
     def fx_json(name, default=None):
@@ -175,11 +176,21 @@ def main():
             return get
         fav = _subject("favorability", "votehub_fav_url")
         appr = _subject("approval", "votehub_subject_approval_url")
+        # 2028 primary and head-to-head polls. Up to 3,000 records are read (the feed holds about 200 today).
+        # If today's read fails or comes back empty, yesterday's copy is used, so the polls model does not
+        # drop out of the Nowcast for a day; polls still age out of the window as usual.
+        pres_cache = os.path.join(cache, "pollresults_president.json")
         try:
-            pres_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_president_url"], max_pages=4)
-        except Exception as e:  # only used to order the candidate list
-            print(f"WARNING: PollResults 2028 primary polls fetch failed ({e})")
+            pres_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_president_url"], max_pages=30)
+            if len(pres_raw) >= 3000:
+                print("WARNING: the PollResults 2028 feed filled all 30 pages; older polls may be missing")
+        except Exception as e:
+            print(f"WARNING: PollResults 2028 polls fetch failed ({e})")
             pres_raw = []
+        if not pres_raw and os.path.exists(pres_cache):
+            pres_raw = (json.load(open(pres_cache)) or {}).get("results", [])
+            pres_stale = bool(pres_raw)
+            print(f"WARNING: using the last good copy of the PollResults 2028 polls ({len(pres_raw)} records)")
         os.makedirs(cache, exist_ok=True)
         json.dump({"polls": polls}, open(os.path.join(cache, "votehub.json"), "w"))
         json.dump({"results": pr_raw}, open(os.path.join(cache, "pollresults.json"), "w"))
@@ -266,7 +277,9 @@ def main():
     # National head-to-head polls between listed candidates, for the second model (DeSart 2025).
     hh = cfg.get("head_to_head", {})
     h_lo = today - dt.timedelta(days=hh.get("window_days", 180))
-    matchups, h_skipped = candidates.general_matchups(pres_raw, h_lo, today, approval._iso, registry)
+    # Two-term presidents cannot be nominees, so hypothetical matchups naming them are left out.
+    barred = [cfg["election"]["incumbent_president"]] + hh.get("cannot_run", [])
+    matchups, h_skipped = candidates.general_matchups(pres_raw, h_lo, today, approval._iso, registry, exclude=barred)
     # People in those matchups who are not on the candidate list still count, as in DeSart's average.
     # Their home states (from Wikipedia) let the polls model spread the home-state effect to them too.
     listed = {(c["party"], c["name"]) for c in registry}
@@ -296,7 +309,7 @@ def main():
                "window": [g_lo.isoformat(), g_hi.isoformat()]},
         "h2h": {"window": [h_lo.isoformat(), today.isoformat()], "days": hh.get("window_days", 180),
                 "min_polls": hh.get("min_polls", 3), "terms": terms, "polls": matchups, "skipped": h_skipped,
-                "people": h2h_people},
+                "people": h2h_people, "stale": pres_stale},
         # Everything the in-browser ticket picker needs to rerun both models (docs/combine.js).
         "scenario": {
             "constant": cfg["approval"]["constant"], "sign": sign,

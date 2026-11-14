@@ -255,17 +255,19 @@ def primary_standing(raw, start, end, iso):
     return out
 
 
-def general_matchups(raw, start, end, iso, registry):
+def general_matchups(raw, start, end, iso, registry, exclude=()):
     """National general-election head-to-head polls between one named Democrat and one named Republican,
     from PollResults.org records. One row per pairing a poll tested, as DeSart counts them: every matchup
     with data counts, on the candidate list or not. A pairing is skipped if it names a third candidate
-    or a generic "Democrat"/"Republican". Names on the list are given in the list's spelling.
+    or a generic "Democrat"/"Republican", or anyone in exclude (people who cannot run again, such as a
+    two-term president). Names on the list are given in the list's spelling.
     Returns ([{d, r, share, date, pollster}], skipped), newest first; share = Democratic two-party %."""
     names = {}
     for c in registry:
         for n in [c["name"]] + list(c.get("aliases", [])):
             names[(c["party"], _norm(n))] = c["name"]
     rank = {"lv": 0, "rv": 1}
+    barred = {_norm(x) for x in exclude}
     best, skipped = {}, 0
     for res in raw or []:
         if str(res.get("state") or "").upper() not in ("US", "USA", "NATIONAL", "") or res.get("internal"):
@@ -299,7 +301,7 @@ def general_matchups(raw, start, end, iso, registry):
             dn = names.get(("D", _norm(d["candidateName"]))) or str(d["candidateName"]).strip()
             rn = names.get(("R", _norm(r["candidateName"]))) or str(r["candidateName"]).strip()
             tot = float(d["pct"]) + float(r["pct"])
-            if tot <= 0:
+            if tot <= 0 or _norm(d["candidateName"]) in barred or _norm(r["candidateName"]) in barred:
                 skipped += 1
                 continue
             key = (str(res.get("pollster") or ""), day, dn, rn)

@@ -79,7 +79,9 @@
     "state_csv_as_of": "2026-11-10"
   },
   "head_to_head": {
-    "_comment": "Second model: DeSart (2025), doi:10.1017/S1049096524000805. National head-to-head general-election polls between listed candidates, from PollResults.org.",
+    "_comment": "Second model: DeSart (2025), doi:10.1017/S1049096524000805. National head-to-head general-election polls between one named Democrat and one named Republican, from PollResults.org.",
+    "cannot_run": ["Barack Obama", "George W. Bush", "Bill Clinton"],
+    "_cannot_run_note": "Two-term presidents cannot be nominees (22nd Amendment), so matchups naming them are left out. The sitting president is added automatically.",
     "window_days": 180,
     "_window_note": "DEPARTURE: DeSart uses polls from October of the year before the election (October 2027). The Nowcast uses the last window_days days instead.",
     "min_polls": 5,
