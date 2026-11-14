@@ -276,10 +276,13 @@ def main():
 
     # National head-to-head polls between listed candidates, for the second model (DeSart 2025).
     hh = cfg.get("head_to_head", {})
-    h_lo = today - dt.timedelta(days=hh.get("window_days", 180))
+    # Head-to-head polls stop at the forecast day, by the date they were conducted: one conducted by then
+    # still counts if it is published later. The 180-day window ends there too.
+    h_hi = min(today, dt.date.fromisoformat(cfg["election"]["forecast_day"]))
+    h_lo = h_hi - dt.timedelta(days=hh.get("window_days", 180))
     # Two-term presidents cannot be nominees, so hypothetical matchups naming them are left out.
     barred = [cfg["election"]["incumbent_president"]] + hh.get("cannot_run", [])
-    matchups, h_skipped = candidates.general_matchups(pres_raw, h_lo, today, approval._iso, registry, exclude=barred)
+    matchups, h_skipped = candidates.general_matchups(pres_raw, h_lo, h_hi, approval._iso, registry, exclude=barred)
     # People in those matchups who are not on the candidate list still count, as in DeSart's average.
     # Their home states (from Wikipedia) let the polls model spread the home-state effect to them too.
     listed = {(c["party"], c["name"]) for c in registry}
@@ -307,7 +310,7 @@ def main():
         "vp": {"gap": None if gap is None else round(gap, 2), "kind": gap_kind, "basis": gap_basis, "applied": applied,
                "raw_gap": None if gap_raw is None else round(gap_raw, 2), "polls": gap_polls, "weight": round(gap_weight, 2),
                "window": [g_lo.isoformat(), g_hi.isoformat()]},
-        "h2h": {"window": [h_lo.isoformat(), today.isoformat()], "days": hh.get("window_days", 180),
+        "h2h": {"window": [h_lo.isoformat(), h_hi.isoformat()], "days": hh.get("window_days", 180),
                 "min_polls": hh.get("min_polls", 3), "terms": terms, "polls": matchups, "skipped": h_skipped,
                 "people": h2h_people, "stale": pres_stale},
         # Everything the in-browser ticket picker needs to rerun both models (docs/combine.js).

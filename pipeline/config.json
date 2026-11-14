@@ -4,6 +4,8 @@
     "year": 2028,
     "election_day": "2028-11-07",
     "forecast_day": "2028-07-30",
+    "publish_day": "2028-08-06",
+    "_dates_note": "Data cutoff is forecast_day (100 days before the election): only polls conducted by then count, judged by field dates, so a poll conducted in time but published later still counts. The forecast publishes a week later, on publish_day, so most late-published polls are in.",
     "incumbent_president": "Donald Trump",
     "incumbent_party": "R",
     "incumbent_party_terms": 1,
