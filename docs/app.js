@@ -200,8 +200,9 @@
   const MODELS = [['enns', 'State-level approval and fundamentals model', 'Enns, Colner, Kumar and Lagodny'], ['desart', 'Long-range model', 'DeSart']];
   function ensemble(el, m) {
     const card = (cls, name, by, x) => `<div class="ens ${cls}"><span class="nm">${name}</span><span class="by">${by}</span>
+      <span class="k">Chance of winning the election</span>
       <span class="odds"><b>${Math.round(100 * x.pDemWin)}</b> in 100 for the Democrat</span><span class="split" aria-hidden="true"><i style="width:${(100 * x.pDemWin).toFixed(1)}%"></i></span>
-      <span class="vote">${fmt(x.demPopular)} of the two-party vote</span></div>`;
+      <span class="vote">Expected vote: ${fmt(x.demPopular)} Democratic, ${fmt(100 - x.demPopular)} Republican</span></div>`;
     const have = MODELS.filter(([k]) => m[k]);
     el.style.setProperty('--cols', have.length > 1 ? Array(have.length + 1).fill('minmax(0, 1fr)').join(' auto ') : 'minmax(0, 1fr)');
     el.innerHTML = have.length > 1

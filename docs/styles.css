@@ -174,7 +174,8 @@ section + section { border-top: 1px solid var(--line); }
 .ens { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px 12px; display: grid; gap: 3px; align-content: start; }
 .ens .nm { font-weight: 500; }
 .ens .by { font-size: 13px; color: var(--muted); }
-.ens .odds { margin-top: 8px; font-size: 14px; color: var(--muted); }
+.ens .k { margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--faint); }
+.ens .odds { margin-top: 2px; font-size: 14px; color: var(--muted); }
 .ens .odds b { font: 600 28px/1 var(--font-num); color: var(--ink); margin-right: 3px; font-variant-numeric: tabular-nums; }
 .ens .split { display: block; height: 6px; border-radius: 3px; background: var(--rep); overflow: hidden; margin: 6px 0 4px; }
 .ens .split i { display: block; height: 100%; background: var(--dem); border-right: 2px solid var(--panel); transition: width .6s cubic-bezier(.2, .8, .2, 1); }
