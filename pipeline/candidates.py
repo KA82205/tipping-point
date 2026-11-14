@@ -200,6 +200,13 @@ def vp_gap(vp_polls, pres_polls, start, end, iso, kind="favorability", min_vp=1)
 
 NOT_A_PERSON = ("undecided", "other", "someone else", "none", "not sure", "don't know", "dont know", "refused",
                 "would not vote", "no one", "unsure")
+# A party label in place of a person: "Generic Democrat", "the Republican nominee", "Democratic candidate".
+_GENERIC_WORDS = ("generic", "nominee", "candidate")
+
+
+def is_generic(name):
+    n = name.lower().strip()
+    return any(w in n for w in _GENERIC_WORDS) or n in ("democrat", "republican", "democratic", "the democrat", "the republican")
 
 
 def primary_standing(raw, start, end, iso):
@@ -249,9 +256,10 @@ def primary_standing(raw, start, end, iso):
 
 
 def general_matchups(raw, start, end, iso, registry):
-    """National general-election head-to-head polls between two listed candidates, from PollResults.org
-    records. One row per pairing a poll tested, as DeSart counts them. A pairing is skipped if it names
-    a third candidate, a generic "Democrat"/"Republican", or anyone not on the candidate list.
+    """National general-election head-to-head polls between one named Democrat and one named Republican,
+    from PollResults.org records. One row per pairing a poll tested, as DeSart counts them: every matchup
+    with data counts, on the candidate list or not. A pairing is skipped if it names a third candidate
+    or a generic "Democrat"/"Republican". Names on the list are given in the list's spelling.
     Returns ([{d, r, share, date, pollster}], skipped), newest first; share = Democratic two-party %."""
     names = {}
     for c in registry:
@@ -271,23 +279,27 @@ def general_matchups(raw, start, end, iso, registry):
         for q in res.get("questions") or []:
             if str(q.get("stage") or "").lower() != "general":
                 continue
-            side = {"D": [], "R": [], "other": []}
+            side, generic = {"D": [], "R": [], "other": []}, False
             for a in q.get("answers") or []:
                 name = str(a.get("candidateName") or "").strip()
                 if not name or a.get("pct") is None or any(w in name.lower() for w in NOT_A_PERSON):
+                    continue
+                if is_generic(name):
+                    generic = True
                     continue
                 tag = str(a.get("party") or "").upper()[:1]
                 if tag in ("D", "R"):
                     side[tag].append(a)
                 elif tag not in ("N", ""):      # a named independent or third-party candidate
                     side["other"].append(a)
-            if len(side["D"]) != 1 or len(side["R"]) != 1 or side["other"]:
+            if generic or len(side["D"]) != 1 or len(side["R"]) != 1 or side["other"]:
                 skipped += 1
                 continue
             d, r = side["D"][0], side["R"][0]
-            dn, rn = names.get(("D", _norm(d["candidateName"]))), names.get(("R", _norm(r["candidateName"])))
+            dn = names.get(("D", _norm(d["candidateName"]))) or str(d["candidateName"]).strip()
+            rn = names.get(("R", _norm(r["candidateName"]))) or str(r["candidateName"]).strip()
             tot = float(d["pct"]) + float(r["pct"])
-            if not dn or not rn or tot <= 0:
+            if tot <= 0:
                 skipped += 1
                 continue
             key = (str(res.get("pollster") or ""), day, dn, rn)

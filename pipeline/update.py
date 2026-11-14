@@ -267,6 +267,14 @@ def main():
     hh = cfg.get("head_to_head", {})
     h_lo = today - dt.timedelta(days=hh.get("window_days", 180))
     matchups, h_skipped = candidates.general_matchups(pres_raw, h_lo, today, approval._iso, registry)
+    # People in those matchups who are not on the candidate list still count, as in DeSart's average.
+    # Their home states (from Wikipedia) let the polls model spread the home-state effect to them too.
+    listed = {(c["party"], c["name"]) for c in registry}
+    h2h_people = []
+    for party, key in (("D", "d"), ("R", "r")):
+        for name in sorted({m[key] for m in matchups} - {n for p, n in listed if p == party}):
+            st, _src = candidates.home_state_of(name, [], wiki)
+            h2h_people.append({"name": name, "party": party, "state": st})
     terms = (1 if cfg["election"]["incumbent_party"] == "D" else -1) * cfg["election"].get("incumbent_party_terms", 1)
 
     by_abbr = {s["abbr"]: s for s in states}
@@ -287,7 +295,8 @@ def main():
                "raw_gap": None if gap_raw is None else round(gap_raw, 2), "polls": gap_polls, "weight": round(gap_weight, 2),
                "window": [g_lo.isoformat(), g_hi.isoformat()]},
         "h2h": {"window": [h_lo.isoformat(), today.isoformat()], "days": hh.get("window_days", 180),
-                "min_polls": hh.get("min_polls", 3), "terms": terms, "polls": matchups, "skipped": h_skipped},
+                "min_polls": hh.get("min_polls", 3), "terms": terms, "polls": matchups, "skipped": h_skipped,
+                "people": h2h_people},
         # Everything the in-browser ticket picker needs to rerun both models (docs/combine.js).
         "scenario": {
             "constant": cfg["approval"]["constant"], "sign": sign,
