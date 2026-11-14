@@ -98,7 +98,8 @@ be changed on the page.
 
 Until 1 June 2028 the Nowcast uses a trailing 30-day poll window and weights the latest
 quarter of economic data as if it were the election year's second quarter. From 1 June 2028
-the poll window switches to June 1–July 30, matching the paper. For the official 30 July
+the poll window switches to June 1–July 30, matching the paper. Polls count by the date they were conducted, through 30 July 2028 (100 days
+out); the forecast publishes 6 August so late-published polls are in. For the official
 forecast, nominees, running mates, home states and the VP adjustment fill in automatically
 once Wikipedia lists the tickets; supply MRP state approval through the `csv` source.
 
