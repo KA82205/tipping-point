@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261113p">
+<link rel="stylesheet" href="styles.css?v=20261114a">
 </head>
 <body>
 
@@ -71,7 +71,7 @@
       </div>
       <div class="stack">
         <p><strong>The 2024 scorecard</strong> checks the Nowcast's method against the certified 2024 results, state by state: a back-test that averages the two forecasts published before that election. The two published forecasts can be scored on their own there too: the state-level approval and fundamentals model as its authors published it in July 2024, and DeSart's long-range model as he published it in November 2023, with his odds reproduced from his own simulation script. Both published forecasts are recomputed from their authors' replication files.</p>
-        <p><strong>The 2028 Nowcast</strong> runs that model every morning on the latest Trump approval polls and state economic data, runs DeSart's model on the latest head-to-head polls, and averages the two. Until the nominees are confirmed, each party's possible nominees are averaged by their standing in the polls. It shows what the models say if the election were held today. It is not the forecast, which needs the nominees and June–July 2028 surveys and is due July 30, 2028.</p>
+        <p><strong>The 2028 Nowcast</strong> runs that model every morning on the latest Trump approval polls and state economic data, runs DeSart's model on the latest head-to-head polls, and averages the two. Until the nominees are confirmed, each party's possible nominees are averaged by their standing in the polls. It shows what the models say if the election were held today. It is not the forecast, which publishes August 6, 2028.</p>
         <p class="small">Everything updates automatically: polls, state economies, and the nominees, running mates and home states once the conventions pick them. Data: FRED (Philadelphia Fed state coincident indexes), VoteHub and PollResults.org (poll data, CC BY 4.0), Wikipedia, certified 2024 returns.</p>
       </div>
     </div>
@@ -246,7 +246,7 @@
         <div class="needs needs-1">
           <div><span class="s ok" id="need-econ">Daily</span><h3>State economies</h3><p>Philadelphia Fed coincident indexes via FRED, through June 2028.</p></div>
           <div><span class="s ok">Daily</span><h3>Trump approval</h3><p>The national average updates every day. How far each state sits from it comes from <a href="https://civiqs.com/results/approve_president_trump_2025">Civiqs's daily tracker of Trump's job approval</a> among registered voters. That part is a copy taken on November 10, 2026: Civiqs's site turns away automatic reads, so it will refresh only once Civiqs agrees to it.</p></div>
-          <div><span class="s ok" id="need-h2h">Daily</span><h3>Head-to-head polls</h3><p>National general-election polls between possible nominees, from PollResults.org, over the last 180 days. They feed the second model.</p></div>
+          <div><span class="s ok" id="need-h2h">Daily</span><h3>Head-to-head polls</h3><p>National general-election polls between possible nominees, from PollResults.org, over the last 180 days. They feed the long-range model.</p></div>
           <div><span class="s ok" id="need-tickets">Watching</span><h3>Nominees and home states</h3><p>Read from Wikipedia every morning. Each nominee and running mate locks in as soon as they are confirmed, and the home-state bonuses switch on.</p></div>
           <div><span class="s ok" id="need-cands">Daily</span><h3>Possible candidates</h3><p>Ordered by national 2028 primary polls from PollResults.org. Anyone new who polls at 3% or more is added.</p></div>
           <div><span class="s ok" id="need-vp">Daily</span><h3>Vice-president adjustment</h3><p>If the sitting vice president is a nominee, approval shifts by his net job approval minus the president's.</p></div>
@@ -261,7 +261,7 @@
   <section class="stack-lg" style="padding-top:44px">
     <div class="stack">
       <h1 style="font-size:clamp(34px,4.4vw,52px)">How the models work</h1>
-      <p class="lede">The 2028 Nowcast runs two published models and averages them. Each predicts the Democratic share of the two-party vote in every state; the Electoral College is then simulated from their average. The 2024 scorecard grades that same average on 2024, and the first model's published forecast on its own.</p>
+      <p class="lede">The 2028 Nowcast runs two published models and averages them. Each predicts the Democratic share of the two-party vote in every state; the Electoral College is then simulated from their average. The 2024 scorecard grades that same average on 2024, and each model's published forecast on its own.</p>
     </div>
     <h2>State-level approval and fundamentals model</h2>
     <p>The State Presidential Approval/State Economy Model, by Peter K. Enns, Jonathan Colner, Anusha Kumar and Julius Lagodny.</p>
@@ -277,7 +277,7 @@
   − <span class="c">0.60</span> × Perot 1996 share (2000 only)</div>
     <p class="small">Fitted on 11 elections × 51 jurisdictions, 1980–2020 (N = 561). Adjusted R² 0.90, standard error 3.46 points.</p>
     <p>The Nowcast runs this regression refitted on 1980–2024 from the authors' replication data, with the 2024 results added, as the authors refit before each forecast. Refitting on 1980–2020 reproduces the numbers above exactly. With 2024 added: approval 0.30, economy 1.56, home state 2.31, previous home state −3.07, running mate 1.78, standard error 3.45.</p>
-    <h2>Head-to-head polls</h2>
+    <h2>Long-range model</h2>
     <p>The Long-Range State-Level Forecast Model, by Jay A. DeSart. It was built to forecast a year ahead, before the nominees are known.</p>
 <div class="eq">Democratic two-party share in a state =
   − <span class="c">27.423</span>
@@ -467,6 +467,6 @@
 <script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261113a"></script>
 <script src="combine.js?v=20261113k"></script>
-<script src="app.js?v=20261113q"></script>
+<script src="app.js?v=20261114a"></script>
 </body>
 </html>

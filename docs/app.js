@@ -23,6 +23,13 @@
   // The 2028 map is colored by rating: darker means safer, and the light shades and gold mark the close states.
   const RATE_COLOR = { SD: '#2e64b0', LD: '#4f8de0', TD: '#a9c8f0', TOSS: TOSS, TR: '#f2aaa1', LR: '#d8665b', SR: '#a63f37' };
   const LIGHT = new Set([RATE_COLOR.TD, TOSS, RATE_COLOR.TR]);   // fills that need dark text
+  // Any fill light enough to need dark text: '#rrggbb' or 'rgb(r,g,b)', by relative luminance.
+  const isLight = c => {
+    if (!c) return false;
+    const v = c[0] === '#' ? [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)) : (c.match(/\d+/g) || []).slice(0, 3).map(Number);
+    const L = v.map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+    return 0.2126 * L[0] + 0.7152 * L[1] + 0.0722 * L[2] > 0.4;
+  };
   const rateOf = p => window.SPASE.rate(p);
   // The leader's win chance, shown on every state that is not Solid.
   const chance = p => { const r = rateOf(p); return r[0] === 'S' ? '' : `${p >= 0.5 ? 'D' : 'R'} ${Math.round(100 * Math.max(p, 1 - p))}%`; };
@@ -41,8 +48,8 @@
   const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
   const mix = (a, b, t) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; };
   function shareColor(s) {
-    const m = s - 50, t = Math.pow(Math.min(Math.abs(m) / 22, 1), 0.75);
-    return m >= 0 ? mix('#1d2a40', '#4f8de0', t) : mix('#3a2830', '#d8665b', t);
+    const m = s - 50, t = Math.pow(Math.min(Math.abs(m) / 15, 1), 0.6);   // light near 50%, full colour by a 15-point margin
+    return m >= 0 ? mix('#c9d9f1', '#2e64b0', t) : mix('#f4cbc5', '#a63f37', t);
   }
   const errColor = e => mix('#172131', '#f0a35e', Math.pow(Math.min(Math.abs(e) / 5, 1), 0.85));
   const greyColor = () => '#1a2333';
@@ -76,11 +83,11 @@
   function snake(el, readEl, items, label, onPick) {
     const { rows, tp } = tippingOf(items);
     const demEV = rows.filter(r => r.share > 50).reduce((a, r) => a + r.ev, 0);
-    el.innerHTML = rows.map(r => `<div class="seg${r === tp ? ' tp' : ''}${r.ev < 19 ? ' sm' : ''}${r.toss || LIGHT.has(r.col) ? ' toss' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${r.col || (r.toss ? TOSS : shareColor(r.share))}" tabindex="0" aria-label="${esc(byAbbr[r.abbr].name)} ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`).join('') +
+    el.innerHTML = rows.map(r => `<div class="seg${r === tp ? ' tp' : ''}${r.ev < 19 ? ' sm' : ''}${r.toss || isLight(r.col || shareColor(r.share)) ? ' toss' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${r.col || (r.toss ? TOSS : shareColor(r.share))}" tabindex="0" aria-label="${esc(byAbbr[r.abbr].name)} ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`).join('') +
       `<div class="mark270" style="left:${270 / 538 * 100}%"></div>`;
     const tpName = byAbbr[tp.abbr].name.replace(' District', '');
     const winner = tp.share > 50 ? 'Democrats' : 'Republicans';
-    const base = `${label}: the tipping point is <b>${esc(tpName)}</b> at ${fmt(tp.share)} Democratic, so <b>${winner}</b> reach 270 (${demEV} Democratic electoral votes at the central estimate).`;
+    const base = `${label}: the tipping point is <b>${esc(tpName)}</b> at ${fmt(tp.share)} Democratic, so <b>${winner}</b> reach 270 (${demEV} Democratic electoral votes if every state goes to the candidate ahead in it).`;
     readEl.innerHTML = base;
     el.querySelectorAll('.seg').forEach(s => {
       const r = rows.find(x => x.abbr === s.dataset.a);
@@ -160,7 +167,7 @@
     });
     mark(selected);
     // Labels turn dark on light fills (gold toss-ups and the Lean shades) so they stay readable.
-    const dark = c => c === TOSS || LIGHT.has(c);
+    const dark = c => c === TOSS || isLight(c);
     const ink = () => {
       svg.querySelectorAll('text[data-l]').forEach(t => t.classList.toggle('dark', dark(fillOf[t.dataset.l]) && !t.classList.contains('off')));
       svg.querySelectorAll('g.box').forEach(g => g.classList.toggle('dark', dark(fillOf[g.dataset.a])));
@@ -423,9 +430,9 @@
   const draw24 = () => drawUS(document.getElementById('map-2024'), { fill: fill24, selected: pinned24, onPick: pick24, onHover: a => { insp24(a || pinned24); map24.mark(a || pinned24); } });
 
   const LEDE24 = {
-    bt: 'What the Nowcast\'s method would have said in 2024. State by state it averages two forecasts published before the election: the state-level approval and fundamentals forecast from July 2024 and Jay DeSart\'s polls forecast from November 2023. Nobody published this average at the time, so it is a back-test.',
+    bt: 'What the Nowcast\'s method would have said in 2024. State by state it averages two forecasts published before the election: the state-level approval and fundamentals forecast from July 2024 and Jay DeSart\'s long-range model forecast from November 2023. Nobody published this average at the time, so it is a back-test.',
     pub: 'The state-level approval and fundamentals forecast as Enns, Colner, Kumar and Lagodny published it in July 2024, with data from 100 days before the election.',
-    ds: 'The polls forecast as Jay DeSart published it in November 2023, a year before the election, from head-to-head polls taken the month before. It forecasts the 50 states and DC; the five districts in Maine and Nebraska are filled in from the state-level approval and fundamentals forecast.',
+    ds: 'The long-range model\'s forecast as Jay DeSart published it in November 2023, a year before the election, from head-to-head polls taken the month before. It forecasts the 50 states and DC; the five districts in Maine and Nebraska are filled in from the state-level approval and fundamentals forecast.',
   };
   function figs24() {
     const st = R.filter(r => r.abbr.length === 2);
@@ -564,7 +571,7 @@
       : `Today's Nowcast is the state-level approval and fundamentals model on its own, because no head-to-head polls are available. <a href="#method">How it works</a>`;
     document.getElementById('figs-2028').innerHTML = [
       [fmt(s.demPopular), 'Democratic share of the two-party vote'],
-      [`${median}`, 'Median Democratic electoral votes, of 538'],
+      [`${median}`, 'Median Democratic electoral votes across all simulations'],
       [esc(byAbbr[tp.abbr].name.replace(' District', '')), `Tipping-point state, ${fmt(tp.share)} Democratic`],
     ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
     board(document.getElementById('board-28'), s.states, toMap);
