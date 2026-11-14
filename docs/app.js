@@ -223,6 +223,34 @@
     el.innerHTML = `<svg viewBox="0 0 344 80" role="img" aria-label="${nD} of 100 simulated elections go to the Democrat">${o}</svg>`;
   }
 
+  // ---------- head-to-head matchups at a glance ----------
+  // One row per pairing: each poll as a small dot and the pairing's plain average as a large one, on the
+  // Democrat's share of the two-party vote. The top row is every poll together, the figure the polls model uses.
+  function matchups(el, noteEl, polls) {
+    if (!el) return;
+    if (!polls.length) { el.innerHTML = ''; noteEl.textContent = ''; return; }
+    const lo = 38, hi = 62, x = v => (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * 100;
+    const groups = {};
+    polls.forEach(p => { const k = p.d + '|' + p.r; (groups[k] = groups[k] || { d: p.d, r: p.r, polls: [] }).polls.push(p); });
+    const avg = ps => ps.reduce((a, p) => a + p.share, 0) / ps.length;
+    const rows = Object.values(groups).map(g => ({ ...g, avg: avg(g.polls) }))
+      .sort((a, b) => b.polls.length - a.polls.length || Math.abs(b.avg - 50) - Math.abs(a.avg - 50));
+    const margin = v => { const m = 2 * (v - 50); return Math.abs(m) < 0.05 ? 'Even' : (m > 0 ? 'D+' : 'R+') + Math.abs(m).toFixed(1); };
+    const row = (name, sub, ps, a, all) => {
+      const side = a > 50 ? 'D' : 'R', single = ps.length === 1;
+      const dots = single ? '' : ps.map(p => `<i class="pt ${p.share > 50 ? 'D' : 'R'}" style="left:${x(p.share).toFixed(2)}%" title="${esc(p.pollster)}, ${p.date}: ${fmt(p.share)}"></i>`).join('');
+      return `<div class="mx-row${all ? ' all' : ''}"><div class="mx-name"><b>${name}</b><span>${sub}</span></div>
+        <div class="mx-track"><span class="mid"></span><span class="lean ${side}" style="left:${Math.min(x(a), 50).toFixed(2)}%;width:${Math.abs(x(a) - 50).toFixed(2)}%"></span>${dots}<i class="avg ${side}${single ? ' one' : ''}" style="left:${x(a).toFixed(2)}%" title="${fmt(a)} Democratic"></i></div>
+        <div class="mx-m ${side === 'D' ? 'd-ink' : 'r-ink'}">${margin(a)}</div></div>`;
+    };
+    const total = avg(polls);
+    el.innerHTML = `<div class="mx-scale" aria-hidden="true"><span></span><div>${[40, 45, 50, 55, 60].map(v => `<em style="left:${x(v)}%">${v}%</em>`).join('')}</div><span></span></div>` +
+      row('All matchups', `Average of ${polls.length} polls`, polls, total, true) +
+      rows.map(g => row(`${esc(pollName(g.d))} vs. ${esc(pollName(g.r))}`, g.polls.length === 1 ? `1 poll, ${g.polls[0].date}` : `Average of ${g.polls.length} polls`, g.polls, g.avg)).join('');
+    el.setAttribute('aria-label', `Head-to-head matchups: all ${polls.length} polls together are ${margin(total)}; ` + rows.map(g => `${pollName(g.d)} vs. ${pollName(g.r)} ${margin(g.avg)}`).join(', '));
+    noteEl.textContent = `The Democrat's share of the two-party vote in each pairing: small dots are single polls, the large dot is their plain average, and the margin is the gap between the two candidates. The top row puts every poll together, as DeSart does; it is the poll figure the polls model uses until the nominees are known.`;
+  }
+
   // ---------- ratings board ----------
   const BOARD = [['SD', 'Solid D'], ['LD', 'Likely D'], ['TD', 'Lean D'], ['TOSS', 'Toss-up'], ['TR', 'Lean R'], ['LR', 'Likely R'], ['SR', 'Solid R']];
   function board(el, states, onPick) {
@@ -449,6 +477,13 @@
   const pk = o => ({ dp: o['dem-p'] || null, rp: o['rep-p'] || null, dv: o['dem-vp'] || null, rv: o['rep-vp'] || null });
   const runModels = (o, n) => window.TP.run(N, pk(o), { n: n || 10000 });
   const lastName = n => n.replace(/ (Jr\.|Sr\.|II|III)$/, '').split(' ').pop();
+  // Names in poll listings: last name, keeping "Jr." (Trump Jr.), and the full name for anyone polled who is
+  // not on the candidate list (Hunter Biden, Mark Cuban), so no one is mistaken for a better-known namesake.
+  const pollName = n => {
+    if (N && N.h2h && (N.h2h.people || []).some(p => p.name === n)) return n;
+    const m = n.match(/ (Jr\.|Sr\.)$/);
+    return m ? `${lastName(n)} ${m[1]}` : lastName(n);
+  };
 
   // The Nowcast: today's polls and state economies, with the chosen (or confirmed) tickets.
   function runScenario() {
@@ -588,9 +623,10 @@
       jump.forEach(b => io.observe(document.getElementById(b.dataset.to)));
     }
     const hp = (N.h2h && N.h2h.polls) || [];
+    matchups(document.getElementById('mx-2028'), document.getElementById('mx-note'), hp);
     const tb = document.getElementById('h2h-2028'), more = document.getElementById('h2h-more');
     const showPolls = all => {
-      tb.innerHTML = (all ? hp : hp.slice(0, 10)).map(q => `<tr><td class="num">${q.date}</td><td>${esc(q.pollster)}</td><td class="mu">${esc(lastName(q.d))} vs. ${esc(lastName(q.r))}</td><td class="n"><span class="bar" aria-hidden="true"><i class="${q.share > 50 ? 'D' : 'R'}" style="width:${Math.min(50, Math.abs(q.share - 50) * 8).toFixed(1)}%"></i></span>${fmt(q.share)}</td></tr>`).join('');
+      tb.innerHTML = (all ? hp : hp.slice(0, 10)).map(q => `<tr><td class="num">${q.date}</td><td>${esc(q.pollster)}</td><td class="mu">${esc(pollName(q.d))} vs. ${esc(pollName(q.r))}</td><td class="n"><span class="bar" aria-hidden="true"><i class="${q.share > 50 ? 'D' : 'R'}" style="width:${Math.min(50, Math.abs(q.share - 50) * 8).toFixed(1)}%"></i></span>${fmt(q.share)}</td></tr>`).join('');
       more.hidden = all || hp.length <= 10;
       more.textContent = `Show all ${hp.length} polls`;
     };
