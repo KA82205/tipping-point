@@ -251,6 +251,41 @@
     noteEl.textContent = `The Democrat's share of the two-party vote in each pairing: small dots are single polls, the large dot is their plain average, and the margin is the gap between the two candidates. The top row puts every poll together, as DeSart does; it is the poll figure the polls model uses${fixed ? '' : ' until the nominees are known'}.`;
   }
 
+  // ---------- the Nowcast day by day, on a timeline running to the forecast ----------
+  // The x axis runs from the first day to the publish day, so the line fills in over time, with the days the
+  // inputs change marked ahead of time: when they happen the Nowcast can jump.
+  const EVENTS = [
+    ['2027-11-07', 'Polls lock', 'The polls model switches to DeSart\'s October 2027 polls and stops changing.'],
+    ['2028-06-01', 'Approval window', 'The approval model switches to polls conducted June 1 to July 30, as the paper does.'],
+    ['2028-08-06', 'Final', 'The final forecast publishes and stops changing.'],
+  ];
+  function trendChart(el, noteEl, H) {
+    if (!el) return;
+    const day = d => Date.parse(d + 'T12:00:00Z') / 864e5;
+    const start = H.length ? H[0].date : todayIso(), end = EVENTS[EVENTS.length - 1][0];
+    const W = 600, Ht = 236, l = 40, r = 14, tp = 30, b = 26;
+    const x = d => l + (day(d) - day(start)) / (day(end) - day(start)) * (W - l - r), y = v => tp + (1 - v) * (Ht - tp - b);
+    let o = '';
+    [0, .25, .5, .75, 1].forEach(v => { o += `<line x1="${l}" x2="${W - r}" y1="${y(v)}" y2="${y(v)}" stroke="${v === .5 ? '#5d6a7e' : '#1f2b3e'}" ${v === .5 ? 'stroke-dasharray="3 3"' : ''}></line><text x="${l - 8}" y="${y(v) + 4}" text-anchor="end">${v * 100}%</text>`; });
+    o += `<text x="${l}" y="${Ht - 6}">${niceDate(start)}</text>`;
+    ['2027-01-01', '2028-01-01'].forEach(d => { if (x(d) - l > 90) o += `<text x="${x(d)}" y="${Ht - 6}" text-anchor="middle">${d.slice(0, 4)}</text>`; });
+    const today = todayIso();
+    EVENTS.forEach(([d, short], k) => {
+      const done = today >= d, xx = x(d);
+      o += `<line x1="${xx}" x2="${xx}" y1="${tp - 2}" y2="${y(0)}" stroke="${done ? '#5d6a7e' : '#f0a35e'}" stroke-dasharray="4 4" opacity="${done ? .6 : .8}"></line>
+        <g class="ev${done ? ' done' : ''}"><circle cx="${xx}" cy="${tp - 12}" r="9"></circle><text x="${xx}" y="${tp - 8}" text-anchor="middle">${k + 1}</text><title>${short}, ${niceDate(d)}</title></g>`;
+    });
+    if (H.length) {
+      const pts = H.map(h => `${x(h.date).toFixed(1)},${y(h.pDemWin).toFixed(1)}`).join(' ');
+      if (H.length > 1) o += `<polygon points="${x(H[0].date)},${y(0)} ${pts} ${x(H[H.length - 1].date)},${y(0)}" fill="rgba(240,163,94,.1)"></polygon><polyline points="${pts}" fill="none" stroke="#f0a35e" stroke-width="2"></polyline>`;
+      const last = H[H.length - 1];
+      o += `<circle cx="${x(last.date)}" cy="${y(last.pDemWin)}" r="4" fill="#f0a35e"><title>${niceDate(last.date)}: ${Math.round(100 * last.pDemWin)} in 100 for the Democrat</title></circle>`;
+    }
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="Share of simulations the Democrat wins, day by day, on a timeline to the forecast on August 6, 2028">${o}</svg>`;
+    if (noteEl) noteEl.innerHTML = '<ol class="ev-list">' + EVENTS.map(([d, , long], k) =>
+      `<li class="${today >= d ? 'done' : ''}"><b>${k + 1}. ${niceDate(d)}</b> ${long}</li>`).join('') + '</ol>';
+  }
+
   // ---------- ratings board ----------
   const BOARD = [['SD', 'Solid D'], ['LD', 'Likely D'], ['TD', 'Lean D'], ['TOSS', 'Toss-up'], ['TR', 'Lean R'], ['LR', 'Likely R'], ['SR', 'Solid R']];
   function board(el, states, onPick) {
@@ -732,16 +767,7 @@
     document.getElementById('polls-2028').innerHTML = N.approval.polls.map(p =>
       `<tr><td>${p.url ? `<a href="${esc(p.url)}">${esc(p.pollster)}</a>` : esc(p.pollster)}</td><td class="num">${p.date}</td><td class="n">${p.approve}</td><td class="n">${p.disapprove}</td></tr>`).join('');
     const H = window.NOWCAST_HISTORY || [];
-    if (H.length >= 2) {
-      const W = 600, Ht = 220, l = 40, r = 12, tp = 10, b = 26;
-      const x = i => l + i / (H.length - 1) * (W - l - r), y = v => tp + (1 - v) * (Ht - tp - b);
-      let o = '';
-      [0, .25, .5, .75, 1].forEach(v => { o += `<line x1="${l}" x2="${W - r}" y1="${y(v)}" y2="${y(v)}" stroke="${v === .5 ? '#5d6a7e' : '#1f2b3e'}" ${v === .5 ? 'stroke-dasharray="3 3"' : ''}></line><text x="${l - 8}" y="${y(v) + 4}" text-anchor="end">${v * 100}%</text>`; });
-      const pts = H.map((h, i) => `${x(i)},${y(h.pDemWin)}`).join(' ');
-      o += `<polygon points="${x(0)},${y(0)} ${pts} ${x(H.length - 1)},${y(0)}" fill="rgba(240,163,94,.1)"></polygon><polyline points="${pts}" fill="none" stroke="#f0a35e" stroke-width="2"></polyline>`;
-      o += `<circle cx="${x(H.length - 1)}" cy="${y(H[H.length - 1].pDemWin)}" r="4" fill="#f0a35e"></circle><text x="${l}" y="${Ht - 6}">${H[0].date}</text><text x="${W - r}" y="${Ht - 6}" text-anchor="end">${H[H.length - 1].date}</text>`;
-      document.getElementById('trend-2028').innerHTML = `<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="Share of simulations the Democrat wins, over time">${o}</svg>`;
-    }
+    trendChart(document.getElementById('trend-2028'), document.getElementById('trend-note'), H);
     schedule();
   }
 

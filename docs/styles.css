@@ -414,3 +414,11 @@ footer p { max-width: none; margin: 4px 0; }
 .fc-figs .v { font: 600 clamp(28px, 3.6vw, 40px)/1 var(--font-num); }
 .fc-figs .l { color: var(--muted); font-size: 13px; }
 @media (max-width: 700px) { .fc-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fc-steps li { grid-template-columns: 1fr; gap: 6px; } .fc-steps .st { justify-self: start; } }
+
+/* Day-by-day timeline: the days the inputs change */
+.trend g.ev circle { fill: var(--panel); stroke: var(--accent); stroke-width: 1.5; }
+.trend g.ev text { fill: var(--accent); font: 700 11px var(--font-num); }
+.trend g.ev.done circle { stroke: #5d6a7e; } .trend g.ev.done text { fill: var(--faint); }
+.ev-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; color: var(--muted); }
+.ev-list b { color: var(--ink); font-weight: 600; margin-right: 4px; }
+.ev-list li.done { opacity: .6; }
