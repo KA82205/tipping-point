@@ -597,7 +597,7 @@
     more.addEventListener('click', () => showPolls(true));
     showPolls(false);
     document.getElementById('h2h-note').innerHTML = hp.length
-      ? `The Democrat's share of the two-party vote in each poll. National polls between two people on the candidate list from the last ${N.h2h.days} days, from <a href="https://pollresults.org/races/president-2028/">PollResults.org</a> (New York Times poll data, CC BY 4.0). ${N.h2h.skipped ? `${N.h2h.skipped} other questions are left out: generic party ballots, questions that name a third candidate, and pairings with someone not on the list.` : ''}`
+      ? `The Democrat's share of the two-party vote in each poll. National polls between one named Democrat and one named Republican from the last ${N.h2h.days} days, from <a href="https://pollresults.org/races/president-2028/">PollResults.org</a> (New York Times poll data, CC BY 4.0). ${N.h2h.skipped ? `${N.h2h.skipped} other questions are left out: generic party ballots, and questions that name a third candidate.` : ''}`
       : 'No head-to-head polls are available today, so the Nowcast is the approval and economy model on its own.';
     const t = N.tickets, set = ['dem', 'rep'].filter(s => t[s] && t[s].president).length;
     document.getElementById('need-tickets').textContent = set ? `Confirmed: ${set === 2 ? 'both nominees' : 'one nominee'}` : 'Watching, none yet';

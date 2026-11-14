@@ -159,7 +159,8 @@
     let dPoint = null;
     if (priors && h && h.polls && h.polls.length) {
       const sel = pickPolls(h, dp, rp);
-      const pollD = pollField(h.polls, S.candidates, 'd'), pollR = pollField(h.polls, S.candidates, 'r');
+      const people = S.candidates.concat(h.people || []);   // matchups with people off the candidate list count too
+      const pollD = pollField(h.polls, people, 'd'), pollR = pollField(h.polls, people, 'r');
       const hD = st => dp ? (dp.state === st ? 1 : 0) : fieldAt(pollD, st);
       const hR = st => rp ? (rp.state === st ? 1 : 0) : fieldAt(pollR, st);
       dPoint = Object.fromEntries(S.states.map(s => [s.abbr, desartPredict(s.prior, sel.avg,

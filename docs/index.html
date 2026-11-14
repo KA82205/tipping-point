@@ -380,7 +380,7 @@
       <p>State economies come from the Philadelphia Fed State Coincident Indexes via FRED. Trump's national approval is an average of public polls from VoteHub and PollResults.org. State-by-state approval comes from <a href="https://civiqs.com/results/approve_president_trump_2025">Civiqs's daily tracker of Trump's job approval</a> (registered voters, all 50 states), as a copy taken on November 10, 2026; only the differences between states are used.</p>
       <p>The 2024 back-test on the scorecard: DeSart's published state forecasts for 2024, from the file dated November 5, 2023 in his replication data (doi:10.7910/DVN/HZGLY9), averaged with the approval and economy forecast published in July 2024.</p>
       <p>Nominees, running mates and their home states are read from Wikipedia each morning. The vice-president adjustment uses job-approval polls of the vice president from VoteHub, or favorability when there are none, as the authors did for 1988. The list of possible candidates follows national 2028 primary polls from PollResults.org.</p>
-      <p>Head-to-head polls are national general-election polls between two people on the candidate list, over the last 180 days. They come from the PollResults.org feed behind its <a href="https://pollresults.org/races/president-2028/">2028 presidential polls page</a>, which carries the New York Times poll data, and every record in it is read each morning. A poll that tests several pairings counts once for each. Left out: state polls, generic party ballots, questions that name a third candidate, and pairings with anyone not on the candidate list. VoteHub supplies the approval polls; it does not publish general-election pairings yet.</p>
+      <p>Head-to-head polls are national general-election polls between one named Democrat and one named Republican, over the last 180 days. They come from the PollResults.org feed behind its <a href="https://pollresults.org/races/president-2028/">2028 presidential polls page</a>, which carries the New York Times poll data, and every record in it is read each morning. A poll that tests several pairings counts once for each. Left out: state polls, generic party ballots, questions that name a third candidate, and pairings with anyone not on the candidate list. VoteHub supplies the approval polls; it does not publish general-election pairings yet.</p>
       <p>The 2024 scorecard is the paper's own forecast, recomputed exactly from the authors' replication files. The Nowcast differs from the two papers in the ways listed below.</p>
     </div>
     <div>
@@ -439,7 +439,7 @@
         <p><b>Error.</b> It is simulated with the correlated error described above, not his independent state errors.</p>
       </div>
       <div>
-        <p><b>Which polls.</b> As in the paper, every head-to-head matchup between two named possible nominees counts once in a plain average, and generic party ballots and three-way questions are left out. Two differences: DeSart took his polls from the RealClearPolitics archive, while the site reads PollResults.org; and a pairing counts only if both people are on the site's candidate list, which takes in anyone at 3% or more in primary polls.</p>
+        <p><b>Which polls.</b> As in the paper, every head-to-head matchup between two named possible nominees counts once in a plain average, and generic party ballots and three-way questions are left out. Matchups with people outside the site's candidate list count too, and their home states share in the home-state effect. One difference: DeSart took his polls from the RealClearPolitics archive, while the site reads PollResults.org.</p>
         <p><b>Districts.</b> DeSart awards Maine and Nebraska statewide. Here their districts follow the rule above.</p>
       </div>
     </div>
@@ -459,7 +459,7 @@
 <script src="nowcast.js" onerror="void 0"></script>
 <script src="history.js" onerror="void 0"></script>
 <script src="engine.js?v=20261113a"></script>
-<script src="combine.js?v=20261113a"></script>
-<script src="app.js?v=20261113c"></script>
+<script src="combine.js?v=20261113d"></script>
+<script src="app.js?v=20261113d"></script>
 </body>
 </html>
