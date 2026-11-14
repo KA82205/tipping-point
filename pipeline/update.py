@@ -286,12 +286,40 @@ def main():
     # People in those matchups who are not on the candidate list still count, as in DeSart's average.
     # Their home states (from Wikipedia) let the polls model spread the home-state effect to them too.
     listed = {(c["party"], c["name"]) for c in registry}
-    h2h_people = []
-    for party, key in (("D", "d"), ("R", "r")):
-        for name in sorted({m[key] for m in matchups} - {n for p, n in listed if p == party}):
-            st, _src = candidates.home_state_of(name, [], wiki)
-            h2h_people.append({"name": name, "party": party, "state": st})
+    h2h_people = None   # filled in below, once off_list is defined
     terms = (1 if cfg["election"]["incumbent_party"] == "D" else -1) * cfg["election"].get("incumbent_party_terms", 1)
+
+    # People in matchups who are off the candidate list, with home states for the home-state effect.
+    def off_list(rows):
+        out = []
+        for party, key in (("D", "d"), ("R", "r")):
+            for name in sorted({m[key] for m in rows} - {n for p, n in listed if p == party}):
+                st, _src = candidates.home_state_of(name, [], wiki)
+                out.append({"name": name, "party": party, "state": st})
+        return out
+    h2h_people = off_list(matchups)
+
+    # The polls model's half of the final forecast, as DeSart publishes it: head-to-head polls conducted in
+    # October 2027, frozen a week later (Nov 7, 2027). Until then it is provisional; after, it never changes.
+    el = cfg["election"]
+    frozen_dir = os.path.join(HERE, "frozen")
+    ds_lo, ds_hi = (dt.date.fromisoformat(d) for d in el["desart_poll_window"])
+    ds_path = os.path.join(frozen_dir, "desart_2028.json")
+    desart_final = None
+    if os.path.exists(ds_path) and not fx:
+        desart_final = json.load(open(ds_path))
+    elif today >= ds_lo:
+        ds_rows, ds_skipped = candidates.general_matchups(pres_raw, ds_lo, ds_hi, approval._iso, registry, exclude=barred)
+        desart_final = {"window": [ds_lo.isoformat(), ds_hi.isoformat()], "polls": ds_rows, "skipped": ds_skipped,
+                        "people": off_list(ds_rows), "terms": terms, "as_of": today.isoformat(), "frozen": False}
+        if not fx and today >= dt.date.fromisoformat(el["desart_freeze_day"]):
+            if ds_rows and pres_raw:
+                desart_final["frozen"] = True
+                os.makedirs(frozen_dir, exist_ok=True)
+                json.dump(desart_final, open(ds_path, "w"), indent=1)
+                print(f"Froze the polls model's half of the final forecast: {len(ds_rows)} polls from {ds_lo} to {ds_hi}")
+            else:
+                print("WARNING: freeze day for the polls model passed, but no October 2027 polls could be read; will retry")
 
     by_abbr = {s["abbr"]: s for s in states}
     r4 = lambda x: round(x, 4)  # noqa: E731
@@ -313,6 +341,7 @@ def main():
         "h2h": {"window": [h_lo.isoformat(), h_hi.isoformat()], "days": hh.get("window_days", 180),
                 "min_polls": hh.get("min_polls", 3), "terms": terms, "polls": matchups, "skipped": h_skipped,
                 "people": h2h_people, "stale": pres_stale},
+        "desart_final": desart_final and {k: v for k, v in desart_final.items() if k != "polls"} | {"n": len(desart_final["polls"])},
         # Everything the in-browser ticket picker needs to rerun both models (docs/combine.js).
         "scenario": {
             "constant": cfg["approval"]["constant"], "sign": sign,
@@ -352,6 +381,40 @@ def main():
                           "approve": round(by_abbr[s["abbr"]]["approve"], 1) if s["abbr"] in by_abbr else None,
                           "econ": round(by_abbr[s["abbr"]]["inputs"]["econ"], 4) if s["abbr"] in by_abbr else None}
                          for s in res["states"]]
+
+    # The final forecast: published on publish_day (Aug 6, 2028) and never changed after. The approval and economy
+    # half uses polls conducted June 1 - July 30 (the paper's window); the polls half is the frozen October 2027 set.
+    fc_path = os.path.join(frozen_dir, "forecast_2028.json")
+    if not fx and os.path.exists(fc_path):
+        final = json.load(open(fc_path))
+    elif not fx and today >= dt.date.fromisoformat(el["publish_day"]) and desart_final and desart_final.get("frozen"):
+        N2 = json.loads(json.dumps(payload))
+        N2["h2h"] = {**N2["h2h"], "polls": desart_final["polls"], "people": desart_final["people"],
+                     "window": desart_final["window"], "skipped": desart_final["skipped"]}
+        N2["scenario"]["candidates"] = registry + [p for p in desart_final["people"] if not any(c["name"] == p["name"] for c in registry)]
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump({**sim_in, "N": N2, "as_published": True}, f)
+        fo = json.loads(subprocess.check_output(["node", os.path.join(HERE, "run_forecast.js"), f.name]))
+        os.unlink(f.name)
+        fr = fo["combined"]
+        final = {"published": today.isoformat(), "tickets": tickets,
+                 "approval": payload["approval"], "economy": payload["economy"], "vp": payload["vp"],
+                 "desart_polls": {"window": desart_final["window"], "n": len(desart_final["polls"]),
+                                  "avg": fo["info"]["polls"] and round(fo["info"]["polls"]["avg"], 2)},
+                 "summary": {"pDemWin": fr["pDemWin"], "pTie": fr["pTie"], "demPopular": fr["demPopular"],
+                             "demEvPoint": sum(s["ev"] for s in fr["states"] if s["demShare"] > 50)},
+                 "models": {"enns": brief(fo["enns"]), "desart": brief(fo["desart"])},
+                 "evHistogram": [round(x, 5) for x in fr["evHistogram"]],
+                 "states": [{**{k: (round(v, 2) if k in ("demShare", "enns", "desart") else v) for k, v in s.items()},
+                             "pDem": round(s["pDem"], 4)} for s in fr["states"]]}
+        os.makedirs(frozen_dir, exist_ok=True)
+        json.dump(final, open(fc_path, "w"), indent=1)
+        print(f"Published the final 2028 forecast: Dem win {fr['pDemWin']:.1%}, Dem popular {fr['demPopular']:.2f}%")
+    else:
+        final = None
+    if final is not None:
+        with open(os.path.join(ROOT, "docs", "forecast.js"), "w") as f:
+            f.write("// The final 2028 forecast, frozen on its publish day. Do not edit.\nwindow.FORECAST = " + json.dumps(final) + ";\n")
 
     with open(os.path.join(ROOT, "docs", "nowcast.js"), "w") as f:
         f.write("// Generated by pipeline/update.py. Do not edit.\nwindow.NOWCAST = " + json.dumps(payload) + ";\n")
