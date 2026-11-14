@@ -115,7 +115,7 @@
   }
 
   // ---------- map: state outlines or a hexagon grid ----------
-  let mapMode = 'geo';
+  let mapMode = window.matchMedia && matchMedia('(max-width: 600px)').matches ? 'hex' : 'geo';   // hexagons read better on phones
   const HEX = {
     AK: [0.5, 0], ME: [11.5, 0], VT: [10, 1], NH: [11, 1],
     WA: [1.5, 2], MT: [2.5, 2], ND: [3.5, 2], MN: [4.5, 2], WI: [5.5, 2], MI: [7.5, 2], NY: [9.5, 2], MA: [10.5, 2], RI: [11.5, 2],
@@ -779,6 +779,7 @@
   }
 
   // Map style switch (state outlines or hexagons), shared by both maps.
+  document.querySelectorAll('[data-mapmode]').forEach(x => x.setAttribute('aria-pressed', x.dataset.mapmode === mapMode));
   document.querySelectorAll('[data-mapmode]').forEach(b => b.addEventListener('click', () => {
     mapMode = b.dataset.mapmode;
     document.querySelectorAll('[data-mapmode]').forEach(x => x.setAttribute('aria-pressed', x.dataset.mapmode === mapMode));

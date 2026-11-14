@@ -341,7 +341,14 @@ svg.usmap text.grp { font: 11px var(--font-body); fill: var(--muted); }
 .board .chips button:hover { filter: brightness(1.3); transform: translateY(-2px); }
 .board .chips button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .board .none { color: var(--faint); font-size: 12px; }
-@media (max-width: 980px) { .board { grid-template-columns: repeat(2, 1fr); } }
+/* Narrower screens: one row per rating, label on the left, states on the right (no empty grid cells). */
+@media (max-width: 980px) {
+  .board { grid-template-columns: 1fr; }
+  .board .col { grid-template-columns: 96px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 12px; box-shadow: inset 3px 0 0 var(--faint); }
+  .board .col.SD, .board .col.LD, .board .col.TD { box-shadow: inset 3px 0 0 var(--dem); }
+  .board .col.SR, .board .col.LR, .board .col.TR { box-shadow: inset 3px 0 0 var(--rep); }
+  .board .col.TOSS { box-shadow: inset 3px 0 0 #d9b23f; }
+}
 
 /* Method */
 .eq { font: 14px/1.8 var(--font-mono); background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; overflow-x: auto; white-space: pre; color: var(--ink); }
@@ -422,3 +429,25 @@ footer p { max-width: none; margin: 4px 0; }
 .ev-list { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; color: var(--muted); }
 .ev-list b { color: var(--ink); font-weight: 600; margin-right: 4px; }
 .ev-list li.done { opacity: .6; }
+
+/* ---------- Phones ---------- */
+@media (max-width: 760px) {
+  /* The answer first: headline, then the odds, then the explanation. */
+  .hero { padding: 28px 0 40px; gap: 22px; }
+  .hero-copy { display: contents; }
+  .hero-copy h1 { order: 0; }
+  .hero .balance-card { order: 1; }
+  .hero-copy .stack { order: 2; }
+}
+@media (max-width: 600px) {
+  /* Menu on one line. */
+  .site-head .wrap { gap: 6px; padding-top: 8px; padding-bottom: 6px; }
+  nav { flex-wrap: nowrap; gap: 0; width: 100%; justify-content: space-between; }
+  nav a { font-size: 13px; padding: 7px 8px; white-space: nowrap; }
+  /* Chart text large enough to read once the chart is scaled down. */
+  .trend text { font-size: 16px; }
+  .trend text.ev, .trend g.ev text { font-size: 15px; }
+  svg.usmap text.lbl.big { font-size: 26px; font-weight: 700; }
+  svg.usmap text.lbl.pc.big { display: none; }
+}
+@media (max-width: 380px) { nav a { font-size: 12.5px; padding: 7px 6px; } }
