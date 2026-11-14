@@ -275,7 +275,7 @@
   }
 
   // ---------- dates ----------
-  const FORECAST_DATE = new Date('2028-07-30T00:00:00-04:00');
+  const FORECAST_DATE = new Date('2028-08-06T00:00:00-04:00');   // uses data through July 30, published a week later
   const ELECTION_DATE = new Date('2028-11-07T00:00:00-05:00');
   const daysTo = d => Math.max(0, Math.floor((d - new Date()) / 86400000));
   const monthName = ym => new Date(ym + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -294,7 +294,7 @@
       balance(hb, views.today[0], '2028 Nowcast', s.pDemWin, rep, () => { location.hash = 'nowcast'; });
       ensemble(document.getElementById('ens-home'), { enns: M.enns || s, desart: M.desart || null, now: s });
       MODELS.forEach(([k]) => { const el = document.getElementById('odds-' + k); if (el && M[k]) el.textContent = Math.round(100 * M[k].pDemWin); });
-      document.getElementById('hero-date').textContent = `Updated ${niceDate(N.generated_at)}. Not the forecast, which publishes July 30, 2028.`;
+      document.getElementById('hero-date').textContent = `Updated ${niceDate(N.generated_at)}. Not the forecast, which publishes August 6, 2028.`;
       setGlow(s.pDemWin, rep);
     } else {
       balance(hb, views.fc[0], '2024 forecast', NAT.pub.pDemWin, 1 - NAT.pub.pDemWin);
@@ -581,7 +581,7 @@
 
   const draw28 = () => drawUS(document.getElementById('map-2028'), { fill: fill28, sub: sub28, selected: pinned28, onPick: pick28, onHover: a => { insp28(a || pinned28); map28.mark(a || pinned28); } });
 
-  // Map layers. "Forecast" shows a countdown, not a map, until July 30, 2028.
+  // Map layers. "Forecast" shows a countdown, not a map, until August 6, 2028.
   function setLayer28(l) {
     layer28 = l;
     document.querySelectorAll('[data-layer28]').forEach(x => x.setAttribute('aria-selected', x.dataset.layer28 === l));
