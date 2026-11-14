@@ -125,6 +125,10 @@ def main():
     args = ap.parse_args()
 
     cfg = json.load(open(os.path.join(HERE, "config.json")))
+    # Once the final forecast is published (Aug 6, 2028), nothing updates again: the last Nowcast is the forecast.
+    if not args.fixtures and os.path.exists(os.path.join(HERE, "frozen", "forecast_2028.json")):
+        print("The final 2028 forecast is published; the Nowcast is frozen with it. Nothing to update.")
+        return
     results = json.load(open(os.path.join(HERE, "results_2024.json")))
     registry = json.load(open(os.path.join(HERE, "candidates.json")))["candidates"]
     today = dt.date.fromisoformat(args.today) if args.today else dt.datetime.now(dt.timezone.utc).date()
