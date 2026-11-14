@@ -226,7 +226,7 @@
   // ---------- head-to-head matchups at a glance ----------
   // One row per pairing: each poll as a small dot and the pairing's plain average as a large one, on the
   // Democrat's share of the two-party vote. The top row is every poll together, the figure the polls model uses.
-  function matchups(el, noteEl, polls) {
+  function matchups(el, noteEl, polls, fixed) {
     if (!el) return;
     if (!polls.length) { el.innerHTML = ''; noteEl.textContent = ''; return; }
     const lo = 38, hi = 62, x = v => (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * 100;
@@ -248,7 +248,7 @@
       row('All matchups', `Average of ${polls.length} polls`, polls, total, true) +
       rows.map(g => row(`${esc(pollName(g.d))} vs. ${esc(pollName(g.r))}`, g.polls.length === 1 ? `1 poll, ${g.polls[0].date}` : `Average of ${g.polls.length} polls`, g.polls, g.avg)).join('');
     el.setAttribute('aria-label', `Head-to-head matchups: all ${polls.length} polls together are ${margin(total)}; ` + rows.map(g => `${pollName(g.d)} vs. ${pollName(g.r)} ${margin(g.avg)}`).join(', '));
-    noteEl.textContent = `The Democrat's share of the two-party vote in each pairing: small dots are single polls, the large dot is their plain average, and the margin is the gap between the two candidates. The top row puts every poll together, as DeSart does; it is the poll figure the polls model uses until the nominees are known.`;
+    noteEl.textContent = `The Democrat's share of the two-party vote in each pairing: small dots are single polls, the large dot is their plain average, and the margin is the gap between the two candidates. The top row puts every poll together, as DeSart does; it is the poll figure the polls model uses${fixed ? '' : ' until the nominees are known'}.`;
   }
 
   // ---------- ratings board ----------
@@ -480,7 +480,7 @@
   // Names in poll listings: last name, keeping "Jr." (Trump Jr.), and the full name for anyone polled who is
   // not on the candidate list (Hunter Biden, Mark Cuban), so no one is mistaken for a better-known namesake.
   const pollName = n => {
-    if (N && N.h2h && (N.h2h.people || []).some(p => p.name === n)) return n;
+    if (N && ((N.h2h && N.h2h.people) || []).concat((N.desart_final && N.desart_final.people) || []).some(p => p.name === n)) return n;
     const m = n.match(/ (Jr\.|Sr\.)$/);
     return m ? `${lastName(n)} ${m[1]}` : lastName(n);
   };
@@ -609,7 +609,7 @@
     // 1. Polls model: October 2027 head-to-head polls
     if (F || (df && df.frozen)) {
       const n = F ? F.desart_polls.n : df.polls.length, avg = F ? F.desart_polls.avg : df.polls.reduce((a, p) => a + p.share, 0) / df.polls.length;
-      step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'done', F ? `Fixed November 7, 2027: ${n} polls averaging ${fmt(avg)} Democratic.` : `Fixed November 7, 2027, with ${n} polls. Its result is shown when the forecast publishes.`);
+      step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'done', `Fixed November 7, 2027: ${n} polls averaging ${fmt(avg)} Democratic. The Nowcast uses them from then on.`);
     } else if (df) {
       const n = df.polls.length;
       step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'open', `${n ? `${n} poll${n === 1 ? '' : 's'} so far` : 'No polls from the window yet'}. Fixed November 7, 2027.`);
@@ -685,8 +685,10 @@
       }, { rootMargin: '-130px 0px -55% 0px' });
       jump.forEach(b => io.observe(document.getElementById(b.dataset.to)));
     }
-    const hp = (N.h2h && N.h2h.polls) || [];
-    matchups(document.getElementById('mx-2028'), document.getElementById('mx-note'), hp);
+    // From Nov 7, 2027 the polls model runs on DeSart's fixed October 2027 polls; until then the latest 180 days.
+    const DF = N.desart_final && N.desart_final.frozen && N.desart_final.polls.length ? N.desart_final : null;
+    const hp = DF ? DF.polls : (N.h2h && N.h2h.polls) || [];
+    matchups(document.getElementById('mx-2028'), document.getElementById('mx-note'), hp, !!DF);
     const tb = document.getElementById('h2h-2028'), more = document.getElementById('h2h-more');
     const showPolls = all => {
       tb.innerHTML = (all ? hp : hp.slice(0, 10)).map(q => `<tr><td class="num">${q.date}</td><td>${esc(q.pollster)}</td><td class="mu">${esc(pollName(q.d))} vs. ${esc(pollName(q.r))}</td><td class="n"><span class="bar" aria-hidden="true"><i class="${q.share > 50 ? 'D' : 'R'}" style="width:${Math.min(50, Math.abs(q.share - 50) * 8).toFixed(1)}%"></i></span>${fmt(q.share)}</td></tr>`).join('');
@@ -695,14 +697,16 @@
     };
     more.addEventListener('click', () => showPolls(true));
     showPolls(false);
-    document.getElementById('h2h-note').innerHTML = hp.length
+    document.getElementById('h2h-note').innerHTML = DF
+      ? `The Democrat's share of the two-party vote in each poll. These are the polls DeSart's model uses: national polls between one named Democrat and one named Republican conducted in October 2027, fixed on November 7, 2027, from <a href="https://pollresults.org/races/president-2028/">PollResults.org</a> (New York Times poll data, CC BY 4.0). ${DF.skipped} other questions were left out: generic party ballots, questions that name a third candidate, and pairings with a two-term president.`
+      : hp.length
       ? `The Democrat's share of the two-party vote in each poll. National polls between one named Democrat and one named Republican from the last ${N.h2h.days} days, from <a href="https://pollresults.org/races/president-2028/">PollResults.org</a> (New York Times poll data, CC BY 4.0). ${N.h2h.skipped ? `${N.h2h.skipped} other questions are left out: generic party ballots, questions that name a third candidate, and pairings with a two-term president, who cannot run again.` : ''}`
       : 'No head-to-head polls are available today, so the Nowcast is the approval and economy model on its own.';
     const t = N.tickets, set = ['dem', 'rep'].filter(s => t[s] && t[s].president).length;
     document.getElementById('need-tickets').textContent = set ? `Confirmed: ${set === 2 ? 'both nominees' : 'one nominee'}` : 'Watching, none yet';
     document.getElementById('need-vp').textContent = N.vp.applied ? `On, ${sgn(N.vp.gap, 1)} pts` : N.vp.gap != null ? `Standing by, ${sgn(N.vp.gap, 1)} pts` : 'No recent polls of the vice president';
     const nh = document.getElementById('need-h2h');
-    if (nh) nh.textContent = N.h2h && N.h2h.polls.length ? (N.h2h.stale ? `Today's read failed; using the last good copy, ${N.h2h.polls.length} polls` : `Daily, ${N.h2h.polls.length} polls in the window`) : 'No polls available today';
+    if (nh) nh.textContent = DF ? `Fixed November 7, 2027: ${DF.polls.length} October polls` : N.h2h && N.h2h.polls.length ? (N.h2h.stale ? `Today's read failed; using the last good copy, ${N.h2h.polls.length} polls` : `Daily, ${N.h2h.polls.length} polls in the window`) : 'No polls available today';
     document.getElementById('need-econ').textContent = `Daily, through ${monthName(N.economy.through)}`;
     document.getElementById('need-cands').textContent = `Daily, ${N.scenario.candidates.filter(c => c.primary).length} names in primary polls`;
     document.getElementById('polls-2028').innerHTML = N.approval.polls.map(p =>

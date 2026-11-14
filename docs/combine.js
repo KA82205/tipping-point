@@ -157,7 +157,12 @@
     const sim = (weight, point, kp = 0) => SPASE.simulate({ states, districts: S.districts, n, seed, econVariants: weight === 0 ? null : S.econVariants,
       mix: point ? { weight, point } : null, keep: kp });
     const info = { vpNom, vpShift, vpWeight, fieldD, fieldR, polls: null };
-    const h = N.h2h, priors = !S.states.some(s => s.prior == null);
+    // Once DeSart's October 2027 polls are fixed (Nov 7, 2027), the polls model is run on them as he publishes
+    // it; until then the latest 180 days of polls stand in. So on the forecast day the Nowcast is the forecast.
+    const df = N.desart_final, fixed = !!(df && df.frozen && df.polls && df.polls.length);
+    if (fixed) asPublished = true;
+    const h = fixed ? { ...N.h2h, polls: df.polls, people: df.people, window: df.window, skipped: df.skipped } : N.h2h;
+    const priors = !S.states.some(s => s.prior == null);
     let dPoint = null;
     if (priors && h && h.polls && h.polls.length) {
       const sel = asPublished ? pickPolls(h, null, null) : pickPolls(h, dp, rp);
