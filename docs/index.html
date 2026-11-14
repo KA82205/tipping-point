@@ -401,7 +401,7 @@
     <div>
       <h2 style="margin-bottom:14px">Changed or added on purpose</h2>
       <p><b>One more model is averaged in.</b> Each state's forecast is half the Enns model and half DeSart's head-to-head polls model, then simulated together. The paper uses its model alone. Why: see "How they are combined" above.</p>
-      <p><b>Each party's field is weighted until its nominee is known.</b> The paper forecasts once the nominees are set, so it has no rule for this. Following DeSart, home-state effects are spread across the possible nominees by their share of primary polling. The vice-president adjustment is applied in the same proportion: if the sitting vice president has 38% of his party's primary polling, 38% of the adjustment applies.</p>
+      <p><b>Each party's field is weighted until its nominee is known.</b> The paper forecasts once the nominees are set, so it has no rule for this. Home-state effects are spread across the possible nominees, an idea taken from DeSart, but by each candidate's share of primary polling. DeSart's own model, as run here, spreads them by how often each candidate appears in the head-to-head polls. The vice-president adjustment is applied in the same proportion: if the sitting vice president has 38% of his party's primary polling, 38% of the adjustment applies.</p>
       <p><b>The vice-president adjustment is phased in.</b> The authors apply the gap between the vice president's and the president's net approval in full, from a handful of July polls. Here it is scaled by the number of polls of the vice president and reaches full size at 20 polls, so a few polls cannot move every state at once. When there are too few polls in the last 120 days, the window widens to 240 and then 365 days, and as a last resort a single poll is used.</p>
       <p><b>It runs every day.</b> The paper forecasts once, about 100 days before the election, from approval polls taken in June and July and the economy through June. The Nowcast uses today's polls and the latest economic month, so it describes today, not November 2028. The official forecast on the countdown will follow the paper's timing.</p>
       <p><b>National vote.</b> The authors add up the national vote by weighting each state by its 2020 population. The Nowcast weights states by the votes cast in 2024.</p>
@@ -439,7 +439,7 @@
         <p><b>Error.</b> It is simulated with the correlated error described above, not his independent state errors.</p>
       </div>
       <div>
-        <p><b>Which polls.</b> Pairings that name a third candidate, a generic party label or someone not on the candidate list are left out.</p>
+        <p><b>Which polls.</b> As in the paper, every head-to-head matchup between two named possible nominees counts once in a plain average, and generic party ballots and three-way questions are left out. Two differences: DeSart took his polls from the RealClearPolitics archive, while the site reads PollResults.org; and a pairing counts only if both people are on the site's candidate list, which takes in anyone at 3% or more in primary polls.</p>
         <p><b>Districts.</b> DeSart awards Maine and Nebraska statewide. Here their districts follow the rule above.</p>
       </div>
     </div>
