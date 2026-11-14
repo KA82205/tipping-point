@@ -79,6 +79,7 @@ def _normalize_pollresults(res):
         "internal": bool(_first(res, "internal")),
         "partisan": _first(res, "partisan"),
         "url": _first(res, "url"),
+        "created_at": _iso(_first(res, "createdAt", "created_at")),
         "state": state if state and state not in ("US", "USA", "NATIONAL") else None,
         "answers": [{"choice": "Approve", "pct": b["choice_yes"]}, {"choice": "Disapprove", "pct": b["choice_no"]}],
         "source": "pollresults",
@@ -152,7 +153,8 @@ def national_average(polls, start, end, half_life_days=14.0):
         if key not in latest or d > latest[key]["date"]:
             n = float(p.get("sample_size") or 600)
             latest[key] = {"date": d, "approve": ap, "disapprove": dis, "n": n,
-                           "pollster": key, "url": p.get("url"), "population": p.get("population")}
+                           "pollster": key, "url": p.get("url"), "population": p.get("population"),
+                           "added": _iso(p.get("created_at") or p.get("createdAt")) or None}
     if not latest:
         raise RuntimeError(f"No usable approval polls between {start} and {end}")
     num_a = num_d = den = 0.0

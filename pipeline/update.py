@@ -85,6 +85,24 @@ def home_lag_weights(cfg):
     return {"dem": c.get("dem_president_home_lag_weight", 1), "rep": c.get("rep_president_home_lag_weight", 1)}
 
 
+def econ_summary(raw, last):
+    """Monthly picture of the state economies for the site's "latest data" page (the models use the
+    weighted averages from economy.py, not this): how many states grew each month, the median state's
+    monthly change in its coincident index, and each state's change in the newest month."""
+    series = {st: dict(v) for st, v in (raw or {}).items() if v}
+    months = sorted({m for v in series.values() for m in v if not last or m <= last})
+    monthly = []
+    for prev, m in zip(months, months[1:]):
+        ch = sorted(100 * (v[m] / v[prev] - 1) for v in series.values() if m in v and prev in v and v[prev])
+        if len(ch) >= 40:
+            monthly.append({"m": m, "median": round(ch[len(ch) // 2], 3), "up": sum(1 for c in ch if c > 0), "n": len(ch)})
+    latest = {}
+    if len(months) >= 2:
+        prev, m = months[-2], months[-1]
+        latest = {st: round(100 * (v[m] / v[prev] - 1), 3) for st, v in series.items() if m in v and prev in v and v[prev]}
+    return {"monthly": monthly, "latest": latest}
+
+
 def build_inputs(cfg, econ_by_delta, approve_by_state, results, codes, vp_shift):
     el, a = cfg["election"], cfg["approval"]
     states = {k: v for k, v in results.items() if len(k) == 2}
@@ -214,12 +232,24 @@ def main():
             state_info["as_of"] = cfg["approval"].get("state_csv_as_of")
 
     # Economy and approval
-    econ, econ_last, _ = economy.build_economy(cfg, None if fx else key, cache, fetch=fred)
+    econ, econ_last, econ_raw = economy.build_economy(cfg, None if fx else key, cache, fetch=fred)
     w_lo, w_hi, mode = approval.window_for(cfg, today)
     national_polls, state_polls = approval.merge_polls(polls, pr_raw)
     if pr_raw and not any(p.get("source") == "pollresults" for p in national_polls) and not state_polls:
         print(f"WARNING: could not read any of {len(pr_raw)} PollResults records; check pipeline/cache/pollresults.json")
     nat = approval.national_average(national_polls, w_lo, w_hi)
+    # For the site's "latest data" page only: the approval average as it stood each week of the term, with the
+    # same 30-day average the Nowcast uses. The models read only today's value.
+    appr_trend, span = [], (w_hi - w_lo).days
+    t_day = dt.date.fromisoformat(cfg["election"]["term_start_month"] + "-01") + dt.timedelta(days=span)
+    while t_day < w_hi:
+        try:
+            a_t = approval.national_average(national_polls, t_day - dt.timedelta(days=span), t_day)
+            appr_trend.append({"d": t_day.isoformat(), "a": round(a_t["approve"], 1), "dis": round(a_t["disapprove"], 1)})
+        except RuntimeError:
+            pass
+        t_day += dt.timedelta(days=7)
+    appr_trend.append({"d": w_hi.isoformat(), "a": round(nat["approve"], 1), "dis": round(nat["disapprove"], 1)})
     by_state, state_used = approval.state_approval(cfg, nat["approve"], results, state_polls=state_polls, window=(w_lo, w_hi))
 
     # Who is running, home states, sitting VP
@@ -334,9 +364,9 @@ def main():
         "fixture_run": bool(fx),
         "approval": {"approve": round(nat["approve"], 1), "disapprove": round(nat["disapprove"], 1),
                      "window": [w_lo.isoformat(), w_hi.isoformat()], "pollsters": nat["pollsters"],
-                     "polls": nat["polls"][:25], "state_source": cfg["approval"]["state_source"],
+                     "polls": nat["polls"][:25], "trend": appr_trend, "state_source": cfg["approval"]["state_source"],
                      "state_data": state_info, "state_polls_used": state_used},
-        "economy": {"through": econ_last, "delta": cfg["economy"]["delta"]},
+        "economy": {"through": econ_last, "delta": cfg["economy"]["delta"], **econ_summary(econ_raw, econ_last)},
         "tickets": tickets,
         "sitting_vp": sitting_vp,
         "vp": {"gap": None if gap is None else round(gap, 2), "kind": gap_kind, "basis": gap_basis, "applied": applied,
@@ -421,9 +451,14 @@ def main():
     if not fx:
         # v4: average of three models. Earlier days used fewer models and are dropped.
         hist = [h for h in hist if h.get("v") == 4 and h["date"] != today.isoformat()]
+        mp = payload["models"]
         hist.append({"v": 4, "date": today.isoformat(), "pDemWin": round(res["pDemWin"], 4),
                      "demPopular": round(res["demPopular"], 2), "approve": round(nat["approve"], 1),
-                     "econThrough": econ_last})
+                     "econThrough": econ_last,
+                     # Added Nov 2026 for the "latest data" page; earlier days lack them.
+                     "enns": mp["enns"] and mp["enns"]["pDemWin"], "desart": mp["desart"] and mp["desart"]["pDemWin"],
+                     "pollAvg": mp["polls"] and mp["polls"]["avg"], "h2hN": len(matchups),
+                     "apprN": nat["pollsters"], "ev": dem_ev_point})
         hist.sort(key=lambda h: h["date"])
         json.dump(hist, open(hist_path, "w"), indent=1)
     with open(os.path.join(ROOT, "docs", "history.js"), "w") as f:

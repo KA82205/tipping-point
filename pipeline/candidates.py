@@ -261,7 +261,7 @@ def general_matchups(raw, start, end, iso, registry, exclude=()):
     with data counts, on the candidate list or not. A pairing is skipped if it names a third candidate
     or a generic "Democrat"/"Republican", or anyone in exclude (people who cannot run again, such as a
     two-term president). Names on the list are given in the list's spelling.
-    Returns ([{d, r, share, date, pollster}], skipped), newest first; share = Democratic two-party %."""
+    Returns ([{d, r, share, date, pollster, added, url}], skipped), newest first; share = Democratic two-party %."""
     names = {}
     for c in registry:
         for n in [c["name"]] + list(c.get("aliases", [])):
@@ -307,8 +307,11 @@ def general_matchups(raw, start, end, iso, registry, exclude=()):
             key = (str(res.get("pollster") or ""), day, dn, rn)
             pop = rank.get(str(q.get("population") or "").lower(), 2)
             if key not in best or pop < best[key][0]:   # one row per poll and pairing: likely voters first
-                best[key] = (pop, round(100 * float(d["pct"]) / tot, 2))
-    rows = [{"d": k[2], "r": k[3], "share": v[1], "date": k[1].isoformat(), "pollster": k[0]} for k, v in best.items()]
+                best[key] = (pop, round(100 * float(d["pct"]) / tot, 2),
+                             iso(res.get("createdAt") or res.get("created_at") or "") or None, res.get("url") or None)
+    # added: the day PollResults listed the poll (for the site's "latest data" page; the models ignore it).
+    rows = [{"d": k[2], "r": k[3], "share": v[1], "date": k[1].isoformat(), "pollster": k[0],
+             "added": v[2], "url": v[3]} for k, v in best.items()]
     return sorted(rows, key=lambda x: (x["date"], x["pollster"], x["d"], x["r"]), reverse=True), skipped
 
 
