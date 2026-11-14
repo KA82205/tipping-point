@@ -483,7 +483,7 @@ dialog.contact h2 { font-size: clamp(26px, 4vw, 34px); line-height: 1.1; margin:
 .contact-me { display: flex; align-items: center; gap: 14px; margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
 .contact-me div { display: grid; gap: 2px; }
 .contact-me span:not(.contact-avatar) { font-size: 13px; color: var(--muted); }
-.contact-avatar { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font: 600 15px var(--font-body); background: var(--raise); border: 1px solid var(--line-2); color: var(--ink); }
+.contact-avatar { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; font: 600 15px var(--font-body); background: var(--raise); border: 1px solid var(--line-2); color: var(--ink); }
 /* Footer: who made it */
 .made-by { display: inline-flex; align-items: center; gap: 14px; margin-bottom: 18px; padding: 12px 16px; border: 1px solid var(--line-2); border-radius: 14px; background: var(--panel); color: var(--ink); text-decoration: none; transition: border-color .15s; }
 .made-by:hover { border-color: var(--faint); }
