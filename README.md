@@ -1,5 +1,7 @@
 # Tipping Point
 
+**Live site: https://ka82205.github.io/tipping-point/** (updated daily; not optimized for mobile)
+
 A personal, non-commercial US presidential election forecast site built on the State Presidential Approval/State
 Economy Model (Enns, Colner, Kumar & Lagodny, *PS: Political Science & Politics*, 2024,
 doi:10.1017/S1049096524000994, CC BY-NC 4.0).
