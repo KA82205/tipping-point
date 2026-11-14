@@ -200,7 +200,7 @@
       <div class="official" id="official-28" hidden>
         <h3>The official prediction will be made in <span id="cd-days"></span> days</h3>
         <div class="cd" id="cd-28" aria-hidden="true"></div>
-        <p>The 2028 forecast uses data through July 30, 2028, 100 days before the election: approval polls conducted June 1 to July 30, head-to-head polls conducted by July 30, and the economy through June. It publishes a week later, on August 6, because polls often come out a few days after they are conducted. A poll conducted by July 30 counts even if it is published later. In the meantime, view the Nowcast to see what the election might look like if it were held today.</p>
+        <p>The 2028 forecast follows each paper's own cutoff, by the date polls were conducted. The approval and economy model uses approval polls conducted June 1 to July 30, 2028 (100 days before the election) and the economy through June. The polls model uses head-to-head polls conducted in October 2027, as DeSart does, and is fixed a week later, on November 7, 2027. The forecast publishes August 6, 2028, a week after the last cutoff, so polls that come out a few days late are included. Once published, it does not change. In the meantime, view the Nowcast to see what the election might look like if it were held today.</p>
         <button class="btn primary" id="btn-to-nowcast" type="button">View the Nowcast</button>
       </div>
     </div>
@@ -437,7 +437,7 @@
     <div class="cols2">
       <div>
         <p><b>Refitted with 2024.</b> The coefficients come from refitting his replication data with 2024 added: his October 2023 poll average (49.53%), the actual nominees' home states and the result. That lowers the home-state effect from 2.54 to 1.91 points.</p>
-        <p><b>Timing.</b> DeSart forecasts once, from polls taken in October of the year before the election, which will be October 2027. The Nowcast uses the last 180 days of polls.</p>
+        <p><b>Timing.</b> DeSart forecasts once, from polls taken in October of the year before the election. The final forecast does the same: polls conducted in October 2027, fixed on November 7, 2027, with home states spread by poll appearances whoever the nominees turn out to be. Only the daily Nowcast differs: it uses the last 180 days of polls.</p>
         <p><b>Error.</b> It is simulated with the correlated error described above, not his independent state errors.</p>
       </div>
       <div>
@@ -461,7 +461,7 @@
 <script src="nowcast.js" onerror="void 0"></script>
 <script src="history.js" onerror="void 0"></script>
 <script src="engine.js?v=20261113a"></script>
-<script src="combine.js?v=20261113d"></script>
+<script src="combine.js?v=20261113h"></script>
 <script src="app.js?v=20261113g"></script>
 </body>
 </html>

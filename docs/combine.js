@@ -126,7 +126,9 @@
    * way. desart is null without head-to-head polls; the Nowcast is then the approval and economy model alone. With parts: false only combined is run (faster). keep: how many of the combined
    * simulations to keep draw by draw (see docs/engine.js), returned as combined.draws.
    */
-  function run(N, picks = {}, { n = 10000, seed = 2028, forceVpShift = null, parts = true, keep = 0 } = {}) {
+  // asPublished: DeSart's half as he publishes it, before the nominees are known: the plain average of every
+  // matchup and home states spread by poll appearances, whoever the nominees turn out to be (the final forecast).
+  function run(N, picks = {}, { n = 10000, seed = 2028, forceVpShift = null, parts = true, keep = 0, asPublished = false } = {}) {
     const S = N.scenario, { dp, rp, dv, rv } = picks;
     const lagW = S.homeLagWeight || { dem: 1, rep: 1 };
     const fieldD = primaryField(S.candidates, 'D'), fieldR = primaryField(S.candidates, 'R');
@@ -158,11 +160,11 @@
     const h = N.h2h, priors = !S.states.some(s => s.prior == null);
     let dPoint = null;
     if (priors && h && h.polls && h.polls.length) {
-      const sel = pickPolls(h, dp, rp);
+      const sel = asPublished ? pickPolls(h, null, null) : pickPolls(h, dp, rp);
       const people = S.candidates.concat(h.people || []);   // matchups with people off the candidate list count too
       const pollD = pollField(h.polls, people, 'd'), pollR = pollField(h.polls, people, 'r');
-      const hD = st => dp ? (dp.state === st ? 1 : 0) : fieldAt(pollD, st);
-      const hR = st => rp ? (rp.state === st ? 1 : 0) : fieldAt(pollR, st);
+      const hD = st => dp && !asPublished ? (dp.state === st ? 1 : 0) : fieldAt(pollD, st);
+      const hR = st => rp && !asPublished ? (rp.state === st ? 1 : 0) : fieldAt(pollR, st);
       dPoint = Object.fromEntries(S.states.map(s => [s.abbr, desartPredict(s.prior, sel.avg,
         hD(s.abbr) - hR(s.abbr) - (s.abbr === S.homeLag.dem ? 1 : 0) + (s.abbr === S.homeLag.rep ? 1 : 0), h.terms)]));
       info.polls = { avg: sel.avg, n: sel.polls.length, basis: sel.basis, total: h.polls.length, pollD, pollR };
