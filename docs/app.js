@@ -640,6 +640,187 @@
     });
   }
 
+  // ================= LATEST DATA =================
+  // What the morning run read: the newest polls, approval, state economies and primary polling, and what changed
+  // since the run before. Reads the payload and the daily history only; it runs no simulation of its own.
+  const etTime = iso => new Date(iso).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET';
+  const shortDay = iso => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const dayDiff = (a, b) => Math.round((Date.parse(a + 'T12:00:00Z') - Date.parse(b + 'T12:00:00Z')) / 864e5);
+  const marginOf = share => { const m = 2 * (share - 50); return Math.abs(m) < 0.05 ? 'Even' : (m > 0 ? 'D+' : 'R+') + Math.abs(m).toFixed(1); };
+  const linkOr = (url, html) => url && /^https?:\/\//.test(url) ? `<a href="${esc(url)}" target="_blank" rel="noopener">${html}</a>` : html;
+
+  // A line chart with a hover readout. series: [{key, color, label}], rows: [{d, ...}], text(row) for the readout.
+  function lineChart(el, readEl, rows, series, opts) {
+    const narrow = el.clientWidth < 480, W = narrow ? 380 : 600, Ht = narrow ? 230 : 210, l = 36, r = narrow ? 104 : 118, tp = 12, b = 24;
+    const day = d => Date.parse(d + 'T12:00:00Z');
+    const vals = rows.flatMap(row => series.map(s => row[s.key]));
+    const lo = Math.floor(Math.min(...vals) / 5) * 5, hi = Math.ceil(Math.max(...vals) / 5) * 5;
+    const x = d => l + (day(d) - day(rows[0].d)) / Math.max(1, day(rows[rows.length - 1].d) - day(rows[0].d)) * (W - l - r);
+    const y = v => tp + (1 - (v - lo) / (hi - lo)) * (Ht - tp - b);
+    let o = '';
+    for (let v = lo; v <= hi; v += 5) o += `<line x1="${l}" x2="${W - r}" y1="${y(v)}" y2="${y(v)}" stroke="#1f2b3e"></line><text x="${l - 6}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`;
+    const y0 = +rows[0].d.slice(0, 4), y1 = +rows[rows.length - 1].d.slice(0, 4);
+    for (let yr = y0 + 1; yr <= y1; yr++) { const xx = x(yr + '-01-01'); o += `<line x1="${xx}" x2="${xx}" y1="${tp}" y2="${Ht - b}" stroke="#1f2b3e"></line><text x="${xx}" y="${Ht - 6}" text-anchor="middle">${yr}</text>`; }
+    o += `<text x="${l}" y="${Ht - 6}">${new Date(rows[0].d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</text>`;
+    const last = rows[rows.length - 1];
+    series.forEach(s => {
+      o += `<polyline points="${rows.map(row => `${x(row.d).toFixed(1)},${y(row[s.key]).toFixed(1)}`).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"></polyline>
+        <circle cx="${x(last.d)}" cy="${y(last[s.key])}" r="3.5" fill="${s.color}"></circle>
+        <text class="end" x="${x(last.d) + 8}" y="${y(last[s.key]) + 4}" fill="${s.color}">${s.label} ${last[s.key].toFixed(1)}%</text>`;
+    });
+    o += `<line class="guide" x1="0" x2="0" y1="${tp}" y2="${Ht - b}" stroke="#5d6a7e" visibility="hidden"></line><rect class="hit" x="${l}" y="${tp}" width="${W - l - r}" height="${Ht - tp - b}" fill="transparent"></rect>`;
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="${esc(opts.label)}">${o}</svg>`;
+    const svg = el.querySelector('svg'), guide = svg.querySelector('.guide'), hit = svg.querySelector('.hit');
+    const idle = () => { guide.setAttribute('visibility', 'hidden'); readEl.textContent = opts.text(last, true); };
+    const at = ev => {
+      const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+      const px = pt.matrixTransform(svg.getScreenCTM().inverse()).x;
+      let best = rows[0]; rows.forEach(row => { if (Math.abs(x(row.d) - px) < Math.abs(x(best.d) - px)) best = row; });
+      guide.setAttribute('x1', x(best.d)); guide.setAttribute('x2', x(best.d)); guide.setAttribute('visibility', 'visible');
+      readEl.textContent = opts.text(best, best === last);
+    };
+    hit.addEventListener('pointermove', at); hit.addEventListener('pointerdown', at); hit.addEventListener('pointerleave', idle);
+    idle();
+  }
+
+  function renderData() {
+    const H = (window.NOWCAST_HISTORY || []).filter(h => h.v === 4);
+    const box = id => document.getElementById(id);
+    if (!N) { box('data-status').textContent = 'This fills in after the first daily data run.'; return; }
+    const S = N.summary, A = N.approval, E = N.economy, h2h = N.h2h || { polls: [] };
+    const today = H.find(h => h.date === N.as_of), prev = [...H].reverse().find(h => h.date < N.as_of);
+    const fixed = !!(N.desart_final && N.desart_final.frozen);
+
+    // Status line: when the data were read, and from where.
+    box('data-status').innerHTML = `Last update <b>${etTime(N.generated_at)}</b>. The data are read every morning, at about 8:30 AM ET.` +
+      (h2h.stale ? ' <span class="warn">PollResults.org could not be read this morning, so the head-to-head polls are the last good copy.</span>' : '');
+
+    // What moved since the run before.
+    const since = prev ? `since ${shortDay(prev.date)}` : '';
+    const change = (now, then, unit, digits, partisan) => {
+      if (then === undefined || then === null || !prev) return `<span class="chg">${prev ? 'First day tracked' : 'First update'}</span>`;
+      const d = now - then, r = +d.toFixed(digits);
+      if (r === 0) return `<span class="chg">No change ${since}</span>`;
+      const cls = partisan ? (d > 0 ? 'd-ink' : 'r-ink') : '';
+      return `<span class="chg ${cls}">${d > 0 ? '▲' : '▼'} ${Math.abs(r).toFixed(digits)}${unit} ${since}</span>`;
+    };
+    const pollAvg = N.models && N.models.polls ? N.models.polls.avg : null;
+    const nD = Math.round(100 * S.pDemWin);
+    const econNew = prev && prev.econThrough && prev.econThrough !== E.through;
+    box('data-changes').innerHTML = [
+      [`${nD} in 100`, 'The Democrat\'s chance in the Nowcast', change(100 * S.pDemWin, prev && 100 * prev.pDemWin, '', 0, true)],
+      [fmt(S.demPopular), 'Expected Democratic vote', change(S.demPopular, prev && prev.demPopular, ' pts', 1, true)],
+      [fmt(A.approve), 'Trump\'s approval', change(A.approve, prev && prev.approve, ' pts', 1)],
+      [pollAvg === null ? '—' : fmt(pollAvg), 'Democrat\'s share in head-to-head polls', change(pollAvg, prev && prev.pollAvg, ' pts', 1, true)],
+      [monthName(E.through).replace(' ', '<br>'), 'Newest month of state economic data', `<span class="chg">${econNew ? 'New month added ' + since : prev ? 'No new month ' + since : 'First update'}</span>`],
+    ].map(([v, l, c]) => `<div><span class="v">${v}</span><span class="l">${l}</span>${c}</div>`).join('');
+
+    // ---- head-to-head polls ----
+    const hp = [...(h2h.polls || [])].sort((a, b) => (b.added || '').localeCompare(a.added || '') || b.date.localeCompare(a.date));
+    const recent = p => p.added && dayDiff(N.as_of, p.added) <= 7;
+    const nRecent = hp.filter(recent).length;
+    const hRow = p => `<tr${recent(p) ? ' class="new"' : ''}><td class="num c-a">${p.added ? shortDay(p.added) : '—'}${recent(p) ? '<i class="dot" title="Added in the last 7 days"></i>' : ''}</td>
+      <td class="c-p">${linkOr(p.url, pollsterCell(p.pollster))}</td><td class="c-m">${esc(pollName(p.d))} vs. ${esc(pollName(p.r))}</td>
+      <td class="num c-g ${p.share > 50 ? 'd-ink' : p.share < 50 ? 'r-ink' : ''}">${marginOf(p.share)}</td><td class="num muted c-c"><span class="lbl">Conducted to </span>${shortDay(p.date)}</td></tr>`;
+    const SHOW = 8;
+    box('dc-h2h').innerHTML = `<div class="dc-head"><div><h2 id="dc-h2h-h">Head-to-head polls</h2>
+        <p class="small">${hp.length} poll${hp.length === 1 ? '' : 's'} conducted ${shortDay(h2h.window[0])} to ${shortDay(h2h.window[1])} count toward the long-range model${pollAvg !== null ? `; the Democrat averages ${fmt(pollAvg)} of the two-party vote` : ''}. ${nRecent ? `${nRecent} added in the last week.` : 'None added in the last week.'}</p></div>
+        <a class="dc-link" href="#nowcast">Matchups chart</a></div>
+      ${fixed ? '<p class="note">Since November 7, 2027 the long-range model uses only polls conducted in October 2027, as DeSart does. Newer polls are listed here but no longer move the Nowcast.</p>' : ''}
+      ${hp.length ? `<div class="dt-wrap"><table class="dt cards"><thead><tr><th>Added</th><th>Pollster</th><th>Matchup</th><th class="num">Margin</th><th class="num">Conducted</th></tr></thead>
+        <tbody>${hp.slice(0, SHOW).map(hRow).join('')}</tbody><tbody class="more" hidden>${hp.slice(SHOW).map(hRow).join('')}</tbody></table></div>
+        ${hp.length > SHOW ? `<button class="btn ghost dc-more" type="button" aria-expanded="false">Show all ${hp.length} polls</button>` : ''}` : '<p class="small">No head-to-head polls in the window yet.</p>'}
+      <p class="foot">Margin is the gap between the two candidates' share of the two-party vote. Added is the day PollResults.org listed the poll; conducted is the last day it was in the field. ${h2h.skipped ? `${h2h.skipped} other pairing${h2h.skipped === 1 ? ' was' : 's were'} left out: generic party labels, three-way questions, or a president who cannot run again.` : ''}</p>`;
+    const more = box('dc-h2h').querySelector('.dc-more');
+    if (more) more.addEventListener('click', () => {
+      const tb = box('dc-h2h').querySelector('tbody.more'), open = tb.hidden;
+      tb.hidden = !open; more.setAttribute('aria-expanded', open); more.textContent = open ? 'Show fewer' : `Show all ${hp.length} polls`;
+    });
+
+    // ---- approval ----
+    const ap = [...(A.polls || [])].sort((a, b) => (b.added || '').localeCompare(a.added || '') || b.date.localeCompare(a.date)).slice(0, 6);
+    const trend = (A.trend || []).filter(t => t.a && t.dis);
+    box('dc-appr').innerHTML = `<div class="dc-head"><div><h2 id="dc-appr-h">Trump's approval</h2>
+        <p class="small">The approval model's national figure: the latest poll from each of ${A.pollsters} pollsters, finished ${shortDay(A.window[0])} to ${shortDay(A.window[1])}, newer and larger polls counting more.</p></div></div>
+      <div class="dc-big"><span><b>${fmt(A.approve)}</b> approve</span><span><b>${fmt(A.disapprove)}</b> disapprove</span></div>
+      ${trend.length > 2 ? `<p class="dc-read" id="appr-read" aria-live="polite"></p><div class="dc-chart" id="appr-chart"></div>` : ''}
+      <h3>Newest approval polls</h3>
+      <ul class="dc-list">${ap.map(p => `<li><span>${linkOr(p.url, pollsterCell(p.pollster))}<small>Conducted to ${shortDay(p.date)}${p.added ? `, added ${shortDay(p.added)}` : ''}</small></span><b class="num">${Math.round(p.approve)}–${Math.round(p.disapprove)}</b></li>`).join('')}</ul>
+      <p class="foot">State figures come from the national number until state-level approval estimates are available. From June 1, 2028 the model uses polls finished June 1 to July 30, 2028, as the paper does.</p>`;
+    if (trend.length > 2) lineChart(box('appr-chart'), box('appr-read'), trend,
+      [{ key: 'dis', color: '#94a1b5', label: 'Disapprove' }, { key: 'a', color: '#f2a65e', label: 'Approve' }],
+      { label: `Trump's approval, a 30-day average each week since ${trend[0].d}: now ${fmt(A.approve)} approve, ${fmt(A.disapprove)} disapprove`,
+        text: (t, isLast) => `${isLast ? 'Today' : 'Week of ' + niceDate(t.d)}: ${fmt(t.a)} approve, ${fmt(t.dis)} disapprove (30-day average)` });
+
+    // ---- state economies ----
+    const M = E.monthly || [], lat = E.latest || {};
+    const ranked = Object.entries(lat).sort((a, b) => b[1] - a[1]);
+    const st = ([a, v]) => `<li><span>${esc(byAbbr[a] ? byAbbr[a].name : a)}</span><b class="num">${v > 0 ? '+' : ''}${v.toFixed(2)}%</b></li>`;
+    const lastM = M[M.length - 1];
+    box('dc-econ').innerHTML = `<div class="dc-head"><div><h2 id="dc-econ-h">State economies</h2>
+        <p class="small">Each state's monthly economic index from the Philadelphia Fed (jobs, unemployment, hours and wages), via FRED. The approval model averages each state's growth over the term, recent quarters counting most.</p></div></div>
+      ${lastM ? `<div class="dc-big"><span><b>${lastM.up} of ${lastM.n}</b> states grew in ${monthName(lastM.m)}</span></div>
+        <p class="dc-read" id="econ-read" aria-live="polite"></p><div class="dc-chart bars" id="econ-chart"></div>` : ''}
+      ${ranked.length ? `<div class="dc-two"><div><h3>Grew most</h3><ul class="dc-list">${ranked.slice(0, 3).map(st).join('')}</ul></div>
+        <div><h3>${ranked[ranked.length - 1][1] < 0 ? 'Shrank most' : 'Grew least'}</h3><ul class="dc-list">${ranked.slice(-3).reverse().map(st).join('')}</ul></div></div>` : ''}
+      <p class="foot">Change in ${lastM ? monthName(lastM.m) : 'the newest month'} from the month before. The data arrive about two months after the month they cover; the model uses months through June 2028.</p>`;
+    if (M.length) {
+      const el = box('econ-chart'), read = box('econ-read');
+      const W = el.clientWidth < 480 ? 380 : 600, Ht = 150, l = 30, r = 8, tp = 8, b = 22, bw = (W - l - r) / M.length;
+      const y = v => tp + (1 - v / 50) * (Ht - tp - b);
+      let o = '';
+      [0, 25, 50].forEach(v => { o += `<line x1="${l}" x2="${W - r}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 25 ? '#2a3953' : '#1f2b3e'}"${v === 25 ? ' stroke-dasharray="3 3"' : ''}></line><text x="${l - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`; });
+      M.forEach((m, i) => {
+        const h = y(0) - y(m.up * 50 / m.n);
+        o += `<rect data-i="${i}" x="${(l + i * bw + 1.5).toFixed(1)}" y="${(y(0) - h).toFixed(1)}" width="${(bw - 3).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${i === M.length - 1 ? '#f2a65e' : '#3c4f6e'}"></rect>`;
+        if (m.m.endsWith('-01')) o += `<text x="${(l + i * bw + bw / 2).toFixed(1)}" y="${Ht - 6}" text-anchor="middle">${m.m.slice(0, 4)}</text>`;
+      });
+      el.innerHTML = `<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="States whose economy grew each month, ${monthName(M[0].m)} to ${monthName(lastM.m)}">${o}</svg>`;
+      const say = m => { read.textContent = `${monthName(m.m)}: ${m.up} of ${m.n} states grew; the typical state ${m.median >= 0 ? 'grew' : 'shrank'} ${Math.abs(m.median).toFixed(2)}%`; };
+      el.querySelectorAll('rect').forEach(rc => { const m = M[+rc.dataset.i]; rc.addEventListener('pointerenter', () => say(m)); rc.addEventListener('pointerdown', () => say(m)); });
+      el.querySelector('svg').addEventListener('pointerleave', () => say(lastM));
+      say(lastM);
+    }
+
+    // ---- primary polling ----
+    const cands = (N.scenario && N.scenario.candidates) || [];
+    const side = party => {
+      const list = cands.filter(c => c.party === party && c.primary > 0).sort((a, b) => b.primary - a.primary).slice(0, 6);
+      const top = list.length ? list[0].primary : 1;
+      return `<div><h3 class="${party === 'D' ? 'd-ink' : 'r-ink'}">${party === 'D' ? 'Democrats' : 'Republicans'}</h3>
+        <ul class="dc-bars">${list.map(c => `<li><span class="nm">${esc(c.name)}</span><span class="bar"><i class="${party}" style="width:${(100 * c.primary / top).toFixed(1)}%"></i></span><b class="num">${c.primary.toFixed(1)}%</b></li>`).join('')}</ul></div>`;
+    };
+    box('dc-primary').innerHTML = `<div class="dc-head"><div><h2 id="dc-primary-h">Primary polling</h2>
+        <p class="small">${nomineesNote()} The approval model counts each possible nominee's home state by this share.</p></div></div>
+      <div class="dc-two">${side('D')}${side('R')}</div>
+      <p class="foot">Average share in national primary polls from PollResults.org. Top six in each party.</p>`;
+
+    // ---- what changes next ----
+    const nowIso = todayIso();
+    const next = EVENTS.map(([d, short, long]) => ({ d, short, long, left: dayDiff(d, nowIso) })).filter(e => e.left >= 0);
+    box('dc-next').innerHTML = `<div class="dc-head"><div><h2 id="dc-next-h">What changes next</h2>
+        <p class="small">Days when the inputs switch, so the Nowcast can move more than usual.</p></div></div>
+      <ul class="dc-next">${next.map(e => `<li><span class="days"><b class="num">${e.left}</b>${e.left === 1 ? 'day' : 'days'}</span><span><b>${esc(e.short)}, ${niceDate(e.d)}</b>${esc(e.long)}</span></li>`).join('')}</ul>`;
+
+    // ---- daily log ----
+    const pct = v => v === undefined || v === null ? '—' : Math.round(100 * v);
+    const logRow = h => `<tr${h.date === N.as_of ? ' class="new"' : ''}><td>${niceDate(h.date)}</td><td class="num">${pct(h.pDemWin)}</td><td class="num">${fmt(h.demPopular)}</td>
+      <td class="num">${h.ev ?? '—'}</td><td class="num">${pct(h.enns)}</td><td class="num">${pct(h.desart)}</td>
+      <td class="num">${h.approve !== undefined ? fmt(h.approve) : '—'}</td><td class="num">${h.pollAvg ? fmt(h.pollAvg) : '—'}${h.h2hN ? ` <small>(${h.h2hN})</small>` : ''}</td><td class="num">${h.econThrough ? new Date(h.econThrough + '-15').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}</td></tr>`;
+    const L = [...H].reverse(), LS = 10;
+    box('dc-log').innerHTML = `<div class="dc-head"><div><h2 id="dc-log-h">Daily log</h2>
+        <p class="small">The Nowcast and its inputs after each morning's run. Chances are in 100 for the Democrat.</p></div></div>
+      <div class="dt-wrap"><table class="dt"><thead><tr><th>Date</th><th class="num">Nowcast</th><th class="num">Vote</th><th class="num">Electoral votes</th><th class="num">Approval model</th><th class="num">Long-range model</th><th class="num">Approval</th><th class="num">Poll average</th><th class="num">Economy through</th></tr></thead>
+      <tbody>${L.slice(0, LS).map(logRow).join('')}</tbody><tbody class="more" hidden>${L.slice(LS).map(logRow).join('')}</tbody></table></div>
+      ${L.length > LS ? `<button class="btn ghost dc-more" type="button" aria-expanded="false">Show all ${L.length} days</button>` : ''}
+      <p class="foot">Columns added in November 2026 are blank for earlier days. Poll average: the Democrat's share of the two-party vote across head-to-head polls, with the number of polls in brackets.</p>`;
+    const lm = box('dc-log').querySelector('.dc-more');
+    if (lm) lm.addEventListener('click', () => {
+      const tb = box('dc-log').querySelector('tbody.more'), open = tb.hidden;
+      tb.hidden = !open; lm.setAttribute('aria-expanded', open); lm.textContent = open ? 'Show fewer' : `Show all ${L.length} days`;
+    });
+  }
+
   function insp28(a) {
     const el = document.getElementById('insp-2028');
     if (!cur) { el.innerHTML = `<span class="tag">2028 Nowcast</span><h3>Waiting for data</h3><p class="small">This fills in after the first daily data run.</p>`; return; }
@@ -877,7 +1058,7 @@
   })();
 
   // ================= routing =================
-  const VIEWS = ['home', 'nowcast', 'models', 'results-2024', 'method'];
+  const VIEWS = ['home', 'nowcast', 'models', 'data', 'results-2024', 'method'];
   const done = {};
   function route() {
     let h = location.hash.replace('#', '');
@@ -888,6 +1069,7 @@
     if (!done[v]) {
       if (v === 'home') renderHome();
       if (v === 'results-2024') render2024();
+      if (v === 'data') renderData();
       // The models page reads the same simulation as the Nowcast, so it starts that run too.
       if ((v === 'nowcast' || v === 'models') && !done.nowcast) { render2028(); done.nowcast = true; }
       if (v === 'models' && !N) document.getElementById('models-each').innerHTML = '<p class="small">This fills in after the first daily data run.</p>';

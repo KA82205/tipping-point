@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261114i">
+<link rel="stylesheet" href="styles.css?v=20261114j">
 </head>
 <body>
 
@@ -21,9 +21,10 @@
     </a>
     <nav aria-label="Main">
       <a href="#" data-view="home">Overview</a>
-      <a href="#nowcast" data-view="nowcast">2028 Nowcast</a>
-      <a href="#models" data-view="models">Each model</a>
-      <a href="#results-2024" data-view="results-2024">2024 scorecard</a>
+      <a href="#nowcast" data-view="nowcast" aria-label="2028 Nowcast"><span class="nl">2028 Nowcast</span><span class="ns">Nowcast</span></a>
+      <a href="#models" data-view="models" aria-label="Each model"><span class="nl">Each model</span><span class="ns">Models</span></a>
+      <a href="#data" data-view="data" aria-label="Latest data"><span class="nl">Latest data</span><span class="ns">Data</span></a>
+      <a href="#results-2024" data-view="results-2024" aria-label="2024 scorecard"><span class="nl">2024 scorecard</span><span class="ns">2024</span></a>
       <a href="#method" data-view="method">Method</a>
     </nav>
     <button class="contact-btn" type="button" id="contact-open" aria-haspopup="dialog">Contact <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -278,6 +279,23 @@
   <div id="models-each"></div>
 </div>
 
+<div id="view-data" class="wrap data-page" hidden>
+  <section class="data-intro">
+    <h1>Latest data</h1>
+    <p class="lede">Everything the Nowcast reads, newest first: head-to-head polls, approval polls, state economies and primary polling. The data update every morning; this page shows what came in and what it moved.</p>
+    <p class="data-status" id="data-status"></p>
+  </section>
+  <div class="figs data-changes" id="data-changes"></div>
+  <div class="data-grid">
+    <section class="data-card wide" id="dc-h2h" aria-labelledby="dc-h2h-h"></section>
+    <section class="data-card" id="dc-appr" aria-labelledby="dc-appr-h"></section>
+    <section class="data-card" id="dc-econ" aria-labelledby="dc-econ-h"></section>
+    <section class="data-card" id="dc-primary" aria-labelledby="dc-primary-h"></section>
+    <section class="data-card" id="dc-next" aria-labelledby="dc-next-h"></section>
+    <section class="data-card wide" id="dc-log" aria-labelledby="dc-log-h"></section>
+  </div>
+</div>
+
 <div id="view-method" class="wrap method" hidden>
   <section class="stack-lg" style="padding-top:44px">
     <div class="stack">
@@ -489,6 +507,6 @@
 <script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261113a"></script>
 <script src="combine.js?v=20261113k"></script>
-<script src="app.js?v=20261114i"></script>
+<script src="app.js?v=20261114j"></script>
 </body>
 </html>
