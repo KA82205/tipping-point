@@ -5,10 +5,10 @@
   const N = window.NOWCAST;
   const byAbbr = Object.fromEntries(R.map(r => [r.abbr, r]));
   const natActual = 100 * NAT.dem / (NAT.dem + NAT.rep);
-  // The 2024 scorecard has two forecasts to score: 'pub', the approval and economy model's forecast as its
+  // The 2024 scorecard has two forecasts to score: 'pub', the state-level approval and fundamentals model's forecast as its
   // authors published it, and 'bt', the Nowcast's method applied to 2024 (docs/backtest2024.js).
   const BT = window.BACKTEST_2024 || null, F24 = ['fc', 'lo', 'hi', 'pDem', 'rating'];
-  // 'ds': DeSart's polls model as he published it (November 2023), also from docs/backtest2024.js.
+  // 'ds': DeSart's long-range model as he published it (November 2023), also from docs/backtest2024.js.
   const DS = BT && BT.desartPub ? BT.desartPub : null;
   R.forEach(r => { r.pub = Object.fromEntries(F24.map(k => [k, r[k]])); r.bt = BT && BT.states[r.abbr] ? BT.states[r.abbr] : null; r.ds = DS && DS.states[r.abbr] ? DS.states[r.abbr] : null; });
   NAT.pub = { fc: NAT.fc, pDemWin: NAT.pDemWin }; NAT.bt = BT ? BT.national : null; NAT.ds = DS ? DS.national : null;
@@ -193,7 +193,7 @@
     setTimeout(() => { arm.style.transform = `rotate(${tiltOf(pDem - pRep).toFixed(2)}deg)`; }, 80);
   }
   // The models and their average, side by side. m: { enns, desart, now }, each { pDemWin, demPopular } or null.
-  const MODELS = [['enns', 'Approval and economy', 'Enns, Colner, Kumar and Lagodny'], ['desart', 'Long-range polls', 'DeSart']];
+  const MODELS = [['enns', 'State-level approval and fundamentals model', 'Enns, Colner, Kumar and Lagodny'], ['desart', 'Long-range model', 'DeSart']];
   function ensemble(el, m) {
     const card = (cls, name, by, x) => `<div class="ens ${cls}"><span class="nm">${name}</span><span class="by">${by}</span>
       <span class="odds"><b>${Math.round(100 * x.pDemWin)}</b> in 100 for the Democrat</span><span class="split" aria-hidden="true"><i style="width:${(100 * x.pDemWin).toFixed(1)}%"></i></span>
@@ -203,7 +203,7 @@
     el.innerHTML = have.length > 1
       ? have.map(([k, name, by]) => card('m-' + k, name, by, m[k])).join('<span class="op" aria-hidden="true">+</span>') + '<span class="op" aria-hidden="true">=</span>' +
         card('now', 'The Nowcast', 'Their average, state by state', m.now)
-      : card('now', 'The Nowcast', 'The approval and economy model alone today', m.now);
+      : card('now', 'The Nowcast', 'The state-level approval and fundamentals model alone today', m.now);
   }
   // The light at the top of the page leans toward whoever is ahead.
   function setGlow(pDem, pRep) {
@@ -225,7 +225,7 @@
 
   // ---------- head-to-head matchups at a glance ----------
   // One row per pairing: each poll as a small dot and the pairing's plain average as a large one, on the
-  // Democrat's share of the two-party vote. The top row is every poll together, the figure the polls model uses.
+  // Democrat's share of the two-party vote. The top row is every poll together, the figure the long-range model uses.
   function matchups(el, noteEl, polls, fixed) {
     if (!el) return;
     if (!polls.length) { el.innerHTML = ''; noteEl.textContent = ''; return; }
@@ -248,14 +248,14 @@
       row('All matchups', `Average of ${polls.length} polls`, polls, total, true) +
       rows.map(g => row(`${esc(pollName(g.d))} vs. ${esc(pollName(g.r))}`, g.polls.length === 1 ? `1 poll, ${g.polls[0].date}` : `Average of ${g.polls.length} polls`, g.polls, g.avg)).join('');
     el.setAttribute('aria-label', `Head-to-head matchups: all ${polls.length} polls together are ${margin(total)}; ` + rows.map(g => `${pollName(g.d)} vs. ${pollName(g.r)} ${margin(g.avg)}`).join(', '));
-    noteEl.textContent = `The Democrat's share of the two-party vote in each pairing: small dots are single polls, the large dot is their plain average, and the margin is the gap between the two candidates. The top row puts every poll together, as DeSart does; it is the poll figure the polls model uses${fixed ? '' : ' until the nominees are known'}.`;
+    noteEl.textContent = `The Democrat's share of the two-party vote in each pairing: small dots are single polls, the large dot is their plain average, and the margin is the gap between the two candidates. The top row puts every poll together, as DeSart does; it is the poll figure the long-range model uses${fixed ? '' : ' until the nominees are known'}.`;
   }
 
   // ---------- the Nowcast day by day, on a timeline running to the forecast ----------
   // The x axis runs from the first day to the publish day, so the line fills in over time, with the days the
   // inputs change marked ahead of time: when they happen the Nowcast can jump.
   const EVENTS = [
-    ['2027-11-07', 'Polls lock', 'The polls model switches to DeSart\'s October 2027 polls and stops changing.'],
+    ['2027-11-07', 'Long-range model locks', 'The long-range model switches to DeSart\'s October 2027 polls and stops changing.'],
     ['2028-06-01', 'Approval window', 'The approval model switches to polls conducted June 1 to July 30, as the paper does.'],
     ['2028-08-06', 'Final', 'The final forecast publishes and stops changing.'],
   ];
@@ -365,7 +365,7 @@
         <div class="stack" style="gap:6px"><div class="strip-scale num"><span>30%</span><span>50%</span><span>70%</span></div><div class="strip">${strip({ f: NAT.fc, a: natActual })}</div></div>
         <div class="strip-legend"><span><i class="f"></i>Forecast</span><span><i class="a"></i>Actual</span></div>
         ${src24 === 'ds' ? `<p class="hint">The odds are reproduced from DeSart's own simulation script, which draws every state independently around its forecast. His national vote adds the states by his own turnout weights.</p>` : ''}
-        ${src24 === 'bt' ? `<p class="hint">A back-test, not a forecast anyone published. State by state it averages two forecasts that were published: approval and economy (July 2024) and DeSart's polls model (November 2023). Their national votes were ${fmt(NAT.bt.enns)} and ${fmt(NAT.bt.desart)}.</p>` : ''}
+        ${src24 === 'bt' ? `<p class="hint">A back-test, not a forecast anyone published. State by state it averages two forecasts that were published: the state-level approval and fundamentals model (July 2024) and DeSart's long-range model (November 2023). Their national votes were ${fmt(NAT.bt.enns)} and ${fmt(NAT.bt.desart)}.</p>` : ''}
         <p class="hint">Hover or click a state for its numbers.</p>`;
       return;
     }
@@ -374,13 +374,13 @@
       <dl class="kv">
         <div><dt>Forecast D share</dt><dd class="d-ink">${fmt(r.fc, 2)}</dd></div>
         <div><dt>Actual D share</dt><dd class="d-ink">${fmt(r.share, 2)}</dd></div>
-        ${src24 === 'bt' ? `<div><dt>Approval and economy, published</dt><dd>${fmt(r.pub.fc, 2)}</dd></div>${r.bt.desart != null ? `<div><dt>DeSart polls model, published</dt><dd>${fmt(r.bt.desart, 2)}</dd></div>` : ''}` : `<div><dt>Forecast R share</dt><dd class="r-ink">${fmt(100 - r.fc, 2)}</dd></div>`}
+        ${src24 === 'bt' ? `<div><dt>State-level approval and fundamentals, published</dt><dd>${fmt(r.pub.fc, 2)}</dd></div>${r.bt.desart != null ? `<div><dt>DeSart long-range model, published</dt><dd>${fmt(r.bt.desart, 2)}</dd></div>` : ''}` : `<div><dt>Forecast R share</dt><dd class="r-ink">${fmt(100 - r.fc, 2)}</dd></div>`}
         <div><dt>Signed error (pred − actual)</dt><dd class="a-ink">${sgn(e)} pts</dd></div>
         <div><dt>Rating</dt><dd>${RATING[r.rating]}</dd></div>
         <div><dt>Harris win chance</dt><dd>${Math.round(100 * r.pDem)}%</dd></div>
         <div><dt>90% range</dt><dd>${r.lo.toFixed(1)}–${r.hi.toFixed(1)}%</dd></div>
         <div><dt>Call</dt><dd style="color:${ok ? 'var(--ok)' : 'var(--rep-ink)'}">${ok ? 'Correct' : 'Missed'}</dd></div>
-        ${src24 === 'ds' && r.ds && r.ds.district ? `<p class="hint" style="grid-column:1/-1">DeSart forecasts states only. This district is his ${byAbbr[a.slice(0, 2)].name} forecast moved by the district's gap from the state in the approval and economy forecast.</p>` : ''}
+        ${src24 === 'ds' && r.ds && r.ds.district ? `<p class="hint" style="grid-column:1/-1">DeSart forecasts states only. This district is his ${byAbbr[a.slice(0, 2)].name} forecast moved by the district's gap from the state in the state-level approval and fundamentals forecast.</p>` : ''}
       </dl>
       <div class="stack" style="gap:6px"><div class="strip-scale num"><span>30%</span><span>50%</span><span>70%</span></div><div class="strip">${strip({ f: r.fc, a: r.share, lo: r.lo, hi: r.hi })}</div></div>
       <div class="strip-legend"><span><i class="f"></i>Forecast</span><span><i class="a"></i>Actual</span><span><i class="b"></i>90% range</span></div>
@@ -423,9 +423,9 @@
   const draw24 = () => drawUS(document.getElementById('map-2024'), { fill: fill24, selected: pinned24, onPick: pick24, onHover: a => { insp24(a || pinned24); map24.mark(a || pinned24); } });
 
   const LEDE24 = {
-    bt: 'What the Nowcast\'s method would have said in 2024. State by state it averages two forecasts published before the election: the approval and economy forecast from July 2024 and Jay DeSart\'s polls forecast from November 2023. Nobody published this average at the time, so it is a back-test.',
-    pub: 'The approval and economy forecast as Enns, Colner, Kumar and Lagodny published it in July 2024, with data from 100 days before the election.',
-    ds: 'The polls forecast as Jay DeSart published it in November 2023, a year before the election, from head-to-head polls taken the month before. It forecasts the 50 states and DC; the five districts in Maine and Nebraska are filled in from the approval and economy forecast.',
+    bt: 'What the Nowcast\'s method would have said in 2024. State by state it averages two forecasts published before the election: the state-level approval and fundamentals forecast from July 2024 and Jay DeSart\'s polls forecast from November 2023. Nobody published this average at the time, so it is a back-test.',
+    pub: 'The state-level approval and fundamentals forecast as Enns, Colner, Kumar and Lagodny published it in July 2024, with data from 100 days before the election.',
+    ds: 'The polls forecast as Jay DeSart published it in November 2023, a year before the election, from head-to-head polls taken the month before. It forecasts the 50 states and DC; the five districts in Maine and Nebraska are filled in from the state-level approval and fundamentals forecast.',
   };
   function figs24() {
     const st = R.filter(r => r.abbr.length === 2);
@@ -480,9 +480,9 @@
 
   // ================= 2028 Nowcast =================
   let layer28 = 'tracker', pinned28 = null, map28, cur = null;   // cur = current simulation result
-  // The polls model's vote is not the polls' average: DeSart's equation starts from the last result and moves it by
+  // The long-range model's vote is not the polls' average: DeSart's equation starts from the last result and moves it by
   // about half of the polls' margin (coefficient 0.52), so the two are shown side by side to avoid misreading.
-  const SHRINK = 'The polls model starts from the 2024 result and moves it by about half of the polls\' margin, because polls this far out are only partly predictive (DeSart\'s estimate).';
+  const SHRINK = 'The long-range model starts from the 2024 result and moves it by about half of the polls\' margin, because polls this far out are only partly predictive (DeSart\'s estimate).';
   const POLLS_NOTE = info => info && info.polls
     ? `The polls themselves: the Democrat gets ${(Math.round(info.polls.avg * 10) / 10).toFixed(1)}% of the two-party vote on average in ${info.polls.n} head-to-head poll${info.polls.n === 1 ? '' : 's'}. ${SHRINK}`
     : '';
@@ -560,8 +560,8 @@
     document.getElementById('waffle-cap').textContent = `Out of 100 simulated elections held today, the Democrat wins ${nD} and the Republican wins ${100 - nD - nT}${nT ? `, with ${nT} tied` : ''}. A simulation is one possible outcome given how far off the models have been in the past.`;
     const mo = document.getElementById('models-28');
     if (mo) mo.innerHTML = s.desart
-      ? `Each state's number is the average of the approval and economy model and the polls model, half each. The whole map is then simulated together, so the Nowcast's odds are not simply the average of the two models' odds. ${nomineesNote()} ${s.desart ? POLLS_NOTE(s.info) : ''} <a href="#method">How they work</a>`
-      : `Today's Nowcast is the approval and economy model on its own, because no head-to-head polls are available. <a href="#method">How it works</a>`;
+      ? `Each state's number is the average of the state-level approval and fundamentals model and the long-range model, half each. The whole map is then simulated together, so the Nowcast's odds are not simply the average of the two models' odds. ${nomineesNote()} ${s.desart ? POLLS_NOTE(s.info) : ''} <a href="#method">How they work</a>`
+      : `Today's Nowcast is the state-level approval and fundamentals model on its own, because no head-to-head polls are available. <a href="#method">How it works</a>`;
     document.getElementById('figs-2028').innerHTML = [
       [fmt(s.demPopular), 'Democratic share of the two-party vote'],
       [`${median}`, 'Median Democratic electoral votes, of 538'],
@@ -586,7 +586,7 @@
           <div><dt>Economy data through</dt><dd>${monthName(N.economy.through)}</dd></div>
         </dl>
         <div class="strip">${strip({ f: cur.demPopular })}</div>
-        ${cur.desart ? modelTable([['Approval and economy', cur.enns.demPopular, cur.enns.pDemWin], ['Polls model', cur.desart.demPopular, cur.desart.pDemWin], ['Nowcast', cur.demPopular, cur.pDemWin, 'avg']], 'the election') : ''}
+        ${cur.desart ? modelTable([['State-level approval and fundamentals', cur.enns.demPopular, cur.enns.pDemWin], ['Long-range model', cur.desart.demPopular, cur.desart.pDemWin], ['Nowcast', cur.demPopular, cur.pDemWin, 'avg']], 'the election') : ''}
         ${cur.info && cur.info.polls ? `<p class="hint">${POLLS_NOTE(cur.info)}</p>` : ''}
         <p class="hint">Not the forecast. The Nowcast simulates the models together, so its odds are not the average of theirs. Hover a state for its numbers.</p>`;
       return;
@@ -602,8 +602,8 @@
       </dl>
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>
-      ${s.desart != null ? modelTable([['Approval and economy', s.enns, s.ennsP], ['Polls model', s.desart, s.desartP], ['Nowcast', s.demShare, s.pDem, 'avg']], 'the state') : ''}
-      ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models take back part of the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(-window.SPASE.coef('homeLag') * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the approval and economy model${s.desart != null ? `, ${window.TP.DESART.home.toFixed(1)} in the polls model` : ''}.</p>` : ''}`;
+      ${s.desart != null ? modelTable([['State-level approval and fundamentals', s.enns, s.ennsP], ['Long-range model', s.desart, s.desartP], ['Nowcast', s.demShare, s.pDem, 'avg']], 'the state') : ''}
+      ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models take back part of the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(-window.SPASE.coef('homeLag') * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the state-level approval and fundamentals model${s.desart != null ? `, ${window.TP.DESART.home.toFixed(1)} in the long-range model` : ''}.</p>` : ''}`;
   }
   function fill28(a) {
     const s = cur && cur.byAbbr[a];
@@ -642,17 +642,17 @@
     const F = window.FORECAST || null, df = N && N.desart_final, t = todayIso();
     const steps = [];
     const step = (name, what, state, note) => steps.push(`<li class="${state}"><span class="st">${{ wait: 'Not started', open: 'Collecting', done: 'Done' }[state]}</span><div><b>${name}</b><span>${what}</span>${note ? `<em>${note}</em>` : ''}</div></li>`);
-    // 1. Polls model: October 2027 head-to-head polls
+    // 1. Long-range model: October 2027 head-to-head polls
     if (F || (df && df.frozen)) {
       const n = F ? F.desart_polls.n : df.polls.length, avg = F ? F.desart_polls.avg : df.polls.reduce((a, p) => a + p.share, 0) / df.polls.length;
-      step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'done', `Fixed November 7, 2027: ${n} polls averaging ${fmt(avg)} Democratic. The Nowcast uses them from then on.`);
+      step('Long-range model (DeSart)', 'Head-to-head polls conducted in October 2027', 'done', `Fixed November 7, 2027: ${n} polls averaging ${fmt(avg)} Democratic. The Nowcast uses them from then on.`);
     } else if (df) {
       const n = df.polls.length;
-      step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'open', `${n ? `${n} poll${n === 1 ? '' : 's'} so far` : 'No polls from the window yet'}. Fixed November 7, 2027.`);
-    } else step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'wait', 'Starts October 1, 2027.');
+      step('Long-range model (DeSart)', 'Head-to-head polls conducted in October 2027', 'open', `${n ? `${n} poll${n === 1 ? '' : 's'} so far` : 'No polls from the window yet'}. Fixed November 7, 2027.`);
+    } else step('Long-range model (DeSart)', 'Head-to-head polls conducted in October 2027', 'wait', 'Starts October 1, 2027.');
     // 2. Approval polls: June 1 - July 30, 2028
     const apState = F ? 'done' : t < AP_WIN[0] ? 'wait' : 'open';
-    step('Approval (Enns et al.)', 'Trump approval polls conducted June 1 to July 30, 2028', apState,
+    step('State-level approval and fundamentals (Enns et al.)', 'Trump approval polls conducted June 1 to July 30, 2028', apState,
       F ? `${fmt(F.approval.approve)} approve, from ${F.approval.pollsters} pollsters.` : apState === 'wait' ? 'Starts June 1, 2028.' : N ? `${fmt(N.approval.approve)} approve so far, from ${N.approval.pollsters} pollsters.` : '');
     // 3. State economies through June 2028
     const ec = F ? F.economy.through : N && N.economy.through;
@@ -684,7 +684,7 @@
         <div><span class="v">${fmt(R.demPopular)}</span><span class="l">Democratic two-party vote</span></div>
         <div><span class="v">${med}</span><span class="l">Median Democratic electoral votes</span></div>
       </div>
-      <p class="small">Half approval and economy (${m.enns ? `${Math.round(100 * m.enns.pDemWin)} in 100, ${fmt(m.enns.demPopular)}` : '—'}), half the polls model from October 2027 (${m.desart ? `${Math.round(100 * m.desart.pDemWin)} in 100, ${fmt(m.desart.demPopular)}` : '—'}), simulated together.</p>
+      <p class="small">Half the state-level approval and fundamentals model (${m.enns ? `${Math.round(100 * m.enns.pDemWin)} in 100, ${fmt(m.enns.demPopular)}` : '—'}), half the long-range model from October 2027 (${m.desart ? `${Math.round(100 * m.desart.pDemWin)} in 100, ${fmt(m.desart.demPopular)}` : '—'}), simulated together.</p>
       <svg class="usmap" id="map-fc" role="img" aria-label="Forecast map by rating"></svg>`;
     const by = Object.fromEntries(R.states.map(s => [s.abbr, s]));
     mapFc = () => drawUS(document.getElementById('map-fc'), { fill: a => by[a] ? RATE_COLOR[rateOf(by[a].pDem)] : greyColor(), sub: a => by[a] ? chance(by[a].pDem) : '',
@@ -740,7 +740,7 @@
       }, { rootMargin: '-130px 0px -55% 0px' });
       jump.forEach(b => io.observe(document.getElementById(b.dataset.to)));
     }
-    // From Nov 7, 2027 the polls model runs on DeSart's fixed October 2027 polls; until then the latest 180 days.
+    // From Nov 7, 2027 the long-range model runs on DeSart's fixed October 2027 polls; until then the latest 180 days.
     const DF = N.desart_final && N.desart_final.frozen && N.desart_final.polls.length ? N.desart_final : null;
     const hp = DF ? DF.polls : (N.h2h && N.h2h.polls) || [];
     matchups(document.getElementById('mx-2028'), document.getElementById('mx-note'), hp, !!DF);
@@ -756,7 +756,7 @@
       ? `The Democrat's share of the two-party vote in each poll. These are the polls DeSart's model uses: national polls between one named Democrat and one named Republican conducted in October 2027, fixed on November 7, 2027, from <a href="https://pollresults.org/races/president-2028/">PollResults.org</a> (New York Times poll data, CC BY 4.0). ${DF.skipped} other questions were left out: generic party ballots, questions that name a third candidate, and pairings with a two-term president.`
       : hp.length
       ? `The Democrat's share of the two-party vote in each poll. National polls between one named Democrat and one named Republican from the last ${N.h2h.days} days, from <a href="https://pollresults.org/races/president-2028/">PollResults.org</a> (New York Times poll data, CC BY 4.0). ${N.h2h.skipped ? `${N.h2h.skipped} other questions are left out: generic party ballots, questions that name a third candidate, and pairings with a two-term president, who cannot run again.` : ''}`
-      : 'No head-to-head polls are available today, so the Nowcast is the approval and economy model on its own.';
+      : 'No head-to-head polls are available today, so the Nowcast is the state-level approval and fundamentals model on its own.';
     const t = N.tickets, set = ['dem', 'rep'].filter(s => t[s] && t[s].president).length;
     document.getElementById('need-tickets').textContent = set ? `Confirmed: ${set === 2 ? 'both nominees' : 'one nominee'}` : 'Watching, none yet';
     document.getElementById('need-vp').textContent = N.vp.applied ? `On, ${sgn(N.vp.gap, 1)} pts` : N.vp.gap != null ? `Standing by, ${sgn(N.vp.gap, 1)} pts` : 'No recent polls of the vice president';
