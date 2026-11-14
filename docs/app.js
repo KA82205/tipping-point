@@ -812,6 +812,15 @@
     });
   })();
 
+  // Contact card: the header button opens it; Esc, the close button or a click outside closes it.
+  (function contact() {
+    const dlg = document.getElementById('contact'), open = document.getElementById('contact-open');
+    if (!dlg || !open || typeof dlg.showModal !== 'function') return;
+    open.addEventListener('click', () => dlg.showModal());
+    document.getElementById('contact-close').addEventListener('click', () => dlg.close());
+    dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+  })();
+
   // ================= routing =================
   const VIEWS = ['home', 'nowcast', 'results-2024', 'method'];
   const done = {};
