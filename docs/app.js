@@ -87,7 +87,7 @@
       `<div class="mark270" style="left:${270 / 538 * 100}%"></div>`;
     const tpName = byAbbr[tp.abbr].name.replace(' District', '');
     const winner = tp.share > 50 ? 'Democrats' : 'Republicans';
-    const base = `${label}: the tipping point is <b>${esc(tpName)}</b> at ${fmt(tp.share)} Democratic, so <b>${winner}</b> reach 270 (${demEV} Democratic electoral votes if every state goes to the candidate ahead in it).`;
+    const base = `${label}: the tipping point is <b>${esc(tpName)}</b> at ${fmt(tp.share)} Democratic, so <b>${winner}</b> reach 270 (${demEV} Democratic electoral votes).`;
     readEl.innerHTML = base;
     el.querySelectorAll('.seg').forEach(s => {
       const r = rows.find(x => x.abbr === s.dataset.a);
@@ -105,13 +105,10 @@
     for (let i = 0; i <= 538; i += bin) bins.push({ x: i, p: hist.slice(i, i + bin).reduce((a, v) => a + v, 0) });
     const max = Math.max(...bins.map(b => b.p)) || 1;
     const x = v => l + v / 538 * (W - l - r), y = p => t + (1 - p / max) * (H - t - b);
-    let cum = 0, median = 0;
-    for (let i = 0; i < hist.length; i++) { cum += hist[i]; if (cum >= 0.5) { median = i; break; } }
-    let o = bins.map(bn => `<rect x="${x(bn.x) + 0.5}" y="${y(bn.p)}" width="${Math.max(1, x(bn.x + bin) - x(bn.x) - 1)}" height="${H - b - y(bn.p)}" fill="${bn.x + bin / 2 >= 270 ? '#4f8de0' : '#d8665b'}" rx="1.5"><title>${bn.x} to ${Math.min(538, bn.x + bin - 1)} Democratic electoral votes: ${bn.p < 0.0005 ? 'almost none' : (100 * bn.p).toFixed(1) + '%'} of simulations</title></rect>`).join('');
+        let o = bins.map(bn => `<rect x="${x(bn.x) + 0.5}" y="${y(bn.p)}" width="${Math.max(1, x(bn.x + bin) - x(bn.x) - 1)}" height="${H - b - y(bn.p)}" fill="${bn.x + bin / 2 >= 270 ? '#4f8de0' : '#d8665b'}" rx="1.5"><title>${bn.x} to ${Math.min(538, bn.x + bin - 1)} Democratic electoral votes: ${bn.p < 0.0005 ? 'almost none' : (100 * bn.p).toFixed(1) + '%'} of simulations</title></rect>`).join('');
     o += `<line x1="${x(270)}" x2="${x(270)}" y1="${t - 6}" y2="${H - b}" stroke="#e9eef5" stroke-dasharray="3 3"></line><text x="${x(270) + 5}" y="${t + 2}">270</text>`;
     [0, 100, 200, 300, 400, 538].forEach(v => { o += `<text x="${x(v)}" y="${H - 10}" text-anchor="${v === 0 ? 'start' : v === 538 ? 'end' : 'middle'}">${v}</text>`; });
-    o += `<text x="${W - r}" y="${t + 2}" text-anchor="end">Median: ${median} Democratic EV</text>`;
-    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Distribution of Democratic electoral votes; median ${median}">${o}</svg><p class="small" style="margin-top:6px">Democratic electoral votes. Blue bars are Democratic wins, red are Republican wins.</p>`;
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Distribution of Democratic electoral votes across all simulations">${o}</svg><p class="small" style="margin-top:6px">Democratic electoral votes. Blue bars are Democratic wins, red are Republican wins.</p>`;
   }
 
   // ---------- map: state outlines or a hexagon grid ----------
@@ -551,8 +548,8 @@
     const s = cur;
     // Whole numbers out of 100, so the two big figures, the hexagons and the caption always agree.
     const nD = Math.round(100 * s.pDemWin), nT = Math.round(100 * s.pTie), rep = (100 - nD - nT) / 100;
-    let cum = 0, median = 0;
-    for (let i = 0; i < s.evHistogram.length; i++) { cum += s.evHistogram[i]; if (cum >= 0.5) { median = i; break; } }
+    // Electoral votes with each state going to whoever is ahead in it: the map as drawn.
+    const evPoint = s.states.filter(x => x.demShare > 50).reduce((a, x) => a + x.ev, 0);
     const items = s.states.map(x => ({ abbr: x.abbr, ev: x.ev, share: x.demShare, toss: x.rating === 'TOSS', col: RATE_COLOR[x.rating] }));
     const tp = tippingOf(items).tp;
     const toMap = a => {
@@ -571,7 +568,7 @@
       : `Today's Nowcast is the state-level approval and fundamentals model on its own, because no head-to-head polls are available. <a href="#method">How it works</a>`;
     document.getElementById('figs-2028').innerHTML = [
       [fmt(s.demPopular), 'Democratic share of the two-party vote'],
-      [`${median}`, 'Median Democratic electoral votes across all simulations'],
+      [`${evPoint}`, 'Democratic electoral votes, each state to the candidate ahead in it'],
       [esc(byAbbr[tp.abbr].name.replace(' District', '')), `Tipping-point state, ${fmt(tp.share)} Democratic`],
     ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
     board(document.getElementById('board-28'), s.states, toMap);
@@ -680,8 +677,7 @@
     document.getElementById('cd-28').hidden = !!F;
     if (!R) { body.hidden = true; return; }
     body.hidden = false;
-    let cum = 0, med = 0;
-    for (let i = 0; i < R.evHistogram.length; i++) { cum += R.evHistogram[i]; if (cum >= 0.5) { med = i; break; } }
+    const med = R.states.filter(x => x.demShare > 50).reduce((a, x) => a + x.ev, 0);   // each state to whoever is ahead
     const nD = Math.round(100 * R.pDemWin), nT = Math.round(100 * (R.pTie || 0));
     const m = R.models || {};
     body.innerHTML = `<p class="fc-tag ${label}">Final forecast, published ${niceDate(F.published)}</p>
@@ -689,7 +685,7 @@
         <div><span class="v d-ink">${nD}</span><span class="l">in 100 for the Democrat</span></div>
         <div><span class="v r-ink">${100 - nD - nT}</span><span class="l">in 100 for the Republican</span></div>
         <div><span class="v">${fmt(R.demPopular)}</span><span class="l">Democratic two-party vote</span></div>
-        <div><span class="v">${med}</span><span class="l">Median Democratic electoral votes</span></div>
+        <div><span class="v">${med}</span><span class="l">Democratic electoral votes</span></div>
       </div>
       <p class="small">Half the state-level approval and fundamentals model (${m.enns ? `${Math.round(100 * m.enns.pDemWin)} in 100, ${fmt(m.enns.demPopular)}` : '—'}), half the long-range model from October 2027 (${m.desart ? `${Math.round(100 * m.desart.pDemWin)} in 100, ${fmt(m.desart.demPopular)}` : '—'}), simulated together.</p>
       <svg class="usmap" id="map-fc" role="img" aria-label="Forecast map by rating"></svg>`;
