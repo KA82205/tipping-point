@@ -116,9 +116,11 @@ _raw = [{"state": "US", "endDate": "2026-11-01", "pollster": "A", "questions": [
     _q(("Generic Democrat", "DEM", 50), ("JD Vance", "REP", 42)),
     _q(("Gavin Newsom", "DEM", 45), ("Generic Republican", "REP", 44)),
     _q(("Gavin Newsom", "DEM", 44), ("JD Vance", "REP", 40), ("Aaron Rodgers", "IND", 9)),
+    _q(("Barack Obama", "DEM", 52), ("Donald Trump", "REP", 42)),
 ]}]
 _reg = [{"name": "Gavin Newsom", "party": "D", "state": "CA"}, {"name": "JD Vance", "party": "R", "state": "OH"}]
-_rows, _skipped = candidates.general_matchups(_raw, dt.date(2026, 10, 1), dt.date(2026, 11, 13), lambda d: d, _reg)
+_rows, _skipped = candidates.general_matchups(_raw, dt.date(2026, 10, 1), dt.date(2026, 11, 13), lambda d: d, _reg,
+                                              exclude=["Donald Trump", "Barack Obama"])
 assert sorted(r["d"] for r in _rows) == ["Gavin Newsom", "Mark Cuban"], _rows
-assert _skipped == 3, _skipped
+assert _skipped == 4, _skipped
 print("ok (matchups)")
