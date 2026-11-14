@@ -341,7 +341,7 @@ def main():
         "h2h": {"window": [h_lo.isoformat(), h_hi.isoformat()], "days": hh.get("window_days", 180),
                 "min_polls": hh.get("min_polls", 3), "terms": terms, "polls": matchups, "skipped": h_skipped,
                 "people": h2h_people, "stale": pres_stale},
-        "desart_final": desart_final and {k: v for k, v in desart_final.items() if k != "polls"} | {"n": len(desart_final["polls"])},
+        "desart_final": desart_final,
         # Everything the in-browser ticket picker needs to rerun both models (docs/combine.js).
         "scenario": {
             "constant": cfg["approval"]["constant"], "sign": sign,
