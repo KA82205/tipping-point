@@ -382,21 +382,14 @@ def main():
                           "econ": round(by_abbr[s["abbr"]]["inputs"]["econ"], 4) if s["abbr"] in by_abbr else None}
                          for s in res["states"]]
 
-    # The final forecast: published on publish_day (Aug 6, 2028) and never changed after. The approval and economy
-    # half uses polls conducted June 1 - July 30 (the paper's window); the polls half is the frozen October 2027 set.
+    # The final forecast: the Nowcast as it stands on publish_day (Aug 6, 2028), frozen and never changed after.
+    # By then its approval half uses polls conducted June 1 - July 30 (the paper's window) and its polls half the
+    # frozen October 2027 set, so the Nowcast that day is each paper's forecast.
     fc_path = os.path.join(frozen_dir, "forecast_2028.json")
     if not fx and os.path.exists(fc_path):
         final = json.load(open(fc_path))
     elif not fx and today >= dt.date.fromisoformat(el["publish_day"]) and desart_final and desart_final.get("frozen"):
-        N2 = json.loads(json.dumps(payload))
-        N2["h2h"] = {**N2["h2h"], "polls": desart_final["polls"], "people": desart_final["people"],
-                     "window": desart_final["window"], "skipped": desart_final["skipped"]}
-        N2["scenario"]["candidates"] = registry + [p for p in desart_final["people"] if not any(c["name"] == p["name"] for c in registry)]
-        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-            json.dump({**sim_in, "N": N2, "as_published": True}, f)
-        fo = json.loads(subprocess.check_output(["node", os.path.join(HERE, "run_forecast.js"), f.name]))
-        os.unlink(f.name)
-        fr = fo["combined"]
+        fo, fr = out, res   # the Nowcast already runs the frozen October 2027 polls as DeSart publishes them
         final = {"published": today.isoformat(), "tickets": tickets,
                  "approval": payload["approval"], "economy": payload["economy"], "vp": payload["vp"],
                  "desart_polls": {"window": desart_final["window"], "n": len(desart_final["polls"]),
