@@ -594,6 +594,76 @@
     document.getElementById('cd-28').innerHTML = parts.map(([v, l], i) => `<div><span class="v num">${i ? String(v).padStart(2, '0') : v}</span><span class="l">${l}</span></div>`).join('');
   }
 
+  // ---------- the 2028 forecast, built up as its data arrives ----------
+  // Each paper's own cutoff, by the date polls were conducted: DeSart's polls from October 2027 (fixed Nov 7,
+  // 2027), Enns et al.'s approval polls from June 1 to July 30, 2028 and the economy through June. Until it
+  // publishes on Aug 6, 2028 the tab shows how far each input has got and, once the polls half exists, a
+  // provisional forecast. The published forecast (docs/forecast.js) is shown as it was and never changes.
+  const PUBLISH = '2028-08-06', DS_WIN = ['2027-10-01', '2027-10-31'], DS_FREEZE = '2027-11-07', AP_WIN = ['2028-06-01', '2028-07-30'];
+  const todayIso = () => new Date().toISOString().slice(0, 10);
+  let mapFc = null;
+  function forecastTab() {
+    const F = window.FORECAST || null, df = N && N.desart_final, t = todayIso();
+    const steps = [];
+    const step = (name, what, state, note) => steps.push(`<li class="${state}"><span class="st">${{ wait: 'Not started', open: 'Collecting', done: 'Done' }[state]}</span><div><b>${name}</b><span>${what}</span>${note ? `<em>${note}</em>` : ''}</div></li>`);
+    // 1. Polls model: October 2027 head-to-head polls
+    if (F || (df && df.frozen)) {
+      const n = F ? F.desart_polls.n : df.polls.length, avg = F ? F.desart_polls.avg : df.polls.reduce((a, p) => a + p.share, 0) / df.polls.length;
+      step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'done', `Fixed November 7, 2027: ${n} polls averaging ${fmt(avg)} Democratic.`);
+    } else if (df) {
+      const n = df.polls.length;
+      step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'open', n ? `${n} poll${n === 1 ? '' : 's'} so far, averaging ${fmt(df.polls.reduce((a, p) => a + p.share, 0) / n)} Democratic. Fixed November 7, 2027.` : 'No polls from the window yet. Fixed November 7, 2027.');
+    } else step('Polls model (DeSart)', 'Head-to-head polls conducted in October 2027', 'wait', 'Starts October 1, 2027.');
+    // 2. Approval polls: June 1 - July 30, 2028
+    const apState = F ? 'done' : t < AP_WIN[0] ? 'wait' : 'open';
+    step('Approval (Enns et al.)', 'Trump approval polls conducted June 1 to July 30, 2028', apState,
+      F ? `${fmt(F.approval.approve)} approve, from ${F.approval.pollsters} pollsters.` : apState === 'wait' ? 'Starts June 1, 2028.' : N ? `${fmt(N.approval.approve)} approve so far, from ${N.approval.pollsters} pollsters.` : '');
+    // 3. State economies through June 2028
+    const ec = F ? F.economy.through : N && N.economy.through;
+    step('State economies', 'Philadelphia Fed state indexes through June 2028', F || (ec && ec >= '2028-06') ? 'done' : 'open',
+      ec ? (F ? `Used data through ${monthName(ec)}.` : `Through ${monthName(ec)}${ec >= '2028-06' ? '' : ' so far'}.`) : '');
+    // 4. Tickets
+    const tk = F ? F.tickets : N && N.tickets, named = tk ? ['dem', 'rep'].flatMap(s => ['president', 'vp'].map(k => (tk[s] || {})[k]).filter(x => x && x.name)) : [];
+    step('Nominees and running mates', 'Read from Wikipedia once confirmed', named.length === 4 || F ? 'done' : named.length ? 'open' : 'wait',
+      named.length ? named.map(x => esc(x.name)).join(', ') + (F && named.length < 4 ? '. The rest were not known by the publish date.' : '')
+        : F ? 'None were confirmed by the publish date, so each party\'s possible nominees were averaged by their polling.' : 'None confirmed yet.');
+    step('Publish', 'August 6, 2028, a week after the last cutoff', F ? 'done' : 'wait', F ? `Published ${niceDate(F.published)}. Final: it does not change.` : 'Polls published a few days late are included. After that, nothing changes.');
+    document.getElementById('fc-steps').innerHTML = steps.join('');
+
+    // The forecast itself: final if published, otherwise provisional once the polls half exists.
+    let R = null, label = '';
+    if (F) { R = { ...F.summary, states: F.states, evHistogram: F.evHistogram, models: F.models }; label = 'final'; }
+    else if (df && df.polls.length && N) {
+      const N2 = { ...N, h2h: { ...N.h2h, polls: df.polls, people: df.people, window: df.window },
+        scenario: { ...N.scenario, candidates: N.scenario.candidates.concat((df.people || []).filter(p => !N.scenario.candidates.some(c => c.name === p.name))) } };
+      const picks = Object.fromEntries(Object.keys(ROLES).map(r => [r, readPick(r)]));
+      const out = window.TP.run(N2, pk(picks), { n: 10000, asPublished: true });
+      R = { ...out.combined, models: { enns: out.enns, desart: out.desart } }; label = 'provisional';
+    }
+    const body = document.getElementById('fc-body');
+    document.getElementById('fc-head').innerHTML = F ? 'The 2028 forecast' : `The official prediction will be made in <span id="cd-days">${daysTo(FORECAST_DATE)}</span> days`;
+    document.getElementById('cd-28').hidden = !!F;
+    if (!R) { body.hidden = true; return; }
+    body.hidden = false;
+    let cum = 0, med = 0;
+    for (let i = 0; i < R.evHistogram.length; i++) { cum += R.evHistogram[i]; if (cum >= 0.5) { med = i; break; } }
+    const nD = Math.round(100 * R.pDemWin), nT = Math.round(100 * (R.pTie || 0));
+    const m = R.models || {};
+    body.innerHTML = `<p class="fc-tag ${label}">${label === 'final' ? 'Final forecast' : `Provisional: ${t < AP_WIN[0] ? 'the approval half uses today\'s polls until the June–July window opens' : 'still collecting June–July approval polls'}. Publishes August 6, 2028.`}</p>
+      <div class="fc-figs">
+        <div><span class="v d-ink">${nD}</span><span class="l">in 100 for the Democrat</span></div>
+        <div><span class="v r-ink">${100 - nD - nT}</span><span class="l">in 100 for the Republican</span></div>
+        <div><span class="v">${fmt(R.demPopular)}</span><span class="l">Democratic two-party vote</span></div>
+        <div><span class="v">${med}</span><span class="l">Median Democratic electoral votes</span></div>
+      </div>
+      <p class="small">Half approval and economy (${m.enns ? `${Math.round(100 * m.enns.pDemWin)} in 100, ${fmt(m.enns.demPopular)}` : '—'}), half the polls model from October 2027 (${m.desart ? `${Math.round(100 * m.desart.pDemWin)} in 100, ${fmt(m.desart.demPopular)}` : '—'}), simulated together.</p>
+      <svg class="usmap" id="map-fc" role="img" aria-label="Forecast map by rating"></svg>`;
+    const by = Object.fromEntries(R.states.map(s => [s.abbr, s]));
+    mapFc = () => drawUS(document.getElementById('map-fc'), { fill: a => by[a] ? RATE_COLOR[rateOf(by[a].pDem)] : greyColor(), sub: a => by[a] ? chance(by[a].pDem) : '',
+      selected: null, onPick: () => {}, onHover: () => {} });
+    mapFc();
+  }
+
   function render2028() {
     const days = daysTo(FORECAST_DATE);
     document.getElementById('d-forecast').textContent = days;
@@ -603,6 +673,7 @@
     ramp(document.getElementById('ramp-2028'), 'nowcast');
     document.querySelectorAll('[data-layer28]').forEach(b => b.addEventListener('click', () => setLayer28(b.dataset.layer28)));
     document.getElementById('btn-to-nowcast').addEventListener('click', () => setLayer28('tracker'));
+    try { forecastTab(); } catch (e) { console.error('forecast tab', e); }
     if (!N) {
       ['hero-28', 'jump-28', 'results-detail', 'tracker-detail'].forEach(id => { document.getElementById(id).hidden = true; });
       document.getElementById('live-pill').textContent = 'Waiting for the first data run';
@@ -664,6 +735,7 @@
     document.querySelectorAll('[data-mapmode]').forEach(x => x.setAttribute('aria-pressed', x.dataset.mapmode === mapMode));
     if (map24) map24 = draw24();
     if (map28) map28 = draw28();
+    if (mapFc) mapFc();
   }));
 
   // ================= routing =================

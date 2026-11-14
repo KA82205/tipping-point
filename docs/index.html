@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261113e">
+<link rel="stylesheet" href="styles.css?v=20261113i">
 </head>
 <body>
 
@@ -198,9 +198,12 @@
         <aside class="inspector" id="insp-2028" aria-live="polite"></aside>
       </div>
       <div class="official" id="official-28" hidden>
-        <h3>The official prediction will be made in <span id="cd-days"></span> days</h3>
+        <h3 id="fc-head">The official prediction will be made in <span id="cd-days"></span> days</h3>
         <div class="cd" id="cd-28" aria-hidden="true"></div>
-        <p>The 2028 forecast follows each paper's own cutoff, by the date polls were conducted. The approval and economy model uses approval polls conducted June 1 to July 30, 2028 (100 days before the election) and the economy through June. The polls model uses head-to-head polls conducted in October 2027, as DeSart does, and is fixed a week later, on November 7, 2027. The forecast publishes August 6, 2028, a week after the last cutoff, so polls that come out a few days late are included. Once published, it does not change. In the meantime, view the Nowcast to see what the election might look like if it were held today.</p>
+        <div class="fc-body" id="fc-body" hidden></div>
+        <h4 class="fc-h">How the forecast is coming together</h4>
+        <ol class="fc-steps" id="fc-steps"></ol>
+        <p id="fc-about">The 2028 forecast follows each paper's own cutoff, by the date polls were conducted. The approval and economy model uses approval polls conducted June 1 to July 30, 2028 (100 days before the election) and the economy through June. The polls model uses head-to-head polls conducted in October 2027, as DeSart does, and is fixed a week later, on November 7, 2027. The forecast publishes August 6, 2028, a week after the last cutoff, so polls that come out a few days late are included. Once published, it does not change. In the meantime, view the Nowcast to see what the election might look like if it were held today.</p>
         <button class="btn primary" id="btn-to-nowcast" type="button">View the Nowcast</button>
       </div>
     </div>
@@ -460,8 +463,9 @@
 <script src="data.js"></script>
 <script src="nowcast.js" onerror="void 0"></script>
 <script src="history.js" onerror="void 0"></script>
+<script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261113a"></script>
 <script src="combine.js?v=20261113h"></script>
-<script src="app.js?v=20261113g"></script>
+<script src="app.js?v=20261113i"></script>
 </body>
 </html>

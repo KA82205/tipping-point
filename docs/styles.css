@@ -393,3 +393,24 @@ footer p { max-width: none; margin: 4px 0; }
 .mx-scale div { position: relative; height: 16px; }
 .mx-scale em { position: absolute; transform: translateX(-50%); font: 11px var(--font-num); font-style: normal; color: var(--faint); }
 @media (max-width: 560px) { .mx-row, .mx-scale { grid-template-columns: 104px 1fr 46px; gap: 8px; } .mx-name b { font-size: 13px; white-space: normal; } }
+
+/* Forecast tab: inputs as they arrive, then the forecast */
+.official .fc-h { font: 600 15px var(--font-body); color: var(--ink); margin-top: 6px; }
+.fc-steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; width: 100%; max-width: 760px; }
+.fc-steps li { display: grid; grid-template-columns: 104px 1fr; gap: 14px; align-items: start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.fc-steps li div { display: grid; gap: 2px; }
+.fc-steps b { color: var(--ink); font-weight: 600; }
+.fc-steps span { color: var(--muted); font-size: 14px; }
+.fc-steps em { font-style: normal; color: var(--ink); font-size: 14px; }
+.fc-steps .st { font: 600 12px var(--font-num); text-align: center; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line-2); color: var(--faint); }
+.fc-steps li.open .st { color: var(--accent); border-color: var(--accent); }
+.fc-steps li.done .st { color: var(--ok); border-color: var(--ok); }
+.fc-body { width: 100%; display: grid; gap: 14px; }
+.fc-tag { font: 600 13px var(--font-body); padding: 6px 10px; border-radius: 8px; justify-self: start; }
+.fc-tag.provisional { color: var(--accent); background: rgba(242, 166, 94, .1); }
+.fc-tag.final { color: var(--ok); background: rgba(111, 207, 154, .1); }
+.fc-figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.fc-figs > div { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 4px; }
+.fc-figs .v { font: 600 clamp(28px, 3.6vw, 40px)/1 var(--font-num); }
+.fc-figs .l { color: var(--muted); font-size: 13px; }
+@media (max-width: 700px) { .fc-figs { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fc-steps li { grid-template-columns: 1fr; gap: 6px; } .fc-steps .st { justify-self: start; } }
