@@ -633,13 +633,13 @@
     more.addEventListener('click', () => showPolls(true));
     showPolls(false);
     document.getElementById('h2h-note').innerHTML = hp.length
-      ? `The Democrat's share of the two-party vote in each poll. National polls between one named Democrat and one named Republican from the last ${N.h2h.days} days, from <a href="https://pollresults.org/races/president-2028/">PollResults.org</a> (New York Times poll data, CC BY 4.0). ${N.h2h.skipped ? `${N.h2h.skipped} other questions are left out: generic party ballots, and questions that name a third candidate.` : ''}`
+      ? `The Democrat's share of the two-party vote in each poll. National polls between one named Democrat and one named Republican from the last ${N.h2h.days} days, from <a href="https://pollresults.org/races/president-2028/">PollResults.org</a> (New York Times poll data, CC BY 4.0). ${N.h2h.skipped ? `${N.h2h.skipped} other questions are left out: generic party ballots, questions that name a third candidate, and pairings with a two-term president, who cannot run again.` : ''}`
       : 'No head-to-head polls are available today, so the Nowcast is the approval and economy model on its own.';
     const t = N.tickets, set = ['dem', 'rep'].filter(s => t[s] && t[s].president).length;
     document.getElementById('need-tickets').textContent = set ? `Confirmed: ${set === 2 ? 'both nominees' : 'one nominee'}` : 'Watching, none yet';
     document.getElementById('need-vp').textContent = N.vp.applied ? `On, ${sgn(N.vp.gap, 1)} pts` : N.vp.gap != null ? `Standing by, ${sgn(N.vp.gap, 1)} pts` : 'No recent polls of the vice president';
     const nh = document.getElementById('need-h2h');
-    if (nh) nh.textContent = N.h2h && N.h2h.polls.length ? `Daily, ${N.h2h.polls.length} polls in the window` : 'No polls available today';
+    if (nh) nh.textContent = N.h2h && N.h2h.polls.length ? (N.h2h.stale ? `Today's read failed; using the last good copy, ${N.h2h.polls.length} polls` : `Daily, ${N.h2h.polls.length} polls in the window`) : 'No polls available today';
     document.getElementById('need-econ').textContent = `Daily, through ${monthName(N.economy.through)}`;
     document.getElementById('need-cands').textContent = `Daily, ${N.scenario.candidates.filter(c => c.primary).length} names in primary polls`;
     document.getElementById('polls-2028').innerHTML = N.approval.polls.map(p =>
