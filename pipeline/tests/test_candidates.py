@@ -103,3 +103,22 @@ def test_primary_standing():
 
 if __name__ == "__main__":
     test_filled_infobox(); test_vp_is_nominee(); test_empty_infobox_and_lookup(); test_vp_gap(); test_primary_standing(); print("ok")
+
+import datetime as dt  # noqa: E402
+
+# Head-to-head matchups: every named Democrat vs named Republican counts, listed or not;
+# generic party labels and three-way questions do not.
+def _q(*ans):
+    return {"stage": "general", "population": "rv", "answers": [{"candidateName": n, "party": p, "pct": v} for n, p, v in ans]}
+_raw = [{"state": "US", "endDate": "2026-11-01", "pollster": "A", "questions": [
+    _q(("Gavin Newsom", "DEM", 48), ("JD Vance", "REP", 44)),
+    _q(("Mark Cuban", "DEM", 47), ("JD Vance", "REP", 41)),
+    _q(("Generic Democrat", "DEM", 50), ("JD Vance", "REP", 42)),
+    _q(("Gavin Newsom", "DEM", 45), ("Generic Republican", "REP", 44)),
+    _q(("Gavin Newsom", "DEM", 44), ("JD Vance", "REP", 40), ("Aaron Rodgers", "IND", 9)),
+]}]
+_reg = [{"name": "Gavin Newsom", "party": "D", "state": "CA"}, {"name": "JD Vance", "party": "R", "state": "OH"}]
+_rows, _skipped = candidates.general_matchups(_raw, dt.date(2026, 10, 1), dt.date(2026, 11, 13), lambda d: d, _reg)
+assert sorted(r["d"] for r in _rows) == ["Gavin Newsom", "Mark Cuban"], _rows
+assert _skipped == 3, _skipped
+print("ok (matchups)")
