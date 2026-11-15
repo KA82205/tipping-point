@@ -617,3 +617,18 @@ nav a .ns { display: none; }
   table.mt th, table.mt td { padding-left: 5px; padding-right: 5px; }
   table.mt thead th { white-space: normal; vertical-align: bottom; line-height: 1.25; }
 }
+
+/* ---------- method page: separated sections, readable measure ---------- */
+.method section { padding: 44px 0; }
+.method > section:first-child { padding-bottom: 36px; }
+.method .m-sec { gap: 14px; }
+.method .m-sec h2 { margin-bottom: 4px; }
+.method p { max-width: 72ch; line-height: 1.7; }
+.method p.small { max-width: 78ch; line-height: 1.6; }
+.method .m-sec > p + p, .method .stack > p + p { margin-top: 0; }
+.method .stack > p.small + p.small { margin-top: -4px; }
+.method .byline { color: var(--muted); font-style: italic; margin: -6px 0 4px; }
+.method p b { color: var(--ink); font-weight: 600; }
+.method .eq { margin: 6px 0; }
+.method .cols2 { margin: 10px 0; }
+.method .rules li { line-height: 1.6; }
