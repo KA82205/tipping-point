@@ -692,7 +692,7 @@
     const fixed = !!(N.desart_final && N.desart_final.frozen);
 
     // Status line: when the data were read, and from where.
-    box('data-status').innerHTML = `Last update <b>${etTime(N.generated_at)}</b>. The data are read every morning, at about 8:30 AM ET.` +
+    box('data-status').innerHTML = `Last update <b>${etTime(N.generated_at)}</b>. Updates every morning at about 8:30 AM ET.` +
       (h2h.stale ? ' <span class="warn">PollResults.org could not be read this morning, so the head-to-head polls are the last good copy.</span>' : '');
 
     // What moved since the run before.
