@@ -1,108 +1,90 @@
 # Tipping Point
 
-**Live site: https://ka82205.github.io/tipping-point/** (updated daily; not optimized for mobile)
+**Live site: https://ka82205.github.io/tipping-point/** (updated every morning)
 
-A personal, non-commercial US presidential election forecast site built on the State Presidential Approval/State
-Economy Model (Enns, Colner, Kumar & Lagodny, *PS: Political Science & Politics*, 2024,
-doi:10.1017/S1049096524000994, CC BY-NC 4.0).
+A personal, non-commercial forecast of the 2028 US presidential election. It runs two published
+models state by state and averages them half and half:
 
-- `docs/` is the website (plain HTML/CSS/JS, no build step). `docs/engine.js` is the model; the
-  2028 Nowcast page reruns it in the browser when a visitor picks the tickets.
-- `pipeline/` fetches data every day, builds the model inputs and writes `docs/nowcast.js`.
-- `.github/workflows/update.yml` runs the pipeline daily and commits the new data.
+- the **State Presidential Approval/State Economy Model** (Enns, Colner, Kumar & Lagodny,
+  *PS: Political Science & Politics*, 2024, doi:10.1017/S1049096524000994, CC BY-NC 4.0), and
+- the **Long-Range State-Level Forecast Model** (DeSart, *PS: Political Science & Politics*, 2025,
+  doi:10.1017/S1049096524000805).
 
-## How it runs
+Until the final forecast the site shows a daily **Nowcast**: what the two models say on the data each
+would use today. The site's Method page documents every equation, test and departure from the papers.
 
-`.github/workflows/update.yml` runs every morning, on every push, and from the Actions tab
-(**Run workflow**). It builds the 2024 data and map shapes, fetches the latest polls and FRED
-data, runs the model, commits the new data, and deploys `docs/` to GitHub Pages
-(Settings → Pages → Source: GitHub Actions).
+## Layout
+
+- `docs/` is the website (plain HTML/CSS/JS, no build step). `docs/engine.js` is the approval and
+  fundamentals model and the simulation; `docs/combine.js` adds the long-range model and averages
+  the two. The same code runs in the daily update and in the browser.
+- `pipeline/` fetches the data every day, builds the model inputs, runs both models and writes
+  `docs/nowcast.js` and `docs/history.js`.
+- `.github/workflows/update.yml` runs the pipeline every morning and on every push, commits the new
+  data and deploys `docs/` to GitHub Pages.
 
 The FRED key lives in a repository secret named `FRED_API_KEY`
 (Settings → Secrets and variables → Actions), so it never appears in the public code.
 
-## Run locally
+## Dates
 
-```
-python pipeline/update.py                       # live data
-python pipeline/tests/make_fixtures.py          # fake data for an offline test...
-python pipeline/update.py --fixtures pipeline/tests/fixtures   # ...shown with a TEST DATA flag
-python pipeline/tests/test_economy.py           # reproduces the paper's Table A-2
-python pipeline/tests/test_candidates.py        # nominee detection on real Wikipedia text
-node pipeline/tests/test_uncertainty.js         # reproduces the paper's 2024 odds (Trump about 73%)
-```
-Build `docs/data.js` and `docs/us-states.js` first (see the workflow), then open
-`docs/index.html`. Delete `docs/nowcast.js` after a fixture run.
+Days are US Eastern dates. Each model keeps its paper's own cutoff, judged by the day a poll was
+conducted.
+
+| When | What happens |
+|---|---|
+| Until November 7, 2027 | Long-range model: head-to-head polls conducted in the last 180 days |
+| November 7, 2027 | Long-range model fixed on polls conducted in October 2027, as DeSart does (`pipeline/frozen/desart_2028.json`) |
+| Until June 1, 2028 | Approval model: approval polls from the last 30 days, latest economic month |
+| June 2028 | Approval model switches to polls conducted June 1 to July 30, 2028, once ten pollsters have a poll in that window; economy through June |
+| August 6, 2028 | The Nowcast that day is saved as the final forecast (`pipeline/frozen/forecast_2028.json`, `docs/forecast.js`). It never changes, and the daily update stops |
+
+Both models are refitted with the 2024 results, as their authors refit before each forecast. If
+either author publishes a revised 2028 version before August 6, 2028, the site switches to it and
+says so on the Method page.
 
 ## Data sources
 
-| Input | Source | Automated |
+| Input | Source | Updates |
 |---|---|---|
-| State economies | Philadelphia Fed State Coincident Indexes via FRED (`{ST}PHCI`) | Yes, daily |
-| National Trump approval | VoteHub Polling API and PollResults.org (both CC BY 4.0), merged and averaged here | Yes, daily |
-| State approval | See below | Partly |
-| 2024 state lean, district offsets | Certified 2024 results (`pipeline/results_2024.json`) | Fixed |
-| Nominees, running mates, home states, sitting VP | Wikipedia infobox (`pipeline/candidates.py`), with `pipeline/candidates.json` as fallback; `config.json` overrides | Yes, daily |
-| Possible candidates in the ticket picker | National 2028 primary polls from PollResults.org; new names at 3% or more are added | Yes, daily |
-| Vice-president adjustment | VoteHub job approval of the sitting VP and the president (favorability as fallback) | Yes, daily |
+| State economies | Philadelphia Fed State Coincident Indexes via FRED (`{ST}PHCI`) | Daily |
+| National Trump approval | VoteHub and PollResults.org (both CC BY 4.0), merged and averaged | Daily |
+| State-by-state approval | A copy of Civiqs's state tracker in `pipeline/state_approval.csv`; only the gaps between states are used, re-centred on the national average | Fixed copy (see below) |
+| Head-to-head polls, primary polls | PollResults.org 2028 feed | Daily |
+| Nominees, running mates, home states, sitting VP | Wikipedia infoboxes, with `pipeline/candidates.json` as the curated list | Daily |
+| Vice-president adjustment | VoteHub job approval of the sitting VP and the president (favorability as fallback) | Daily |
+| 2024 results, district offsets | Certified 2024 results (`pipeline/results_2024.json`) | Fixed |
 
-**State approval.** The paper estimates it with MRP on survey microdata (Gallup, AP-NORC,
-Verasight and others, June–July of the election year). No free feed publishes state MRP
-approval, so `config.json → approval.state_source` chooses:
+**State approval.** The paper estimates approval in each state with MRP on survey microdata. No
+free feed publishes that, so `config.json → approval.state_source` is set to `csv`: a dated copy of
+Civiqs's public state tracker. Civiqs's site turns away automatic reads, so the copy is not
+refreshed daily. G. Elliott Morris's Trump Approval Explorer has state MRP estimates, but its page
+says the data may not be republished without written permission. Neither is read automatically
+unless its owner agrees.
 
-- `state_polls` (default): the `vote_swing` estimate, pulled toward any state-level approval
-  polls PollResults.org carries (window plus 60 days; the baseline counts as 1,500 respondents).
-- `vote_swing`: national average shifted by each state's 2024 Trump margin.
-- `csv`: `pipeline/state_approval.csv` with columns `state,approve` (all 50 states + DC).
-  Use estimates you are allowed to republish (Civiqs and Morning Consult publish daily or
-  monthly state trackers, but neither offers a public API), or your own MRP output.
-  The file's state differences are kept and re-centred on the national poll average.
+## Run locally
 
-G. Elliott Morris's Trump Approval Explorer (Strength In Numbers) has state MRP estimates, but
-its page says the data may not be copied or republished without written permission, so it is
-not used here unless he grants it.
+```
+python pipeline/tests/test_economy.py           # reproduces the paper's Table A-2
+python pipeline/tests/test_candidates.py        # nominee detection and head-to-head counting
+node pipeline/tests/test_uncertainty.js         # reproduces the paper's 2024 odds (Harris about 27 in 100)
+python pipeline/tests/make_fixtures.py          # fake data for an offline run...
+python pipeline/update.py --fixtures pipeline/tests/fixtures   # ...shown with a TEST DATA flag
+python pipeline/update.py                       # live data (needs FRED_API_KEY)
+```
 
-## 2024 scorecard numbers
+Build `docs/data.js` and `docs/us-states.js` first (see the workflow), then open
+`docs/index.html`. Restore `docs/nowcast.js` after a fixture run.
 
-The paper prints state forecasts only as a chart (Figure A-2). `pipeline/extract_fig_a2.py`
-reads the chart's vector paths from the supplement PDF and recovers each state's mean,
-90% range and win probability. The recovered values reproduce every call and rating in the
-paper, its count of 17 states within 5 points and 10 within 2.5, and Trump's 312 electoral votes.
+## Checks against the papers
 
-## Assumptions to confirm with the replication data
-
-These are not published in the paper or appendix and are set in `config.json`:
-
-- **Approval constant (50).** Table A-3's range (−21.85 to 34.68) and the 2024 national
-  result are both consistent with about 50.
-- **Economic weight δ (0.55) and its grid (0.40–0.70).** 0.55 is the appendix's California
-  example; the 2024 forecast used the median of the fitted 2008–2016 values.
-- **Economy signed by incumbent party.** Growth is multiplied by −1 under a Republican
-  president, as approval is.
-- **Coefficient draws are independent.** The paper's CLARIFY draws use the full covariance
-  matrix.
-- **How the model error is shared.** The paper adds one error draw per simulation. The engine
-  uses a shared draw (3.1 points) plus a state-specific draw (1.54 points), 3.46 in total.
-  That split reproduces the paper's published 2024 results from its own state forecasts:
-  Harris in 27% of simulations, ties about 1 in 500, and the spread of Figure 1. Fully
-  independent state errors would give Harris 12%.
-
-The replication archive (Harvard Dataverse, doi:10.7910/DVN/PBGFOF) would settle all five.
-
-## Before the forecast date
-
-The site calls the daily run the 2028 Nowcast: what the model says if the election were held
-today. Visitors can pick who they think will be on each ticket; each nominee and running mate
-locks in once Wikipedia lists them. Approval and the state economies are live data and cannot
-be changed on the page.
-
-Until 1 June 2028 the Nowcast uses a trailing 30-day poll window and weights the latest
-quarter of economic data as if it were the election year's second quarter. From 1 June 2028
-the poll window switches to June 1–July 30, matching the paper. The final forecast follows each paper's cutoff by field date: approval polls 1 June-30 July
-2028 (Enns et al.), head-to-head polls from October 2027 (DeSart, fixed 7 November 2027). It
-publishes 6 August 2028 and is then frozen (pipeline/frozen/, docs/forecast.js). For the official
-forecast, nominees, running mates, home states and the VP adjustment fill in automatically
-once Wikipedia lists the tickets; supply MRP state approval through the `csv` source.
-
-Gallup, one of the paper's 2024 sources, has stopped publishing presidential approval;
-plan the 2028 MRP survey sources early.
+- Refitting each model on its paper's years reproduces the published coefficients exactly; the
+  site then adds 2024 (`docs/engine.js`, `docs/combine.js`).
+- Rerunning the authors' simulation on their replication data gives Harris 27 in 100 for 2024, as
+  published. DeSart's equation with his own independent errors reproduces his published 2024
+  simulation (256 Democratic electoral votes on average).
+- The paper prints its 2024 state forecasts only as a chart (Figure A-2);
+  `pipeline/extract_fig_a2.py` reads the chart's vector paths, and the recovered values match every
+  call and rating in the paper and Trump's 312 electoral votes.
+- Back-tests of 2008 to 2024, each election forecast from earlier elections only, are on the
+  Method page next to the forecasts the authors actually published.
