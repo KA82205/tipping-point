@@ -71,6 +71,7 @@ node pipeline/tests/test_uncertainty.js         # reproduces the paper's 2024 od
 python pipeline/tests/make_fixtures.py          # fake data for an offline run...
 python pipeline/update.py --fixtures pipeline/tests/fixtures   # ...shown with a TEST DATA flag
 python pipeline/update.py                       # live data (needs FRED_API_KEY)
+python pipeline/backtest_2008_2024.py FOLDER    # the Method page's track record, from the papers' replication files
 ```
 
 Build `docs/data.js` and `docs/us-states.js` first (see the workflow), then open
@@ -87,4 +88,7 @@ Build `docs/data.js` and `docs/us-states.js` first (see the workflow), then open
   `pipeline/extract_fig_a2.py` reads the chart's vector paths, and the recovered values match every
   call and rating in the paper and Trump's 312 electoral votes.
 - Back-tests of 2008 to 2024, each election forecast from earlier elections only, are on the
-  Method page next to the forecasts the authors actually published.
+  Method page next to the forecasts the authors actually published. `pipeline/backtest_2008_2024.py`
+  reproduces them, with a last-election baseline and a check of the simulated ranges, from the
+  replication files on Harvard Dataverse (doi:10.7910/DVN/PBGFOF and doi:10.7910/DVN/HZGLY9; the
+  data are not stored here).
