@@ -7,7 +7,7 @@
     "publish_day": "2028-08-06",
     "desart_poll_window": ["2027-10-01", "2027-10-31"],
     "desart_freeze_day": "2027-11-07",
-    "_dates_note": "The final forecast follows each paper's own cutoff, judged by the date polls were conducted. Approval and economy (Enns et al.): approval polls conducted June 1 - July 30, 2028 (forecast_day, 100 days out), economy through June. Polls model (DeSart): head-to-head polls conducted in October 2027 (desart_poll_window), 13 months out. Each half freezes a week after its cutoff (desart_freeze_day, publish_day) so polls published a few days late are in; after that nothing changes. The final forecast is published on publish_day and never changes. The daily Nowcast keeps running.",
+    "_dates_note": "The final forecast follows each paper's own cutoff, judged by the date polls were conducted. Approval and economy (Enns et al.): approval polls conducted June 1 - July 30, 2028 (forecast_day, 100 days out), economy through June. Polls model (DeSart): head-to-head polls conducted in October 2027 (desart_poll_window), 13 months out. Each half freezes a week after its cutoff (desart_freeze_day, publish_day) so polls published a few days late are in; after that nothing changes. The final forecast is the Nowcast as it stands on publish_day (US Eastern date); it never changes, and the daily update stops with it.",
     "incumbent_president": "Donald Trump",
     "incumbent_party": "R",
     "incumbent_party_terms": 1,
@@ -74,6 +74,8 @@
     "pollresults_president_url": "https://api.pollresults.org/v1.0/politics/results/president",
     "_pollresults_note": "PollResults.org (NYT poll data, CC BY 4.0, non-commercial). Merged into the national average; its state polls feed state_source state_polls. If its format changes, the run logs a warning and continues with VoteHub only.",
     "nowcast_window_days": 30,
+    "official_min_pollsters": 10,
+    "_official_min_note": "ASSUMPTION, not in the paper: from June 1, 2028 the Nowcast moves to the paper's window (approval_window) once this many pollsters have a poll conducted in it; until then it keeps the trailing nowcast_window_days. The window opens empty, and without this the first days of June would rest on one or two polls. It has no effect on the final forecast: once the window closes on July 30 it is used whatever it holds.",
     "state_source": "csv",
     "state_live_read": false,
     "state_prior_n": 1500,
@@ -90,8 +92,12 @@
       "Bill Clinton"
     ],
     "_cannot_run_note": "Two-term presidents cannot be nominees (22nd Amendment), so matchups naming them are left out. The sitting president is added automatically.",
+    "home_states": {
+      "Mark Cuban": "TX"
+    },
+    "_home_states_note": "Home states set by hand for people in head-to-head polls who are not on the candidate list, where Wikipedia's infobox gives only a birthplace. Mark Cuban was born in Pittsburgh but has lived in Dallas for decades.",
     "window_days": 180,
-    "_window_note": "DEPARTURE: DeSart uses polls from October of the year before the election (October 2027). The Nowcast uses the last window_days days instead.",
+    "_window_note": "DEPARTURE: DeSart uses polls from October of the year before the election (October 2027). The Nowcast uses the last window_days days until desart_freeze_day, and the October 2027 polls from then on.",
     "min_polls": 5,
     "_min_polls_note": "A chosen nominee or pairing needs at least this many polls to be judged on its own polls; otherwise a wider set is used."
   },

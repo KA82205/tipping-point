@@ -24,6 +24,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from zoneinfo import ZoneInfo
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -139,7 +140,7 @@ def slug(name):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--fixtures", help="read every source from this folder instead of the network")
-    ap.add_argument("--today", help="YYYY-MM-DD, defaults to today (UTC)")
+    ap.add_argument("--today", help="YYYY-MM-DD, defaults to today in US Eastern time")
     args = ap.parse_args()
 
     cfg = json.load(open(os.path.join(HERE, "config.json")))
@@ -149,9 +150,12 @@ def main():
         return
     results = json.load(open(os.path.join(HERE, "results_2024.json")))
     registry = json.load(open(os.path.join(HERE, "candidates.json")))["candidates"]
-    today = dt.date.fromisoformat(args.today) if args.today else dt.datetime.now(dt.timezone.utc).date()
+    # The day is the US Eastern date, not UTC's: a run on a US evening belongs to that day, and the cutoff
+    # days (the poll windows, the freeze days, the publish day) start at midnight Eastern.
+    today = dt.date.fromisoformat(args.today) if args.today else dt.datetime.now(ZoneInfo("America/New_York")).date()
     cache = os.path.join(HERE, "cache")
     pres_stale = False   # True when the 2028 polls come from the last good copy, not today's read
+    degraded = []        # sources that could not be read fresh today; nothing is frozen for good on such a day
     fx = args.fixtures
 
     def fx_json(name, default=None):
@@ -186,6 +190,7 @@ def main():
         except Exception as e:  # second source is optional
             print(f"WARNING: PollResults fetch failed ({e}); continuing with VoteHub only")
             pr_raw = []
+            degraded.append("PollResults approval polls")
         wiki = None
 
         def _subject(kind, key):
@@ -194,6 +199,7 @@ def main():
                     return approval.fetch_votehub(cfg["approval"][key].format(slug=subject_slug))
                 except Exception as e:
                     print(f"WARNING: {kind} fetch for {subject_slug} failed ({e})")
+                    degraded.append(f"VoteHub {kind} polls")
                     return []
             return get
         fav = _subject("favorability", "votehub_fav_url")
@@ -213,6 +219,8 @@ def main():
             pres_raw = (json.load(open(pres_cache)) or {}).get("results", [])
             pres_stale = bool(pres_raw)
             print(f"WARNING: using the last good copy of the PollResults 2028 polls ({len(pres_raw)} records)")
+        if pres_stale or not pres_raw:
+            degraded.append("PollResults 2028 polls")
         os.makedirs(cache, exist_ok=True)
         json.dump({"polls": polls}, open(os.path.join(cache, "votehub.json"), "w"))
         json.dump({"results": pr_raw}, open(os.path.join(cache, "pollresults.json"), "w"))
@@ -237,10 +245,24 @@ def main():
     national_polls, state_polls = approval.merge_polls(polls, pr_raw)
     if pr_raw and not any(p.get("source") == "pollresults" for p in national_polls) and not state_polls:
         print(f"WARNING: could not read any of {len(pr_raw)} PollResults records; check pipeline/cache/pollresults.json")
+    # The paper's window (June 1 - July 30, 2028) opens with no polls in it. While it is still open and fewer
+    # than official_min_pollsters have a poll in it, the Nowcast keeps its trailing window, so the first days
+    # of June do not rest on one or two polls. Once the window has closed it is used whatever it holds.
+    trailing = cfg["approval"]["nowcast_window_days"]
+    official_wait = None
+    if mode == "official" and today <= dt.date.fromisoformat(cfg["election"]["approval_window"][1]):
+        need = cfg["approval"].get("official_min_pollsters", 10)
+        try:
+            have = approval.national_average(national_polls, w_lo, w_hi)["pollsters"]
+        except RuntimeError:
+            have = 0
+        if have < need:
+            official_wait = {"pollsters": have, "needed": need}
+            w_lo, w_hi, mode = today - dt.timedelta(days=trailing), today, "nowcast"
     nat = approval.national_average(national_polls, w_lo, w_hi)
-    # For the site's "latest data" page only: the approval average as it stood each week of the term, with the
-    # same 30-day average the Nowcast uses. The models read only today's value.
-    appr_trend, span = [], (w_hi - w_lo).days
+    # For the site's "latest data" page only: the approval average as it stood each week of the term, as a
+    # trailing 30-day average. The models read only today's value.
+    appr_trend, span = [], trailing
     t_day = dt.date.fromisoformat(cfg["election"]["term_start_month"] + "-01") + dt.timedelta(days=span)
     while t_day < w_hi:
         try:
@@ -257,6 +279,8 @@ def main():
     codes, tickets, vp_is_nominee = candidates.resolve(cfg, detected)
     for n in detected["notes"]:
         print("WARNING:", n)
+    if detected["notes"]:
+        degraded.append("Wikipedia")
 
     # Possible candidates, ordered by 2028 primary polling; new names are added automatically.
     cc = cfg["candidates"]
@@ -286,7 +310,7 @@ def main():
         tries += [("approval", spans[-1], 1), ("favorability", spans[-1], 1)]
         for kind, days, need in tries:
             usual = days == spans[0]
-            lo = g_lo if usual else today - dt.timedelta(days=days)
+            lo = g_lo if usual else g_hi - dt.timedelta(days=days)   # counted back from the window's end, not from today
             g, basis = candidates.vp_gap(*sources[kind], lo, g_hi, approval._iso, kind, min_vp=need)
             if g is not None:
                 gap, gap_kind, g_lo = g, kind, lo
@@ -328,7 +352,9 @@ def main():
         out = []
         for party, key in (("D", "d"), ("R", "r")):
             for name in sorted({m[key] for m in rows} - {n for p, n in listed if p == party}):
-                st, _src = candidates.home_state_of(name, [], wiki)
+                st = hh.get("home_states", {}).get(name)   # set by hand where Wikipedia's infobox misleads
+                if not st:
+                    st, _src = candidates.home_state_of(name, [], wiki)
                 out.append({"name": name, "party": party, "state": st})
         return out
     h2h_people = off_list(matchups)
@@ -347,13 +373,15 @@ def main():
         desart_final = {"window": [ds_lo.isoformat(), ds_hi.isoformat()], "polls": ds_rows, "skipped": ds_skipped,
                         "people": off_list(ds_rows), "terms": terms, "as_of": today.isoformat(), "frozen": False}
         if not fx and today >= dt.date.fromisoformat(el["desart_freeze_day"]):
-            if ds_rows and pres_raw:
+            # Not frozen from a stale copy of the polls, unless the feed has been unreadable for a week.
+            late = (today - dt.date.fromisoformat(el["desart_freeze_day"])).days >= el.get("freeze_retry_days", 7)
+            if ds_rows and pres_raw and (not pres_stale or late):
                 desart_final["frozen"] = True
                 os.makedirs(frozen_dir, exist_ok=True)
                 json.dump(desart_final, open(ds_path, "w"), indent=1)
                 print(f"Froze the polls model's half of the final forecast: {len(ds_rows)} polls from {ds_lo} to {ds_hi}")
             else:
-                print("WARNING: freeze day for the polls model passed, but no October 2027 polls could be read; will retry")
+                print("WARNING: freeze day for the polls model passed, but the October 2027 polls could not be read fresh; will retry")
 
     by_abbr = {s["abbr"]: s for s in states}
     r4 = lambda x: round(x, 4)  # noqa: E731
@@ -364,7 +392,7 @@ def main():
         "fixture_run": bool(fx),
         "approval": {"approve": round(nat["approve"], 1), "disapprove": round(nat["disapprove"], 1),
                      "window": [w_lo.isoformat(), w_hi.isoformat()], "pollsters": nat["pollsters"],
-                     "polls": nat["polls"][:25], "trend": appr_trend, "state_source": cfg["approval"]["state_source"],
+                     "polls": nat["polls"][:25], "trend": appr_trend, "official_wait": official_wait, "state_source": cfg["approval"]["state_source"],
                      "state_data": state_info, "state_polls_used": state_used},
         "economy": {"through": econ_last, "delta": cfg["economy"]["delta"], **econ_summary(econ_raw, econ_last)},
         "tickets": tickets,
@@ -422,6 +450,12 @@ def main():
     fc_path = os.path.join(frozen_dir, "forecast_2028.json")
     if not fx and os.path.exists(fc_path):
         final = json.load(open(fc_path))
+    elif (not fx and today >= dt.date.fromisoformat(el["publish_day"]) and desart_final and desart_final.get("frozen")
+          and degraded and (today - dt.date.fromisoformat(el["publish_day"])).days < el.get("publish_retry_days", 3)):
+        # A source could not be read today. The forecast is frozen for good, so it waits for a clean read
+        # (the next run, or tomorrow's); after publish_retry_days it is published with what there is.
+        print(f"WARNING: the final forecast was NOT published today: could not read {', '.join(sorted(set(degraded)))}; will retry")
+        final = None
     elif not fx and today >= dt.date.fromisoformat(el["publish_day"]) and desart_final and desart_final.get("frozen"):
         fo, fr = out, res   # the Nowcast already runs the frozen October 2027 polls as DeSart publishes them
         final = {"published": today.isoformat(), "tickets": tickets,
@@ -450,7 +484,8 @@ def main():
     hist = json.load(open(hist_path)) if os.path.exists(hist_path) else []
     if not fx:
         # v4: average of three models. Earlier days used fewer models and are dropped.
-        hist = [h for h in hist if h.get("v") == 4 and h["date"] != today.isoformat()]
+        # Today's row is replaced; a row dated after today (written by a run stamped with the wrong day) is dropped.
+        hist = [h for h in hist if h.get("v") == 4 and h["date"] < today.isoformat()]
         mp = payload["models"]
         hist.append({"v": 4, "date": today.isoformat(), "pDemWin": round(res["pDemWin"], 4),
                      "demPopular": round(res["demPopular"], 2), "approve": round(nat["approve"], 1),
