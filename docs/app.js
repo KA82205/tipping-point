@@ -763,7 +763,7 @@
         <p class="dc-read" id="econ-read" aria-live="polite"></p><div class="dc-chart bars" id="econ-chart"></div>` : ''}
       ${ranked.length ? `<div class="dc-two"><div><h3>Grew most</h3><ul class="dc-list">${ranked.slice(0, 3).map(st).join('')}</ul></div>
         <div><h3>${ranked[ranked.length - 1][1] < 0 ? 'Shrank most' : 'Grew least'}</h3><ul class="dc-list">${ranked.slice(-3).reverse().map(st).join('')}</ul></div></div>` : ''}
-      <p class="foot">Change in ${lastM ? monthName(lastM.m) : 'the newest month'} from the month before. The data arrive about two months after the month they cover; the model uses months through June 2028.</p>`;
+      <p class="foot">Change in ${lastM ? monthName(lastM.m) : 'the newest month'} from the month before. The Philadelphia Fed publishes each month about four weeks after it ends; the model uses months through June 2028.</p>`;
     if (M.length) {
       const el = box('econ-chart'), read = box('econ-read');
       const W = el.clientWidth < 480 ? 380 : 600, Ht = 150, l = 30, r = 8, tp = 8, b = 22, bw = (W - l - r) / M.length;
