@@ -611,3 +611,9 @@ nav a .ns { display: none; }
   .dt.cards .lbl { display: inline; }
   .dt.cards tr.new td.c-a { color: var(--faint); }
 }
+@media (max-width: 600px) {
+  /* Method tables: let the column headings wrap so four columns fit a phone. */
+  table.mt { font-size: 13.5px; }
+  table.mt th, table.mt td { padding-left: 5px; padding-right: 5px; }
+  table.mt thead th { white-space: normal; vertical-align: bottom; line-height: 1.25; }
+}

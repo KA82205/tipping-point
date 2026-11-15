@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261114j">
+<link rel="stylesheet" href="styles.css?v=20261114m">
 </head>
 <body>
 
@@ -329,10 +329,10 @@
     <p>The Nowcast runs it refitted on 1996–2024 from DeSart's replication data, with 2024 added. Refitting on 1996–2020 reproduces the numbers above exactly. With 2024 added: previous share 1.007, polls 0.522, home state 1.91, terms −1.00, standard error 2.93.</p>
     <h2>How they are combined</h2>
     <p>The two models read different things: how people rate the president and how state economies are doing, and what voters say when asked to choose between named candidates. Each state's Nowcast is the average of the two models' forecasts for that state, half each. The Electoral College is then simulated once from those averages, the way the state-level approval and fundamentals model simulates it.</p>
-    <p>Equal weights, because the back-tests found no mix that does reliably better: the best one moved around depending on how the test was run. Research on election forecasting has long found that a plain average of forecasts from different methods beats relying on one, and is hard to improve on by fitting weights. Nothing in the combination is fitted to past results: both models run with their authors' equations, and each gets half. The method was fixed on November 12, 2026, and will not be changed on the strength of these same back-tests again, so that 2028 is a fair test of it. The one exception is the authors' own updates: if Enns and colleagues or DeSart publish a revised version of their model for 2028 before the final forecast, the site switches to it and says so here. Their published track records come from the version each author used at the time, so following their updates keeps the site on the version with that record. The site does not choose between versions itself.</p>
+    <p>Equal weights, because the back-tests found no mix that does reliably better: the best one moved around depending on how the test was run. Research on election forecasting has long found that a plain average of forecasts from different methods beats relying on one, and is hard to improve on by fitting weights. Nothing in the combination is fitted to past results: both models run with their authors' equations, and each gets half. The method was fixed on November 12, 2026, and will not be changed on the strength of these same back-tests again, so that 2028 is a fair test of it. The one exception is the authors' own updates: if Enns and colleagues or DeSart publish a revised version of their model for 2028 before the final forecast, the site switches to it and says so here. Their published track records come from the version each author used at the time, so following their updates keeps the site on the version with that record. If they do not, the current versions stand. The site does not choose between versions itself.</p>
     <h3 style="margin-top:22px">Track record</h3>
     <p>Each election below was forecast the way each model would have forecast it at the time: refitted on the earlier elections only, with that year's inputs. Every number is computed from the two papers' replication files and the 2024 results.</p>
-    <p>These are back-tests: today's versions of the two models, run on past elections. The forecasts the authors actually published before each election did at least as well. Enns and colleagues' 2020 forecast called every state except Georgia, and their 2024 forecast called every state, with Trump at exactly 312 electoral votes. DeSart's 2024 forecast, published a year before the election, called every state. The back-tests come out a little lower, for example 47 states rather than 49 in 2020, because they apply one version of each model to every year instead of the version the authors used at the time.</p>
+    <p>These are back-tests: today's versions of the two models, run on past elections. The forecasts the authors actually published before each election are compared with them below the tables.</p>
     <div class="cols2">
       <table class="mt">
         <caption>National vote, Democratic share</caption>
@@ -360,6 +360,32 @@
       </table>
     </div>
     <p class="small">2008 to 2024 are the elections both models can be tested on fairly: the long-range model's data starts in 1996, and with fewer than three past elections its equation cannot be estimated properly. The national figures add up the 50 states by turnout, leaving out the District of Columbia, so they differ slightly from the papers' own. The Nowcast called four of the five winners; like both models on their own, it called 2016 wrong, giving Clinton 285 electoral votes. Its average miss in a state was 2.1 points, against 2.6 and 2.2 for the two models alone, and it called 240 of the 250 state results, against 236 and 238. Its national miss is smaller than either model's because their misses often point in opposite directions and partly cancel: in 2012 the state-level approval and fundamentals model was 2.0 points too low and the long-range model 1.7 too high, so the average was off by 0.2. When both miss the same way, as in 2020, the average does too. A second test, which forecasts each election from 1996 to 2024 using all the other elections, gives the Nowcast a state miss of 2.2 points and a national miss of 1.0, with seven of eight winners called. The long-range model is tested here on polls from October of the year before the election, as DeSart designed it. The Nowcast feeds it polls from even earlier, so today it is probably less accurate than this record shows.</p>
+    <h3 style="margin-top:22px">Published forecasts and these back-tests</h3>
+    <p>The back-tests apply today's version of each model to every year. Before each election the authors refit their models and sometimes revise them, so the forecasts they actually published came from the version they used at the time. Where both exist, they compare like this.</p>
+    <div class="cols2">
+      <table class="mt">
+        <caption>Approval and fundamentals model (Enns and colleagues)</caption>
+        <thead><tr><th scope="col"></th><th scope="col">Published</th><th scope="col">Back-test</th><th scope="col">Result</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">2020 states called</th><td>49</td><td>47</td><td></td></tr>
+          <tr><th scope="row">2020 Democratic vote</th><td>54.5</td><td>56.0</td><td>52.2</td></tr>
+          <tr><th scope="row">2024 states called</th><td>50</td><td>50</td><td></td></tr>
+          <tr><th scope="row">2024 Democratic vote</th><td>49.7</td><td>49.4</td><td>49.2</td></tr>
+        </tbody>
+      </table>
+      <table class="mt">
+        <caption>Long-range model (DeSart)</caption>
+        <thead><tr><th scope="col"></th><th scope="col">Published</th><th scope="col">Back-test</th><th scope="col">Result</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">2016 Democratic vote</th><td>50.3</td><td>50.1</td><td>51.0</td></tr>
+          <tr><th scope="row">2020 Democratic vote</th><td>54.8</td><td>54.8</td><td>52.2</td></tr>
+          <tr><th scope="row">2024 states called</th><td>50</td><td>50</td><td></td></tr>
+          <tr><th scope="row">2024 Democratic vote</th><td>50.5</td><td>50.6</td><td>49.2</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small">Democratic share of the two-party vote, in percent; states called are of 50. Enns and colleagues' 2020 forecast missed only Georgia (Enns and Lagodny 2021); their 2024 forecast had Trump at exactly 312 electoral votes. DeSart's published 2016 and 2020 figures are his national forecasts as reported in his 2024 paper (table 1), which gives no state-by-state count for those years; his 2024 forecast was published a year before the election. The authors' own versions did as well as the back-tests or better: two more states and 1.5 points closer in 2020 for Enns and colleagues, and almost no difference for DeSart. Part of the 2020 gap may come from data rather than the model, since that forecast used the authors' own state approval estimates from almost 90,000 survey responses.</p>
+    <p><b>What this means for 2028.</b> The published records come from each author's latest version at the time, so the site follows their updates. If Enns and colleagues or DeSart publish a revised version of their model for 2028 before August 6, 2028, the site switches to it and says so here. If they do not, the current versions stand. The site never chooses between versions itself.</p>
     <h3 style="margin-top:22px">Why there is no third model</h3>
     <p>Several well-known forecasts were tried as a third member of the average, in the same back-tests: counts of Allan Lichtman's Keys to the White House, Helmut Norpoth's Primary Model and Alan Abramowitz's Time for Change model. Each gives one national number, so each was tested the same way: the state map from the first two models, the national level from all three.</p>
     <div class="cols2">
