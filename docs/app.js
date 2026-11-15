@@ -3,6 +3,10 @@
   const NAT = window.NATIONAL_2024;
   const SHAPES = window.US_STATES;
   const N = window.NOWCAST;
+  // The final forecast shows from 9 AM Eastern on August 6, 2028. That morning's run may save it a little
+  // earlier or later; until 9 AM the page keeps showing the countdown.
+  const FORECAST_DATE = new Date('2028-08-06T09:00:00-04:00');
+  if (window.FORECAST && new Date() < FORECAST_DATE) window.FORECAST = null;
   const byAbbr = Object.fromEntries(R.map(r => [r.abbr, r]));
   const natActual = 100 * NAT.dem / (NAT.dem + NAT.rep);
   // The 2024 scorecard has two forecasts to score: 'pub', the state-level approval and fundamentals model's forecast as its
@@ -261,7 +265,7 @@
   // inputs change marked ahead of time: when they happen the Nowcast can jump.
   const EVENTS = [
     ['2027-11-07', 'Long-range model locks', 'The long-range model switches to DeSart\'s October 2027 polls and stops changing.'],
-    ['2028-06-01', 'Approval window', 'The approval model switches to polls conducted June 1 to July 30, as the paper does.'],
+    ['2028-06-01', 'Approval window', 'The approval model starts moving to polls conducted June 1 to July 30, as the paper does; it switches once ten pollsters have one.'],
     ['2028-08-06', 'Final', 'The final forecast publishes and stops changing.'],
   ];
   function trendChart(el, noteEl, H) {
@@ -315,7 +319,6 @@
   }
 
   // ---------- dates ----------
-  const FORECAST_DATE = new Date('2028-08-06T09:00:00-04:00');   // 9 AM ET Aug 6, 2028: by then that morning's run has published it
   const ELECTION_DATE = new Date('2028-11-07T00:00:00-05:00');
   const daysTo = d => Math.max(0, Math.floor((d - new Date()) / 86400000));
   const monthName = ym => new Date(ym + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -570,7 +573,7 @@
     ensemble(document.getElementById('ens-28'), { enns: s.enns || s, desart: s.desart, now: s });
     setGlow(s.pDemWin, rep);
     waffle(document.getElementById('waffle-28'), s.pDemWin, s.pTie);
-    document.getElementById('waffle-cap').textContent = `Out of 100 simulated elections held today, the Democrat wins ${nD} and the Republican wins ${100 - nD - nT}${nT ? `, with ${nT} tied` : ''}. A simulation is one possible outcome given how far off the models have been in the past.`;
+    document.getElementById('waffle-cap').textContent = `Out of 100 simulated elections${window.FORECAST ? '' : ' held today'}, the Democrat wins ${nD} and the Republican wins ${100 - nD - nT}${nT ? `, with ${nT} tied` : ''}. A simulation is one possible outcome given how far off the models have been in the past.`;
     const mo = document.getElementById('models-28');
     if (mo) mo.innerHTML = s.desart
       ? `Each state's number is the average of the state-level approval and fundamentals model and the long-range model, half each. The whole map is then simulated together, so the Nowcast's odds are not simply the average of the two models' odds. ${nomineesNote()} ${s.desart ? POLLS_NOTE(s.info) : ''} <a href="#method">How they work</a>`
@@ -692,7 +695,8 @@
     const fixed = !!(N.desart_final && N.desart_final.frozen);
 
     // Status line: when the data were read, and from where.
-    box('data-status').innerHTML = `Last update <b>${etTime(N.generated_at)}</b>. Updates every morning at about 8:30 AM ET.` +
+    box('data-status').innerHTML = (window.FORECAST ? `The final forecast was published ${niceDate(window.FORECAST.published)}. The data stopped updating then; this page shows them as they stood.`
+      : `Last update <b>${etTime(N.generated_at)}</b>. Updates every morning, Eastern time.`) +
       (h2h.stale ? ' <span class="warn">PollResults.org could not be read this morning, so the head-to-head polls are the last good copy.</span>' : '');
 
     // What moved since the run before.
@@ -708,7 +712,7 @@
     const nD = Math.round(100 * S.pDemWin);
     const econNew = prev && prev.econThrough && prev.econThrough !== E.through;
     box('data-changes').innerHTML = [
-      [`${nD} in 100`, 'The Democrat\'s chance in the Nowcast', change(100 * S.pDemWin, prev && 100 * prev.pDemWin, '', 0, true)],
+      [`${nD} in 100`, `The Democrat's chance in ${window.FORECAST ? 'the forecast' : 'the Nowcast'}`, change(100 * S.pDemWin, prev && 100 * prev.pDemWin, '', 0, true)],
       [fmt(S.demPopular), 'Expected Democratic vote', change(S.demPopular, prev && prev.demPopular, ' pts', 1, true)],
       [fmt(A.approve), 'Trump\'s approval', change(A.approve, prev && prev.approve, ' pts', 1)],
       [pollAvg === null ? '—' : fmt(pollAvg), 'Democrat\'s share in head-to-head polls', change(pollAvg, prev && prev.pollAvg, ' pts', 1, true)],
@@ -724,9 +728,10 @@
       <td class="num c-g ${p.share > 50 ? 'd-ink' : p.share < 50 ? 'r-ink' : ''}">${marginOf(p.share)}</td><td class="num muted c-c"><span class="lbl">Conducted to </span>${shortDay(p.date)}</td></tr>`;
     const SHOW = 8;
     box('dc-h2h').innerHTML = `<div class="dc-head"><div><h2 id="dc-h2h-h">Head-to-head polls</h2>
-        <p class="small">${hp.length} poll${hp.length === 1 ? '' : 's'} conducted ${shortDay(h2h.window[0])} to ${shortDay(h2h.window[1])} count toward the long-range model${pollAvg !== null ? `; the Democrat averages ${fmt(pollAvg)} of the two-party vote` : ''}. ${nRecent ? `${nRecent} added in the last week.` : 'None added in the last week.'}</p></div>
+        <p class="small">${fixed ? `The long-range model is fixed on ${N.desart_final.polls.length} polls conducted in October 2027${pollAvg !== null ? `, where the Democrat averages ${fmt(pollAvg)} of the two-party vote` : ''}. Below are the ${hp.length} polls conducted since ${shortDay(h2h.window[0])}.`
+          : `${hp.length} poll${hp.length === 1 ? '' : 's'} conducted ${shortDay(h2h.window[0])} to ${shortDay(h2h.window[1])} count toward the long-range model${pollAvg !== null ? `; the Democrat averages ${fmt(pollAvg)} of the two-party vote` : ''}.`} ${nRecent ? `${nRecent} added in the last week.` : 'None added in the last week.'}</p></div>
         <a class="dc-link" href="#nowcast">Matchups chart</a></div>
-      ${fixed ? '<p class="note">Since November 7, 2027 the long-range model uses only polls conducted in October 2027, as DeSart does. Newer polls are listed here but no longer move the Nowcast.</p>' : ''}
+      ${fixed ? `<p class="note">Since November 7, 2027 the long-range model uses only polls conducted in October 2027, as DeSart does. Newer polls are listed here but no longer move ${window.FORECAST ? 'the forecast' : 'the Nowcast'}.</p>` : ''}
       ${hp.length ? `<div class="dt-wrap"><table class="dt cards"><thead><tr><th>Added</th><th>Pollster</th><th>Matchup</th><th class="num">Margin</th><th class="num">Conducted</th></tr></thead>
         <tbody>${hp.slice(0, SHOW).map(hRow).join('')}</tbody><tbody class="more" hidden>${hp.slice(SHOW).map(hRow).join('')}</tbody></table></div>
         ${hp.length > SHOW ? `<button class="btn ghost dc-more" type="button" aria-expanded="false">Show all ${hp.length} polls</button>` : ''}` : '<p class="small">No head-to-head polls in the window yet.</p>'}
@@ -746,7 +751,7 @@
       ${trend.length > 2 ? `<p class="dc-read" id="appr-read" aria-live="polite"></p><div class="dc-chart" id="appr-chart"></div>` : ''}
       <h3>Newest approval polls</h3>
       <ul class="dc-list">${ap.map(p => `<li><span>${linkOr(p.url, pollsterCell(p.pollster))}<small>Conducted to ${shortDay(p.date)}${p.added ? `, added ${shortDay(p.added)}` : ''}</small></span><b class="num">${Math.round(p.approve)}–${Math.round(p.disapprove)}</b></li>`).join('')}</ul>
-      <p class="foot">State figures come from the national number until state-level approval estimates are available. From June 1, 2028 the model uses polls finished June 1 to July 30, 2028, as the paper does.</p>`;
+      <p class="foot">This is the national figure. Each state sits above or below it by a fixed gap, taken from ${A.state_data && A.state_data.name ? esc(A.state_data.name) + "'s" : 'a'} state-by-state tracker${A.state_data && A.state_data.as_of ? ' on ' + niceDate(A.state_data.as_of) : ''}; the gaps do not update yet. ${A.official_wait ? `The model moves to polls finished June 1 to July 30, 2028, the paper's window, once ${A.official_wait.needed} pollsters have one in it (${A.official_wait.pollsters} so far).` : N.mode === 'official' ? 'The model now uses polls finished June 1 to July 30, 2028, as the paper does.' : 'From June 2028 the model uses polls finished June 1 to July 30, 2028, as the paper does, once ten pollsters have one in that window.'}</p>`;
     if (trend.length > 2) lineChart(box('appr-chart'), box('appr-read'), trend,
       [{ key: 'dis', color: '#94a1b5', label: 'Disapprove' }, { key: 'a', color: '#f2a65e', label: 'Approve' }],
       { label: `Trump's approval, a 30-day average each week since ${trend[0].d}: now ${fmt(A.approve)} approve, ${fmt(A.disapprove)} disapprove`,
@@ -797,9 +802,12 @@
 
     // ---- what changes next ----
     const nowIso = todayIso();
-    const next = EVENTS.map(([d, short, long]) => ({ d, short, long, left: dayDiff(d, nowIso) })).filter(e => e.left >= 0);
+    const next = window.FORECAST ? [] : EVENTS.map(([d, short, long]) => ({ d, short, long, left: dayDiff(d, nowIso) })).filter(e => e.left >= 0);
+    const wait = !window.FORECAST && A.official_wait;
     box('dc-next').innerHTML = `<div class="dc-head"><div><h2 id="dc-next-h">What changes next</h2>
-        <p class="small">Days when the inputs switch, so the Nowcast can move more than usual.</p></div></div>
+        <p class="small">${window.FORECAST ? 'The days when the inputs switched.' : 'Days when the inputs switch, so the Nowcast can move more than usual.'}</p></div></div>
+      ${next.length ? '' : '<p class="small">Nothing more changes: the final forecast is published.</p>'}
+      ${wait ? `<p class="note">The approval model moves to polls conducted June 1 to July 30, 2028 once ${wait.needed} pollsters have a poll in that window. So far ${wait.pollsters} ${wait.pollsters === 1 ? 'has' : 'have'}, so it still uses the last 30 days.</p>` : ''}
       <ul class="dc-next">${next.map(e => `<li><span class="days"><b class="num">${e.left}</b>${e.left === 1 ? 'day' : 'days'}</span><span><b>${esc(e.short)}, ${niceDate(e.d)}</b>${esc(e.long)}</span></li>`).join('')}</ul>`;
 
     // ---- daily log ----
@@ -871,8 +879,11 @@
     document.getElementById('desk-28').hidden = l === 'official';
     document.getElementById('official-28').hidden = l !== 'official';
   }
+  let counting = FORECAST_DATE > new Date();
   function tickCountdown() {
     const ms = Math.max(0, FORECAST_DATE - new Date());
+    // When the countdown runs out with the page open, load the page again once to pick up the forecast.
+    if (counting && ms === 0) { counting = false; location.reload(); return; }
     const parts = [[Math.floor(ms / 864e5), 'days'], [Math.floor(ms % 864e5 / 36e5), 'hours'], [Math.floor(ms % 36e5 / 6e4), 'minutes'], [Math.floor(ms % 6e4 / 1e3), 'seconds']];
     document.getElementById('cd-28').innerHTML = parts.map(([v, l], i) => `<div><span class="v num">${i ? String(v).padStart(2, '0') : v}</span><span class="l">${l}</span></div>`).join('');
   }
@@ -883,7 +894,8 @@
   // publishes on Aug 6, 2028 the tab shows only the countdown and how far each input has got, with no forecast
   // numbers. The published forecast (docs/forecast.js) is shown as it was and never changes.
   const PUBLISH = '2028-08-06', DS_WIN = ['2027-10-01', '2027-10-31'], DS_FREEZE = '2027-11-07', AP_WIN = ['2028-06-01', '2028-07-30'];
-  const todayIso = () => new Date().toISOString().slice(0, 10);
+  // Today's date in US Eastern time, the clock the site's cutoffs run on.
+  const todayIso = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
   let mapFc = null;
   function forecastTab() {
     const F = window.FORECAST || null, df = N && N.desart_final, t = todayIso();
@@ -916,8 +928,10 @@
     // The forecast itself is shown only once published (docs/forecast.js); until then, only the countdown.
     const R = F ? { ...F.summary, states: F.states, evHistogram: F.evHistogram, models: F.models } : null, label = 'final';
     const body = document.getElementById('fc-body');
-    document.getElementById('fc-head').innerHTML = F ? 'The 2028 forecast' : `The official prediction will be made in <span id="cd-days">${daysTo(FORECAST_DATE)}</span> days`;
-    document.getElementById('cd-28').hidden = !!F;
+    const due = !F && new Date() >= FORECAST_DATE;   // the hour has come but this morning's run has not saved it yet
+    document.getElementById('fc-head').innerHTML = F ? 'The 2028 forecast' : due ? 'The official prediction is being published. Check back in a little while.'
+      : `The official prediction will be made in <span id="cd-days">${daysTo(FORECAST_DATE)}</span> days`;
+    document.getElementById('cd-28').hidden = !!F || due;
     if (!R) { body.hidden = true; return; }
     body.hidden = false;
     const med = R.states.filter(x => x.demShare > 50).reduce((a, x) => a + x.ev, 0);   // each state to whoever is ahead
@@ -945,7 +959,7 @@
     if (!F) return;
     const when = niceDate(F.published);
     const set = (sel, txt) => document.querySelectorAll(sel).forEach(el => { el.textContent = txt; });
-    set('a[data-view="nowcast"]', '2028 forecast');
+    document.querySelectorAll('a[data-view="nowcast"]').forEach(a => { a.innerHTML = '<span class="nl">2028 forecast</span><span class="ns">Forecast</span>'; a.setAttribute('aria-label', '2028 forecast'); });
     set('#title-28', '2028 forecast');
     set('[data-layer28="tracker"]', '2028 forecast');
     set('[data-snake="today"]', '2028 forecast');
@@ -958,7 +972,8 @@
 
   function render2028() {
     const days = daysTo(FORECAST_DATE);
-    document.getElementById('d-forecast').textContent = days;
+    const dEl = document.getElementById('d-forecast');
+    if (dEl && days < 1) { const p = dEl.parentNode; p.innerHTML = p.innerHTML.replace(/, in <span id="d-forecast"><\/span> days\./, ' today.'); } else if (dEl) dEl.textContent = days;
     document.getElementById('cd-days').textContent = days;
     tickCountdown(); setInterval(tickCountdown, 1000);
     map28 = draw28();
@@ -1078,5 +1093,6 @@
     window.scrollTo(0, 0);
   }
   window.addEventListener('hashchange', route);
+  finalLabels();
   route();
 })();

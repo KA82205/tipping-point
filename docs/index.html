@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261114n">
+<link rel="stylesheet" href="styles.css?v=20261114p">
 </head>
 <body>
 
@@ -399,14 +399,15 @@
         <thead><tr><th scope="col"></th><th scope="col">Published</th><th scope="col">Back-test</th><th scope="col">Result</th></tr></thead>
         <tbody>
           <tr><th scope="row">2016 Democratic vote</th><td>50.3</td><td>50.1</td><td>51.0</td></tr>
+          <tr><th scope="row">2020 states called, of 50</th><td>48</td><td>48</td><td>—</td></tr>
           <tr><th scope="row">2020 Democratic vote</th><td>54.8</td><td>54.8</td><td>52.2</td></tr>
           <tr><th scope="row">2024 states called, of 50</th><td>50</td><td>50</td><td>—</td></tr>
-          <tr><th scope="row">2024 Democratic vote</th><td>50.5</td><td>50.6</td><td>49.2</td></tr>
+          <tr><th scope="row">2024 Democratic vote</th><td>50.7</td><td>50.6</td><td>49.2</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="small">Democratic share of the two-party vote, in percent. Rows of states called have no result of their own: the count already compares each forecast with the results. Enns and colleagues' 2020 forecast missed only Georgia (Enns and Lagodny 2021); their 2024 forecast had Trump at exactly 312 electoral votes. DeSart's published 2016 and 2020 figures are his national forecasts as reported in his 2024 paper (table 1), which gives no state-by-state count for those years; his 2024 forecast was published a year before the election.</p>
-    <p class="small">The authors' own versions did as well as the back-tests or better: two more states and 1.5 points closer in 2020 for Enns and colleagues, and almost no difference for DeSart. Part of the 2020 gap may come from data rather than the model, since that forecast used the authors' own state approval estimates from almost 90,000 survey responses.</p>
+    <p class="small">Democratic share of the two-party vote, in percent. Rows of states called have no result of their own: the count already compares each forecast with the results. Enns and colleagues' 2020 forecast missed only Georgia (Enns and Lagodny 2021); their 2024 forecast had Trump at exactly 312 electoral votes. DeSart's 2020 forecast, made from October 2019 polls, missed Florida and North Carolina; the back-test reproduces its state forecasts exactly, because his model had the same design then (his replication files for 2020). His 2016 figure is his national forecast as reported in his 2024 paper (table 1), which gives no count of states for that year; his 2024 forecast was published a year before the election. Published figures are the authors' own national numbers; back-tests and results are for the 50 states, as in the tables above, which moves a figure by a tenth of a point at most.</p>
+    <p class="small">The authors' own versions did as well as the back-tests or better: two more states and 1.5 points closer in 2020 for Enns and colleagues, and no difference to speak of for DeSart. The 2020 gap comes from changes Enns and colleagues made for 2024, which the back-test applies to 2020 as well. They dropped an indicator for Southern states that their 2020 model had: put it back and the back-test also misses only Georgia. Putting it back does not close the gap in the national vote; that part comes from the data they revised for 2024, with state approval re-estimated from more surveys and the 2020 economy measured differently.</p>
     <p><b>What this means for 2028.</b> The published records come from each author's latest version at the time, so the site follows their updates. If Enns and colleagues or DeSart publish a revised version of their model for 2028 before August 6, 2028, the site switches to it and says so here. If they do not, the current versions stand. The site never chooses between versions itself.</p>
     <p><b>What this means for the track record.</b> The 96% of states and 1-point national miss quoted on this site come from the back-tests, the harder of the two tests. They are a cautious figure: the forecasts the authors actually published did as well or better.</p>
   </section>
@@ -481,7 +482,7 @@
       <p>State economies come from the Philadelphia Fed State Coincident Indexes via FRED. Trump's national approval is an average of public polls from VoteHub and PollResults.org. State-by-state approval comes from <a href="https://civiqs.com/results/approve_president_trump_2025">Civiqs's daily tracker of Trump's job approval</a> (registered voters, all 50 states), as a copy taken on November 10, 2026; only the differences between states are used.</p>
       <p>The 2024 back-test on the scorecard: DeSart's published state forecasts for 2024, from the file dated November 5, 2023 in his replication data (doi:10.7910/DVN/HZGLY9), averaged with the state-level approval and fundamentals forecast published in July 2024.</p>
       <p>Nominees, running mates and their home states are read from Wikipedia each morning. The vice-president adjustment uses job-approval polls of the vice president from VoteHub, or favorability when there are none, as the authors did for 1988. The list of possible candidates follows national 2028 primary polls from PollResults.org.</p>
-      <p>Head-to-head polls are national general-election polls between one named Democrat and one named Republican, over the last 180 days. They come from the PollResults.org feed behind its <a href="https://pollresults.org/races/president-2028/">2028 presidential polls page</a>, which carries the New York Times poll data, and every record in it is read each morning. A poll that tests several pairings counts once for each. Left out: state polls, generic party ballots, questions that name a third candidate, and pairings with anyone not on the candidate list. VoteHub supplies the approval polls; it does not publish general-election pairings yet.</p>
+      <p>Head-to-head polls are national general-election polls between one named Democrat and one named Republican: those conducted in the last 180 days until November 7, 2027, and those conducted in October 2027 from then on. They come from the PollResults.org feed behind its <a href="https://pollresults.org/races/president-2028/">2028 presidential polls page</a>, which carries the New York Times poll data, and every record in it is read each morning. A poll that tests several pairings counts once for each. Left out: state polls, generic party ballots, questions that name a third candidate, and pairings that name a president who cannot run again. People who are not on the site's candidate list still count. VoteHub supplies the approval polls; it does not publish general-election pairings yet.</p>
       <p>The 2024 scorecard is the paper's own forecast, recomputed exactly from the authors' replication files. The Nowcast differs from the two papers in the ways listed below.</p>
     </div>
     <div>
@@ -504,7 +505,7 @@
       <p><b>One more model is averaged in.</b> Each state's forecast is half the Enns model and half DeSart's long-range model, then simulated together. The paper uses its model alone. Why: see "How they are combined" above.</p>
       <p><b>Each party's field is weighted until its nominee is known.</b> The paper forecasts once the nominees are set, so it has no rule for this. Home-state effects are spread across the possible nominees, an idea taken from DeSart, but by each candidate's share of primary polling. DeSart's own model, as run here, spreads them by how often each candidate appears in the head-to-head polls. The vice-president adjustment is applied in the same proportion: if the sitting vice president has 38% of his party's primary polling, 38% of the adjustment applies.</p>
       <p><b>The vice-president adjustment is phased in.</b> The authors apply the gap between the vice president's and the president's net approval in full, from a handful of July polls. Here it is scaled by the number of polls of the vice president and reaches full size at 20 polls, so a few polls cannot move every state at once. When there are too few polls in the last 120 days, the window widens to 240 and then 365 days, and as a last resort a single poll is used.</p>
-      <p><b>It runs every day.</b> The paper forecasts once, about 100 days before the election, from approval polls taken in June and July and the economy through June. The Nowcast uses today's polls and the latest economic month, so it describes today, not November 2028. The official forecast on the countdown will follow the paper's timing.</p>
+      <p><b>It runs every day.</b> The paper forecasts once, about 100 days before the election, from approval polls taken in June and July and the economy through June. The Nowcast uses today's polls and the latest economic month, so it describes today, not November 2028. The final forecast follows the paper's timing: approval polls conducted June 1 to July 30, 2028 and the economy through June. The Nowcast moves to that window in June 2028, once ten pollsters have a poll in it; until then it keeps the last 30 days, so the first days of June do not rest on one or two polls.</p>
       <p><b>National vote.</b> The authors add up the national vote by weighting each state by its 2020 population. The Nowcast weights states by the votes cast in 2024.</p>
     </div>
     <div>
@@ -521,7 +522,7 @@
     <div class="cols2">
       <div>
         <p><b>Refitted with 2024.</b> The coefficients come from refitting the authors' data with the 2024 results added. This lowers the fade in the previous nominees' home states from 3.49 to 3.07 points. Until now the site halved the fade, because it looked too large in 2024; the refit now learns that from the 2024 results, so halving it as well would count the same evidence twice. The authors code Trump's 2020 run as Florida; DeSart codes it as New York.</p>
-        <p><b>Economic weighting.</b> 0.55, the median fitted value for 2008 to 2016, simulated from 0.52 to 0.58 in steps of 0.01. The site used 0.40 to 0.70. Economic growth is counted against the Democrat while a Republican is president, as the site assumed.</p>
+        <p><b>Economic weighting.</b> 0.55, the median fitted value for 2008 to 2016, simulated from 0.52 to 0.58 in steps of 0.01, as in the authors' forecast code. The table in their paper, shown at the top of this page, is fitted at 0.56; refitted with 2024 at that value the economy coefficient is 1.59, not 1.56. The site used 0.40 to 0.70. Economic growth is counted against the Democrat while a Republican is president, as the site assumed.</p>
       </div>
       <div>
         <p><b>Uncertainty.</b> Coefficients are drawn together from their covariance, and the correlation of state errors is drawn between 0.70 and 0.97 for each weighting. The site drew coefficients one at a time and used a fixed split of the error.</p>
@@ -562,6 +563,6 @@
 <script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261113a"></script>
 <script src="combine.js?v=20261113k"></script>
-<script src="app.js?v=20261114l"></script>
+<script src="app.js?v=20261114p"></script>
 </body>
 </html>
