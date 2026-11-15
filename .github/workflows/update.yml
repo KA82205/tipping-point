@@ -2,9 +2,10 @@ name: Update data and deploy site
 
 on:
   schedule:
-    # GitHub starts scheduled runs late, about 7 hours late so far, so this is set for 1:17 AM Eastern
-    # (standard time) to have the day's update in place by the morning.
+    # GitHub starts scheduled runs late, anywhere from 1 to 7 hours so far. Two starts a day, 5 hours apart
+    # (1:17 and 6:17 AM Eastern standard time), so that one of them lands in the morning, summer or winter.
     - cron: "17 6 * * *"
+    - cron: "17 11 * * *"
   workflow_dispatch: {}      # "Run workflow" button in the Actions tab
   push:
     branches: [main]
@@ -59,7 +60,7 @@ jobs:
           for p in docs/nowcast.js docs/history.js docs/forecast.js pipeline/history.json pipeline/frozen pipeline/cache docs/data.js docs/us-states.js pipeline/results_2024.json; do
             if [ -e "$p" ]; then git add -f "$p"; fi
           done
-          if git diff --cached --quiet; then echo "No changes"; else git commit -m "Data update $(date -u +%Y-%m-%d)" && git push; fi
+          if git diff --cached --quiet; then echo "No changes"; else git commit -m "Data update $(TZ=America/New_York date +%Y-%m-%d)" && git push; fi
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
