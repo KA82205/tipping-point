@@ -46,15 +46,15 @@
  {
   "v": 4,
   "date": "2026-11-16",
-  "pDemWin": 0.5123,
-  "demPopular": 50.46,
-  "approve": 37.1,
+  "pDemWin": 0.5114,
+  "demPopular": 50.45,
+  "approve": 37.2,
   "econThrough": "2026-09",
-  "enns": 0.5688,
+  "enns": 0.567,
   "desart": 0.4506,
   "pollAvg": 50.24,
   "h2hN": 29,
-  "apprN": 30,
+  "apprN": 31,
   "ev": 286
  }
 ]
