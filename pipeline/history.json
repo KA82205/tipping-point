@@ -56,5 +56,19 @@
   "h2hN": 29,
   "apprN": 31,
   "ev": 286
+ },
+ {
+  "v": 4,
+  "date": "2026-11-17",
+  "pDemWin": 0.5063,
+  "demPopular": 50.41,
+  "approve": 37.3,
+  "econThrough": "2026-09",
+  "enns": 0.563,
+  "desart": 0.4441,
+  "pollAvg": 50.14,
+  "h2hN": 28,
+  "apprN": 31,
+  "ev": 286
  }
 ]
