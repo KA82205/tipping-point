@@ -674,13 +674,14 @@
     o += `<line class="guide" x1="0" x2="0" y1="${tp}" y2="${Ht - b}" stroke="#5d6a7e" visibility="hidden"></line><rect class="hit" x="${l}" y="${tp}" width="${W - l - r}" height="${Ht - tp - b}" fill="transparent"></rect>`;
     el.innerHTML = `<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="${esc(opts.label)}">${o}</svg>`;
     const svg = el.querySelector('svg'), guide = svg.querySelector('.guide'), hit = svg.querySelector('.hit');
-    const idle = () => { guide.setAttribute('visibility', 'hidden'); readEl.textContent = opts.text(last, true); };
+    const pick = (row, isLast) => { readEl.textContent = opts.text(row, isLast); if (opts.onPick) opts.onPick(row, isLast); };
+    const idle = () => { guide.setAttribute('visibility', 'hidden'); pick(last, true); };
     const at = ev => {
       const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
       const px = pt.matrixTransform(svg.getScreenCTM().inverse()).x;
       let best = rows[0]; rows.forEach(row => { if (Math.abs(x(row.d) - px) < Math.abs(x(best.d) - px)) best = row; });
       guide.setAttribute('x1', x(best.d)); guide.setAttribute('x2', x(best.d)); guide.setAttribute('visibility', 'visible');
-      readEl.textContent = opts.text(best, best === last);
+      pick(best, best === last);
     };
     hit.addEventListener('pointermove', at); hit.addEventListener('pointerdown', at); hit.addEventListener('pointerleave', idle);
     idle();
@@ -730,7 +731,7 @@
     box('dc-h2h').innerHTML = `<div class="dc-head"><div><h2 id="dc-h2h-h">Head-to-head polls</h2>
         <p class="small">${fixed ? `The long-range model is fixed on ${N.desart_final.polls.length} polls conducted in October 2027${pollAvg !== null ? `, where the Democrat averages ${fmt(pollAvg)} of the two-party vote` : ''}. Below are the ${hp.length} polls conducted since ${shortDay(h2h.window[0])}.`
           : `${hp.length} poll${hp.length === 1 ? '' : 's'} conducted ${shortDay(h2h.window[0])} to ${shortDay(h2h.window[1])} count toward the long-range model${pollAvg !== null ? `; the Democrat averages ${fmt(pollAvg)} of the two-party vote` : ''}.`} ${nRecent ? `${nRecent} added in the last week.` : 'None added in the last week.'}</p></div>
-        <a class="dc-link" href="#nowcast">Matchups chart</a></div>
+        <a class="dc-link" href="#nowcast" data-goto="mx-anchor">Matchups chart</a></div>
       ${fixed ? `<p class="note">Since November 7, 2027 the long-range model uses only polls conducted in October 2027, as DeSart does. Newer polls are listed here but no longer move ${window.FORECAST ? 'the forecast' : 'the Nowcast'}.</p>` : ''}
       ${hp.length ? `<div class="dt-wrap"><table class="dt cards"><thead><tr><th>Added</th><th>Pollster</th><th>Matchup</th><th class="num">Margin</th><th class="num">Conducted</th></tr></thead>
         <tbody>${hp.slice(0, SHOW).map(hRow).join('')}</tbody><tbody class="more" hidden>${hp.slice(SHOW).map(hRow).join('')}</tbody></table></div>
@@ -747,7 +748,7 @@
     const trend = (A.trend || []).filter(t => t.a && t.dis);
     box('dc-appr').innerHTML = `<div class="dc-head"><div><h2 id="dc-appr-h">Trump's approval</h2>
         <p class="small">The approval model's national figure: the latest poll from each of ${A.pollsters} pollsters, finished ${shortDay(A.window[0])} to ${shortDay(A.window[1])}, newer and larger polls counting more.</p></div></div>
-      <div class="dc-big"><span><b>${fmt(A.approve)}</b> approve</span><span><b>${fmt(A.disapprove)}</b> disapprove</span></div>
+      <div class="dc-big"><span><b id="appr-big-a">${fmt(A.approve)}</b> approve</span><span><b id="appr-big-d">${fmt(A.disapprove)}</b> disapprove</span></div>
       ${trend.length > 2 ? `<p class="dc-read" id="appr-read" aria-live="polite"></p><div class="dc-chart" id="appr-chart"></div>` : ''}
       <h3>Newest approval polls</h3>
       <ul class="dc-list">${ap.map(p => `<li><span>${linkOr(p.url, pollsterCell(p.pollster))}<small>Conducted to ${shortDay(p.date)}${p.added ? `, added ${shortDay(p.added)}` : ''}</small></span><b class="num">${Math.round(p.approve)}–${Math.round(p.disapprove)}</b></li>`).join('')}</ul>
@@ -755,7 +756,9 @@
     if (trend.length > 2) lineChart(box('appr-chart'), box('appr-read'), trend,
       [{ key: 'dis', color: '#94a1b5', label: 'Disapprove' }, { key: 'a', color: '#f2a65e', label: 'Approve' }],
       { label: `Trump's approval, a 30-day average each week since ${trend[0].d}: now ${fmt(A.approve)} approve, ${fmt(A.disapprove)} disapprove`,
-        text: (t, isLast) => `${isLast ? 'Today' : 'Week of ' + niceDate(t.d)}: ${fmt(t.a)} approve, ${fmt(t.dis)} disapprove (30-day average)` });
+        text: (t, isLast) => isLast ? 'Today (30-day average). Move over the chart to see any week.' : `Week of ${niceDate(t.d)} (30-day average)`,
+        // The large figures follow the pointer, and return to today's when it leaves the chart.
+        onPick: t => { box('appr-big-a').textContent = fmt(t.a); box('appr-big-d').textContent = fmt(t.dis); } });
 
     // ---- state economies ----
     const M = E.monthly || [], lat = E.latest || {};
@@ -1091,6 +1094,25 @@
       done[v] = true;
     }
     window.scrollTo(0, 0);
+    if (goTo) { const id = goTo; goTo = null; scrollToWhenReady(id); }
+  }
+  // A link can ask to land on one part of a page (data-goto). The page may still be drawing, so keep
+  // scrolling to that part until its position settles, and stop if the reader scrolls themselves.
+  let goTo = null;
+  document.addEventListener('click', ev => { const a = ev.target.closest && ev.target.closest('a[data-goto]'); if (a) goTo = a.dataset.goto; });
+  function scrollToWhenReady(id) {
+    let tries = 0, lastTop = null, steady = 0, stop = false;
+    const quit = () => { stop = true; };
+    ['wheel', 'touchstart', 'keydown'].forEach(e => window.addEventListener(e, quit, { once: true, passive: true }));
+    const step = () => {
+      const el = document.getElementById(id);
+      if (stop || !el || tries++ > 60) return;
+      const top = Math.round(el.getBoundingClientRect().top + window.scrollY);
+      el.scrollIntoView({ block: 'start' });
+      steady = top === lastTop ? steady + 1 : 0; lastTop = top;
+      if (steady < 10) setTimeout(step, 150);
+    };
+    step();
   }
   window.addEventListener('hashchange', route);
   finalLabels();

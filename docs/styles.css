@@ -632,3 +632,6 @@ nav a .ns { display: none; }
 .method .eq { margin: 6px 0; }
 .method .cols2 { margin: 10px 0; }
 .method .rules li { line-height: 1.6; }
+
+#mx-anchor { scroll-margin-top: 128px; }
+.dc-big b { font-variant-numeric: tabular-nums; }
