@@ -9,9 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261117a">
+<link rel="stylesheet" href="styles.css?v=20261118a">
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 
 <header class="site-head">
   <div class="wrap">
@@ -41,7 +42,7 @@
   <div class="contact-me"><img class="contact-avatar" src="klein.jpg" alt="" width="46" height="46"><div><b>Klein Ahmetaj</b><span>Creator of Tipping Point</span></div></div>
 </dialog>
 
-<main>
+<main id="main" tabindex="-1">
 <!-- ================= HOME ================= -->
 <div id="view-home" class="wrap">
   <section class="hero">
@@ -58,46 +59,8 @@
     <div class="balance-card">
       <div class="bc-head"><span class="live" id="hero-live">If the election were held today</span><span class="small" id="hero-date"></span></div>
       <div class="balance" id="bal-home"></div>
-      <div class="ensemble" id="ens-home"></div>
     </div>
-  </section>
-
-  <section class="stack-lg">
-    <div class="stack" style="gap:6px">
-      <h2>The tipping point</h2>
-      <p class="lede">The balance above lines every state up from most Democratic to most Republican, sized by electoral votes. The state that carries a candidate past 270 is the tipping point. Here is the same line-up for 2024, as forecast in July and as it turned out.</p>
-    </div>
-    <div class="tabs" role="tablist" aria-label="Tipping point view">
-      <button class="tab" role="tab" data-snake="fc" aria-selected="true">2024 forecast</button>
-      <button class="tab" role="tab" data-snake="actual" aria-selected="false">2024 result</button>
-    </div>
-    <div class="snake-card"><div class="snake" id="snake-home"></div><p class="snake-read" id="snake-home-read"></p></div>
-  </section>
-
-  <section class="stack-lg" id="about">
-    <h2>About this site</h2>
-    <div class="cols2">
-      <div class="stack">
-        <p>Tipping Point is a personal, non-commercial project. It runs the State Presidential Approval/State Economy Model created by Peter K. Enns (Cornell University and Verasight), Jonathan Colner, Anusha Kumar and Julius Lagodny, published in <em>PS: Political Science &amp; Politics</em>. The model and its published forecasts are theirs. The 2028 Nowcast also runs a second published model from the same journal, Jay A. DeSart's long-range state-level forecast, which reads head-to-head polls.  This site is not affiliated with or endorsed by any of the authors, and any errors in the code are its own.</p>
-        <p>The idea: presidential elections are largely decided by fundamentals that are knowable months ahead. The authors publish their forecast about 100 days before Election Day. The name comes from the state that decides the Electoral College, and the logo is that idea drawn as districts on a balance beam.</p>
-      </div>
-      <div class="stack">
-        <p><strong>The 2024 scorecard</strong> checks the Nowcast's method against the certified 2024 results, state by state: a back-test that averages the two forecasts published before that election. The two published forecasts can be scored on their own there too: the state-level approval and fundamentals model as its authors published it in July 2024, and DeSart's long-range model as he published it in November 2023, with his odds reproduced from his own simulation script. Both published forecasts are recomputed from their authors' replication files.</p>
-        <p><strong>The 2028 Nowcast</strong> runs that model every morning on the latest Trump approval polls and state economic data, runs DeSart's model on the latest head-to-head polls, and averages the two. Until the nominees are confirmed, each party's possible nominees are averaged by their standing in the polls. It shows what the models say if the election were held today. It is not the forecast, which publishes August 6, 2028.</p>
-        <p class="small">Everything updates automatically: polls, state economies, and the nominees, running mates and home states once the conventions pick them. Data: FRED (Philadelphia Fed state coincident indexes), VoteHub and PollResults.org (poll data, CC BY 4.0), Wikipedia, certified 2024 returns.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="stack-lg">
-    <div class="stack">
-      <h2>What the two models read</h2>
-      <p class="lede">Each predicts the Democratic share of the vote in every state from different evidence, and the Nowcast gives each half the weight.</p>
-    </div>
-    <div class="inputs3 two">
-      <div><h3>State-level approval and fundamentals model</h3><p class="small">Enns, Colner, Kumar and Lagodny. How each state rates the president, how its economy has grown, and how it voted last time.</p></div>
-      <div><h3>Long-range model</h3><p class="small">DeSart. National head-to-head polls between possible nominees, counted at about half, on top of each state's last result.</p></div>
-    </div>
+    <div class="ensemble" id="ens-home"></div>
   </section>
 
   <section class="stack-lg">
@@ -106,9 +69,38 @@
       <div><span class="v">96%</span><span class="small">States called right, back-tests of 2008 to 2024</span></div>
       <div><span class="v">1.0 pts</span><span class="small">Average miss on the national vote</span></div>
       <div><span class="v">4 of 5</span><span class="small">Winners called, missing only 2016</span></div>
-      <div><span class="v">50/50</span><span class="small">States called right in 2024</span></div>
+      <div><span class="v">50 of 50</span><span class="small">States called right in 2024</span></div>
     </div>
-    <p class="small">Each election from 2008 to 2024 forecast as each model would have at the time, refitted on earlier elections only, then averaged half and half. Nothing in the average was tuned to these results. On the national vote, the state-level approval and fundamentals model missed by 1.7 points on average and the long-range model by 1.5, against 1.0 for their average. The average beats both because their misses often point in opposite directions and partly cancel: in 2012, the state-level approval and fundamentals model was 2.0 points too low and the long-range model 1.7 too high, so the average was off by 0.2. It does not always work: in 2020 both were too high and so was the average, by 3.2 points. For comparison, assuming every state votes as it did last time gets 89% of states and misses the national vote by 2.3 points. Five elections is a small sample, and 2028 is the first real test of the method as fixed. <a href="#method">Track record in full</a></p>
+    <p class="small">Each election from 2008 to 2024 was forecast as each model would have at the time, from earlier elections only, then averaged half and half. Nothing in the average was tuned to these results. For comparison, assuming every state votes as it did last time gets 89% of states and misses the national vote by 2.3 points. Five elections is a small sample: in 2020 both models were too high, and the average missed by 3.2 points. <a href="#method">Track record in full</a></p>
+  </section>
+
+  <section class="stack-lg">
+    <div class="stack" style="gap:6px">
+      <h2>The tipping point</h2>
+      <p class="lede">The balance above lines every state up from most Democratic to most Republican, sized by electoral votes. The state that carries a candidate past 270 is the tipping point. Here is the same line-up for 2024, as forecast in July and as it turned out.</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Tipping point view">
+      <button class="tab" role="tab" data-snake="fc" aria-selected="true" aria-controls="snake-home-panel">2024 forecast</button>
+      <button class="tab" role="tab" data-snake="actual" aria-selected="false" aria-controls="snake-home-panel">2024 result</button>
+    </div>
+    <div class="snake-card" id="snake-home-panel" role="tabpanel" aria-label="2024 line-up"><div class="snake" id="snake-home"></div><div class="snake-key" id="snake-home-key"></div><p class="snake-read" id="snake-home-read"></p></div>
+  </section>
+
+  <section class="stack-lg" id="about">
+    <h2>About this site</h2>
+    <div class="cols2">
+      <div class="stack">
+        <p>Tipping Point is a personal, non-commercial project. Both models are published research in <em>PS: Political Science &amp; Politics</em>: the State Presidential Approval/State Economy Model by Peter K. Enns (Cornell University and Verasight), Jonathan Colner, Anusha Kumar and Julius Lagodny, and Jay A. DeSart's long-range state-level forecast. The models and their published forecasts are theirs. This site is not affiliated with or endorsed by any of the authors, and any errors in the code are its own.</p>
+      </div>
+      <div class="stack">
+        <p>The Nowcast runs both models every morning on the latest polls and state economic data and averages them. It shows what the models say if the election were held today. It is not the forecast, which publishes August 6, 2028. The name comes from the state that decides the Electoral College, and the logo is that idea drawn as districts on a balance beam.</p>
+        <p class="small">Data: FRED (Philadelphia Fed state coincident indexes), VoteHub and PollResults.org (poll data, CC BY 4.0), Wikipedia, certified 2024 returns.</p>
+      </div>
+    </div>
+    <div class="btns">
+      <a class="btn primary" href="#nowcast">Explore the Nowcast</a>
+      <a class="btn" href="#method">How the models work</a>
+    </div>
   </section>
 </div>
 
@@ -575,6 +567,6 @@
 <script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261113a"></script>
 <script src="combine.js?v=20261113k"></script>
-<script src="app.js?v=20261117a"></script>
+<script src="app.js?v=20261118a"></script>
 </body>
 </html>

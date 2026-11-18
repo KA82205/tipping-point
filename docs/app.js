@@ -28,12 +28,17 @@
   const RATE_COLOR = { SD: '#2e64b0', LD: '#4f8de0', TD: '#a9c8f0', TOSS: TOSS, TR: '#f2aaa1', LR: '#d8665b', SR: '#a63f37' };
   const LIGHT = new Set([RATE_COLOR.TD, TOSS, RATE_COLOR.TR]);   // fills that need dark text
   // Any fill light enough to need dark text: '#rrggbb' or 'rgb(r,g,b)', by relative luminance.
-  const isLight = c => {
-    if (!c) return false;
+  const lumOf = c => {
     const v = c[0] === '#' ? [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)) : (c.match(/\d+/g) || []).slice(0, 3).map(Number);
     const L = v.map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
-    return 0.2126 * L[0] + 0.7152 * L[1] + 0.0722 * L[2] > 0.4;
+    return 0.2126 * L[0] + 0.7152 * L[1] + 0.0722 * L[2];
   };
+  const isLight = c => !!c && lumOf(c) > 0.4;
+  // On the state line-ups a label is black wherever black reads better than white on that fill. The two cross
+  // at a luminance of 0.179, where both still clear 4.5 to 1.
+  const darkInk = c => !!c && lumOf(c) > 0.179;
+  // The race in plain words, by the same thresholds as the state ratings.
+  const VERDICT = { SD: 'solidly Democratic', LD: 'likely Democratic', TD: 'leaning Democratic', TOSS: 'a toss-up', TR: 'leaning Republican', LR: 'likely Republican', SR: 'solidly Republican' };
   const rateOf = p => window.SPASE.rate(p);
   // The leader's win chance, shown on every state that is not Solid.
   const chance = p => { const r = rateOf(p); return r[0] === 'S' ? '' : `${p >= 0.5 ? 'D' : 'R'} ${Math.round(100 * Math.max(p, 1 - p))}%`; };
@@ -84,22 +89,79 @@
     rows.forEach(r => { r.before = cum; cum += r.ev; r.after = cum; if (!tp && cum >= 270) tp = r; });
     return { rows, tp };
   }
-  function snake(el, readEl, items, label, onPick) {
+  // What the colors of a line-up mean, how to read a state, and where to go next.
+  const snakeKey = kind => `<span class="ramp">${kind === 'rate'
+    ? `<span class="rate-keys">${[['Solid', 'SD', 'SR'], ['Likely', 'LD', 'LR'], ['Lean', 'TD', 'TR']].map(([n, d, r]) => `<span class="rk"><i style="background:${RATE_COLOR[d]}"></i><i style="background:${RATE_COLOR[r]}"></i>${n}</span>`).join('')}<span class="rk"><i style="background:${TOSS}"></i>Toss-up</span></span>`
+    : `<span class="d-ink">D</span><i style="background:linear-gradient(90deg,${shareColor(72)},${shareColor(56)},${shareColor(50)},${shareColor(44)},${shareColor(28)})"></i><span class="r-ink">R</span><span>Shaded by share of the vote</span>`}</span>
+    <span class="hint"><span class="h-hover">Point at a state for its numbers.</span><span class="h-touch">Slide along the bar to read each state.</span></span>`;
+  // Labels that do not fit their state are hidden instead of clipped.
+  const fitLabels = el => el.querySelectorAll('.seg').forEach(s => { s.classList.remove('nl'); s.classList.toggle('nl', s.scrollWidth > s.clientWidth + 0.5); });
+  let fitTimer = 0;
+  const refit = () => document.querySelectorAll('.snake').forEach(fitLabels);
+  window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(refit, 150); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);   // label widths change when the web font arrives
+  const votes = n => `${n} electoral vote${n === 1 ? '' : 's'}`;
+  function snake(el, readEl, items, label, onPick, lead, touchPick) {
     const { rows, tp } = tippingOf(items);
     const demEV = rows.filter(r => r.share > 50).reduce((a, r) => a + r.ev, 0);
-    el.innerHTML = rows.map(r => `<div class="seg${r === tp ? ' tp' : ''}${r.ev < 19 ? ' sm' : ''}${r.toss || isLight(r.col || shareColor(r.share)) ? ' toss' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${r.col || (r.toss ? TOSS : shareColor(r.share))}" tabindex="0" aria-label="${esc(byAbbr[r.abbr].name)} ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`).join('') +
-      `<div class="mark270" style="left:${270 / 538 * 100}%"></div>`;
+    el.innerHTML = rows.map(r => {
+      const fill = r.col || (r.toss ? TOSS : shareColor(r.share));
+      return `<div class="seg${r === tp ? ' tp' : ''}${r.ev < 19 ? ' sm' : ''}${r.toss || isLight(fill) ? ' toss' : ''}${darkInk(fill) ? ' dk' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${fill}" tabindex="${r === tp ? 0 : -1}" role="${onPick ? 'button' : 'img'}" aria-label="${esc(byAbbr[r.abbr].name)}, ${votes(r.ev)}, ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`;
+    }).join('') + `<div class="mark270" style="left:${270 / 538 * 100}%"></div>`;
+    el.setAttribute('role', 'group');
+    el.setAttribute('aria-label', `${label}: every state from most Democratic to most Republican. The arrow keys move between states.`);
     const tpName = byAbbr[tp.abbr].name.replace(' District', '');
     const winner = tp.share > 50 ? 'Democrats' : 'Republicans';
-    const base = `${label}: the tipping point is <b>${esc(tpName)}</b> at ${fmt(tp.share)} Democratic, so <b>${winner}</b> reach 270 (${demEV} Democratic electoral votes).`;
+    const base = `${label}: ${lead ? lead + '. The' : 'the'} tipping point is <b>${esc(tpName)}</b> at ${fmt(tp.share)} Democratic, so <b>${winner}</b> reach 270 (${demEV} Democratic electoral votes).`;
     readEl.innerHTML = base;
-    el.querySelectorAll('.seg').forEach(s => {
-      const r = rows.find(x => x.abbr === s.dataset.a);
-      const show = () => { readEl.innerHTML = `<b>${esc(byAbbr[r.abbr].name)}</b> · ${r.ev} EV · ${fmt(r.share)} Democratic · Democrats reach ${r.after} electoral votes if they win every state up to here`; };
-      s.addEventListener('mouseenter', show); s.addEventListener('focus', show);
-      s.addEventListener('mouseleave', () => { readEl.innerHTML = base; }); s.addEventListener('blur', () => { readEl.innerHTML = base; });
-      if (onPick) { s.addEventListener('click', () => onPick(r.abbr)); s.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(r.abbr); } }); }
+    const segs = [...el.querySelectorAll('.seg')];
+    const show = r => { readEl.innerHTML = `<b>${esc(byAbbr[r.abbr].name)}</b>: ${votes(r.ev)}, ${fmt(r.share)} Democratic. Democrats reach ${votes(r.after)} if they win every state up to here.`; };
+    segs.forEach((s, i) => {
+      const r = rows[i];
+      s.addEventListener('mouseenter', () => { if (!el._touch) show(r); });
+      s.addEventListener('mouseleave', () => { if (!el._touch) readEl.innerHTML = base; });
+      // One stop for the Tab key: the state that has focus is the one Tab comes back to. A touch also moves
+      // focus, to whichever state the browser snaps the finger to; the line keeps the state under the finger.
+      s.addEventListener('focus', () => {
+        segs.forEach(x => { x.tabIndex = x === s ? 0 : -1; });
+        if (performance.now() - (el._touchAt || 0) < 500) return;
+        el._touch = false; segs.forEach(g => g.classList.remove('on')); show(r);
+      });
+      s.addEventListener('blur', () => { if (!el._touch) readEl.innerHTML = base; });
+      if (onPick) {
+        // A touch reads the state. It also picks it only where the page says so (touchPick); elsewhere a link under the bar does.
+        s.addEventListener('click', () => {
+          if (!el._touch) return onPick(r.abbr);
+          const on = el.querySelector('.seg.on');   // the state the line is reading, not the one the browser snapped the tap to
+          if (touchPick) onPick(on ? on.dataset.a : r.abbr);
+        });
+        s.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(r.abbr); } });
+      }
     });
+    // By touch: put a finger on the bar or slide along it, and the line below reads the state under it.
+    el._read = x => {
+      // The state under the finger, taken along the middle of the bar so a finger that drifts off it still reads.
+      const box = el.getBoundingClientRect(), under = document.elementFromPoint(Math.max(box.left + 1, Math.min(box.right - 1, x)), box.top + box.height / 2);
+      const s = segs.includes(under) ? under : x < box.left + box.width / 2 ? segs[0] : segs[segs.length - 1];
+      segs.forEach(g => g.classList.toggle('on', g === s));
+      show(rows[segs.indexOf(s)]);
+    };
+    if (!el._wired) {
+      el._wired = true;
+      const touch = e => { el._touch = e.pointerType !== 'mouse'; if (el._touch) { el._touchAt = performance.now(); el._read(e.clientX); } };
+      el.addEventListener('pointerdown', touch);
+      el.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' && (e.pressure > 0 || e.buttons)) { el._touchAt = performance.now(); el._read(e.clientX); } });
+      // A mouse arriving after a touch (a laptop with both) goes back to pointing.
+      el.addEventListener('pointerover', e => { if (e.pointerType === 'mouse' && el._touch) { el._touch = false; el.querySelectorAll('.seg.on').forEach(g => g.classList.remove('on')); } });
+      el.addEventListener('keydown', e => {
+        const all = [...el.querySelectorAll('.seg')], i = all.indexOf(document.activeElement);
+        const to = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: all.length - 1 }[e.key];
+        if (i < 0 || to === undefined) return;
+        e.preventDefault();
+        all[Math.max(0, Math.min(all.length - 1, to))].focus();
+      });
+    }
+    fitLabels(el);
   }
 
   // ---------- electoral-vote histogram ----------
@@ -186,17 +248,25 @@
 
   // ---------- the balance: the path to 270 as a beam on a fulcrum ----------
   // The beam tips toward whoever wins more simulations: level at 50-50, five degrees at a certainty.
-  const BALANCE = `<div class="bal-top"><div class="side d"><span class="big" data-k="dem"></span><span class="l">in 100<b>Democrat wins</b></span></div>
-    <div class="side r"><span class="l">in 100<b>Republican wins</b></span><span class="big" data-k="rep"></span></div></div>
+  const BALANCE = `<div class="bal-top"><div class="side d"><span class="big" data-k="dem"></span> <span class="l">in 100 <b>Democrat wins</b></span></div>
+    <div class="side r"><span class="l">in 100 <b>Republican wins</b></span> <span class="big" data-k="rep"></span></div></div>
     <div class="bal-stage"><div class="bal-arm"><div class="snake"></div></div><div class="bal-fulcrum" aria-hidden="true"><span>270</span></div></div>
-    <p class="snake-read"></p>`;
+    <div class="snake-key"></div>
+    <p class="snake-read"></p>
+    <div class="snake-more"></div>`;
   const tiltOf = d => -Math.sign(d) * 5 * Math.pow(Math.min(1, Math.abs(d)), 0.6);
-  function balance(el, items, label, pDem, pRep, onPick) {
+  function balance(el, items, label, pDem, pRep, onPick, more, touchPick) {
     if (!el.firstChild) el.innerHTML = BALANCE;
     const whole = v => String(Math.round(100 * v));
     countTo(el.querySelector('[data-k="dem"]'), pDem, whole);
     countTo(el.querySelector('[data-k="rep"]'), pRep, whole);
-    snake(el.querySelector('.snake'), el.querySelector('.snake-read'), items, label, onPick);
+    snake(el.querySelector('.snake'), el.querySelector('.snake-read'), items, label, onPick, VERDICT[rateOf(pDem)], touchPick);
+    el.querySelector('.snake-key').innerHTML = snakeKey(items.some(i => i.col) ? 'rate' : 'share');
+    el.querySelector('.snake-more').innerHTML = more || '';
+    // Read aloud as one sentence, not as loose numbers and labels.
+    const top = el.querySelector('.bal-top');
+    top.setAttribute('role', 'img');
+    top.setAttribute('aria-label', `${whole(pDem)} in 100 Democrat wins, ${whole(pRep)} in 100 Republican wins`);
     const arm = el.querySelector('.bal-arm');
     setTimeout(() => { arm.style.transform = `rotate(${tiltOf(pDem - pRep).toFixed(2)}deg)`; }, 80);
   }
@@ -334,7 +404,7 @@
     const hb = document.getElementById('bal-home');
     if (N && !N.fixture_run) {
       const s = N.summary, M = N.models || {}, nD = Math.round(100 * s.pDemWin), nT = Math.round(100 * s.pTie), rep = (100 - nD - nT) / 100;
-      balance(hb, views.today[0], views.today[1], s.pDemWin, rep, () => { location.hash = 'nowcast'; });
+      balance(hb, views.today[0], views.today[1], s.pDemWin, rep, () => { location.hash = 'nowcast'; }, '<a href="#nowcast">See every state</a>');
       ensemble(document.getElementById('ens-home'), { enns: M.enns || s, desart: M.desart || null, now: s });
       MODELS.forEach(([k]) => { const el = document.getElementById('odds-' + k); if (el && M[k]) el.textContent = Math.round(100 * M[k].pDemWin); });
       document.getElementById('hero-date').textContent = window.FORECAST ? `Published ${niceDate(window.FORECAST.published)}. Final: it does not change.` : `Updated ${niceDate(N.generated_at)}. Not the forecast, which publishes August 6, 2028.`;
@@ -347,7 +417,7 @@
       document.getElementById('ens-home').hidden = true;
     }
     const tabs = document.querySelectorAll('[data-snake]');
-    const show = k => { const v = views[k] || views.fc; tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.snake === k)); snake(document.getElementById('snake-home'), document.getElementById('snake-home-read'), v[0], v[1]); };
+    const show = k => { const v = views[k] || views.fc; tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.snake === k)); snake(document.getElementById('snake-home'), document.getElementById('snake-home-read'), v[0], v[1]); document.getElementById('snake-home-key').innerHTML = snakeKey(v[0].some(i => i.col) ? 'rate' : 'share'); };
     tabs.forEach(t => { if (t.dataset.snake === 'today' && !views.today) t.disabled = true; t.addEventListener('click', () => show(t.dataset.snake)); });
     show('fc');   // the 2028 line-up is the balance at the top of the page
   }
@@ -569,7 +639,7 @@
       if (pinned28 !== a) pick28(a, true);
       document.getElementById('map-2028').scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center' });
     };
-    balance(document.getElementById('bal-28'), items, window.FORECAST ? '2028 forecast' : '2028 Nowcast', s.pDemWin, rep, toMap);
+    balance(document.getElementById('bal-28'), items, window.FORECAST ? '2028 forecast' : '2028 Nowcast', s.pDemWin, rep, toMap, '', true);
     ensemble(document.getElementById('ens-28'), { enns: s.enns || s, desart: s.desart, now: s });
     setGlow(s.pDemWin, rep);
     waffle(document.getElementById('waffle-28'), s.pDemWin, s.pTie);
@@ -1084,6 +1154,8 @@
     const v = VIEWS.includes(h) ? h : 'home';
     VIEWS.forEach(n => document.getElementById('view-' + n).hidden = n !== v);
     document.querySelectorAll('nav a').forEach(a => a.dataset.view === v ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
+    const here = document.querySelector(`nav a[data-view="${v}"]`), name = here && v !== 'home' ? (here.querySelector('.nl') || here).textContent.trim() : '';
+    document.title = name ? `${name} | Tipping Point` : 'Tipping Point';
     if (!done[v]) {
       if (v === 'home') renderHome();
       if (v === 'results-2024') render2024();
@@ -1098,6 +1170,17 @@
   }
   // A link can ask to land on one part of a page (data-goto). The page may still be drawing, so keep
   // scrolling to that part until its position settles, and stop if the reader scrolls themselves.
+  // Skip link: the address bar belongs to the pages, so move focus to the content without touching it.
+  const skip = document.querySelector('.skip');
+  if (skip) skip.addEventListener('click', e => { e.preventDefault(); const m = document.getElementById('main'); m.focus({ preventScroll: true }); m.scrollIntoView(); });
+  // Left and right arrows move between tabs, on every set of tabs.
+  document.addEventListener('keydown', e => {
+    const t = e.target.closest && e.target.closest('[role="tab"]');
+    if (!t || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
+    const all = [...t.closest('[role="tablist"]').querySelectorAll('[role="tab"]:not(:disabled)')];
+    const next = all[(all.indexOf(t) + (e.key === 'ArrowRight' ? 1 : all.length - 1)) % all.length];
+    e.preventDefault(); next.focus(); next.click();
+  });
   let goTo = null;
   document.addEventListener('click', ev => { const a = ev.target.closest && ev.target.closest('a[data-goto]'); if (a) goTo = a.dataset.goto; });
   function scrollToWhenReady(id) {
