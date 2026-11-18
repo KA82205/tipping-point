@@ -144,12 +144,13 @@ section + section { border-top: 1px solid var(--line); }
 .bal-top .l { color: var(--muted); font-size: 15px; line-height: 1.3; display: grid; padding-bottom: 6px; }
 .bal-top .l b { color: var(--ink); font-weight: 500; font-size: 18px; }
 .bal-top .r { text-align: right; }
-.bal-stage { position: relative; padding-top: 50px; }
+/* Room above the beam: for its tilt, and for the names of the narrow states and the end that rises under them. */
+.bal-stage { position: relative; --stage-pad: 50px; padding-top: max(var(--stage-pad), calc(var(--rail-h, 0px) + var(--rise, 0px) + 8px)); }
 .bal-arm { transform-origin: 50% 100%; transition: transform 1.5s cubic-bezier(.3, 1.7, .5, 1); will-change: transform; }
 .bal-fulcrum { position: relative; width: 0; height: 0; margin: 0 auto; border-left: 32px solid transparent; border-right: 32px solid transparent; border-bottom: 46px solid var(--accent); }
 .bal-fulcrum span { position: absolute; top: 21px; left: -32px; width: 64px; text-align: center; font: 600 14px/1 var(--font-num); color: #1b1206; }
 .bal-stage::after { content: ""; display: block; height: 1px; background: linear-gradient(90deg, transparent, var(--line-2) 18%, var(--line-2) 82%, transparent); }
-.balance .snake { height: 60px; }
+.balance .snake { height: 60px; margin-top: 0; }
 .balance .mark270 { display: none; }
 .balance .snake-read { margin-top: 10px; }
 @media (min-width: 1000px) { .balance .snake-read { min-height: 1.6em; } }   /* one line at this width, so the link sits close under it */
@@ -158,16 +159,16 @@ section + section { border-top: 1px solid var(--line); }
   .bal-top .side { flex-direction: column; align-items: flex-start; gap: 6px; }
   .bal-top .r { align-items: flex-end; }
   .bal-top .r .l { order: 2; }
-  .bal-stage { padding-top: 26px; }
+  .bal-stage { --stage-pad: 26px; }
   .balance .snake { height: 44px; }
 }
 
 /* Tipping-point line-up */
 .snake-card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px 18px 14px; display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
-.snake { position: relative; display: flex; height: 54px; border-radius: 9px; overflow: visible; touch-action: pan-y; }
+.snake { position: relative; display: flex; height: 54px; margin-top: var(--rail-h, 0px); border-radius: 9px; overflow: visible; touch-action: pan-y; }
 .snake .seg { position: relative; height: 100%; border-right: 1px solid rgba(7, 12, 21, .7); display: flex; align-items: center; justify-content: center; font: 600 11px var(--font-num); color: #fff; cursor: pointer; transition: transform .16s, filter .16s; min-width: 0; overflow: hidden; }
 .snake .seg:first-child { border-radius: 9px 0 0 9px; } .snake .seg:last-child { border-radius: 0 9px 9px 0; border-right: 0; }
-.snake .seg:focus-visible, .snake .seg.on { filter: brightness(1.35); transform: translateY(-5px); z-index: 4; }
+.snake .seg:focus-visible, .snake .seg.on, .snake .seg.hov { filter: brightness(1.35); transform: translateY(-5px); z-index: 4; }
 @media (hover: hover) { .snake .seg:hover { filter: brightness(1.35); transform: translateY(-5px); z-index: 4; } }
 .snake .seg.toss, .snake .seg.dk { color: #000; }
 .snake .seg.nl { font-size: 0; }
@@ -176,6 +177,29 @@ section + section { border-top: 1px solid var(--line); }
 .snake .seg:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .snake .mark270 { position: absolute; top: -10px; bottom: -10px; width: 2px; background: var(--ink); z-index: 3; pointer-events: none; }
 .snake .mark270::after { content: "270"; position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font: 600 12px var(--font-num); color: var(--ink); }
+/* Every state is named. A state too narrow for its own name has it above the bar, joined by a line. */
+.snake .rail { position: absolute; left: 0; right: 0; bottom: 100%; height: var(--rail-h, 0px); pointer-events: none; }
+.snake .rail svg { position: absolute; left: 0; bottom: 0; overflow: visible; }
+.snake .rail path { fill: none; stroke: var(--faint); stroke-opacity: .6; stroke-width: 1; }
+.snake .rail path.hot { stroke: var(--ink); stroke-opacity: 1; }
+.snake .rl { position: absolute; transform: translateX(-50%); font: 600 11px/13px var(--font-num); color: var(--muted); white-space: nowrap; pointer-events: auto; cursor: pointer; }
+.snake .rl.hot { color: var(--ink); }
+/* Where the bar is too short for that, the same line-up as a list under it. */
+.snake-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 3px; }
+.snake-list[hidden] { display: none; }
+.snake-list span { height: 26px; border-radius: 4px; display: grid; place-items: center; font: 600 11px var(--font-num); color: #fff; cursor: pointer; }
+.snake-list span.toss, .snake-list span.dk { color: #000; }
+.snake-list span.tp { outline: 2px solid var(--accent); outline-offset: -2px; }
+.snake-list span.toss.tp { outline-color: #fff; }
+.snake-list span.hot { position: relative; z-index: 1; filter: brightness(1.35); outline: 2px solid #fff; outline-offset: 2px; }
+.balance .snake-list { margin-top: 14px; }
+/* With the list, the line that reads a state sits above it, clear of the finger that taps it. */
+@media (max-width: 999.98px) {
+  .balance .snake-read, .snake-card .snake-read { order: 1; }
+  .balance .snake-list, .snake-card .snake-list { order: 2; margin-top: 0; }
+  .balance .snake-key, .snake-card .snake-key { order: 3; }
+  .balance .snake-more { order: 4; }
+}
 .snake-read { margin: 0; font-size: 14px; color: var(--muted); min-height: 3.2em; max-width: none; }
 .snake-read b { color: var(--ink); font-weight: 500; }
 @media (max-width: 600px) { .snake-read { min-height: 6.4em; } }
@@ -183,8 +207,8 @@ section + section { border-top: 1px solid var(--line); }
 .snake-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; font-size: 13px; color: var(--muted); }
 .balance .snake-key { margin-top: 12px; }
 .snake-key .ramp .rk i + i { margin-left: -3px; }
-.snake-key .h-touch { display: none; }
-@media (hover: none) { .snake-key .h-hover { display: none; } .snake-key .h-touch { display: inline; } }
+.snake-key .h-touch, .snake-key .h-tap { display: none; }
+@media (hover: none) { .snake-key .h-hover { display: none; } .snake-key .h-touch { display: inline; } .snake-list:not([hidden]) ~ .snake-key .h-touch { display: none; } .snake-list:not([hidden]) ~ .snake-key .h-tap { display: inline; } }
 .snake-more:empty { display: none; }
 .snake-more a { display: inline-block; font-size: 14px; font-weight: 500; padding: 4px 0; }
 @media (pointer: coarse) { .snake-more a { padding: 11px 0; } }
@@ -385,7 +409,6 @@ footer p { max-width: 62ch; margin: 4px 0; }
   section { padding: 44px 0; }
   .hero { padding: 40px 0 44px; }
   .map-tools .btn { flex: 1; justify-content: center; }
-  .snake .seg.sm { font-size: 0; }   /* only the largest states keep their labels */
 }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

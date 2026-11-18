@@ -26,7 +26,6 @@
   const isToss = p => Math.max(p, 1 - p) <= 0.55;
   // The 2028 map is colored by rating: darker means safer, and the light shades and gold mark the close states.
   const RATE_COLOR = { SD: '#2e64b0', LD: '#4f8de0', TD: '#a9c8f0', TOSS: TOSS, TR: '#f2aaa1', LR: '#d8665b', SR: '#a63f37' };
-  const LIGHT = new Set([RATE_COLOR.TD, TOSS, RATE_COLOR.TR]);   // fills that need dark text
   // Any fill light enough to need dark text: '#rrggbb' or 'rgb(r,g,b)', by relative luminance.
   const lumOf = c => {
     const v = c[0] === '#' ? [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16)) : (c.match(/\d+/g) || []).slice(0, 3).map(Number);
@@ -93,21 +92,155 @@
   const snakeKey = kind => `<span class="ramp">${kind === 'rate'
     ? `<span class="rate-keys">${[['Solid', 'SD', 'SR'], ['Likely', 'LD', 'LR'], ['Lean', 'TD', 'TR']].map(([n, d, r]) => `<span class="rk"><i style="background:${RATE_COLOR[d]}"></i><i style="background:${RATE_COLOR[r]}"></i>${n}</span>`).join('')}<span class="rk"><i style="background:${TOSS}"></i>Toss-up</span></span>`
     : `<span class="d-ink">D</span><i style="background:linear-gradient(90deg,${shareColor(72)},${shareColor(56)},${shareColor(50)},${shareColor(44)},${shareColor(28)})"></i><span class="r-ink">R</span><span>Shaded by share of the vote</span>`}</span>
-    <span class="hint"><span class="h-hover">Point at a state for its numbers.</span><span class="h-touch">Slide along the bar to read each state.</span></span>`;
-  // Labels that do not fit their state are hidden instead of clipped.
-  const fitLabels = el => el.querySelectorAll('.seg').forEach(s => { s.classList.remove('nl'); s.classList.toggle('nl', s.scrollWidth > s.clientWidth + 0.5); });
+    <span class="hint"><span class="h-hover">Point at a state for its numbers.</span><span class="h-touch">Slide along the bar to read each state.</span><span class="h-tap">Tap a state for its numbers.</span></span>`;
+  // ---------- naming every state ----------
+  // A state wide enough carries its own name. One too narrow gets its name above the bar, joined to it by a thin
+  // line. The names sit in up to three rows, and a line that climbs past a row is given a gap in that row, so no
+  // line crosses a name. Where the bar is too short for that (a phone), every state is listed under the bar
+  // instead, in the same order and colors.
+  const NAME = { h: 13, gap: 3, lead: 16, stub: 2, fit: 4, pad: 4, pass: 5, rows: 3, fan: 20, far: 40, wide: '(min-width: 1000px)' };
+  let inkW = {}, inkCtx = null;
+  const inkFont = () => `600 11px ${getComputedStyle(document.documentElement).getPropertyValue('--font-num')}`;
+  const textW = t => {
+    if (inkW[t] === undefined) {
+      inkCtx = inkCtx || document.createElement('canvas').getContext('2d');
+      inkCtx.font = inkFont();
+      inkW[t] = inkCtx.measureText(t).width;
+    }
+    return inkW[t];
+  };
+  // Things in a row that each want to sit at t[i] and each need f[i] of room: the nearest places where none
+  // overlap, kept between lo and hi. (Isotonic regression on the places, less the room taken up before them.)
+  function spread(t, f, lo, hi) {
+    const n = t.length, off = [0], pool = [], z = [];
+    if (!n) return z;
+    for (let i = 1; i < n; i++) off[i] = off[i - 1] + (f[i - 1] + f[i]) / 2;
+    for (let i = 0; i < n; i++) {
+      let b = { sum: t[i] - off[i], n: 1 };
+      while (pool.length && pool[pool.length - 1].sum / pool[pool.length - 1].n > b.sum / b.n) { const p = pool.pop(); b = { sum: p.sum + b.sum, n: p.n + b.n }; }
+      pool.push(b);
+    }
+    pool.forEach(b => { for (let k = 0; k < b.n; k++) z.push(b.sum / b.n); });
+    const zlo = lo + f[0] / 2, zhi = Math.max(zlo, hi - f[n - 1] / 2 - off[n - 1]);
+    return z.map((v, i) => Math.max(zlo, Math.min(zhi, v)) + off[i]);
+  }
+  function nameStates(el) {
+    const W = el.clientWidth, rail = el.querySelector('.rail');
+    if (!W || !rail) return;   // not drawn yet, or not on screen
+    const out = [];
+    const mark = el.querySelector('.mark270'), x270 = mark && mark.offsetParent ? W * 270 / 538 : null;   // the 270 mark, where one is drawn
+    el.querySelectorAll('.seg').forEach(s => {
+      const w = textW(s.dataset.n);
+      let room = s.clientWidth;
+      s.style.padding = '';
+      if (x270 !== null && x270 > s.offsetLeft && x270 < s.offsetLeft + s.clientWidth) {
+        // The 270 mark runs through this state: its name sits on the wider side of the mark, not under it.
+        const before = x270 - 2 - s.offsetLeft, after = s.offsetLeft + s.clientWidth - x270 - 2;
+        room = Math.max(before, after);
+        s.style.padding = before > after ? `0 ${Math.round(s.clientWidth - before)}px 0 0` : `0 0 0 ${Math.round(s.clientWidth - after)}px`;
+      }
+      const fits = w + NAME.fit <= room;
+      s.classList.toggle('nl', !fits);
+      if (!fits) out.push({ a: s.dataset.a, n: s.dataset.n, w, c: s.offsetLeft + s.offsetWidth / 2, row: 0, xs: [] });
+    });
+    let ok = out.length > 0 && matchMedia(NAME.wide).matches, H = 0, R = 1;
+    if (ok) {
+      // Row by row from the bar up: the names in that row, and the lines on their way to a higher one, each get room.
+      const place = ([side, lo, hi]) => {
+        side.forEach(o => { o.xs = []; });
+        for (let q = 0; q <= Math.max(0, ...side.map(o => o.row)); q++) {
+          const live = side.filter(o => o.row >= q);
+          spread(live.map(o => o.xs.length ? o.xs[o.xs.length - 1] : o.c), live.map(o => o.row === q ? o.w + NAME.pad : NAME.pass), lo, hi).forEach((x, k) => live[k].xs.push(x));
+        }
+      };
+      // Where the 270 mark is drawn, the names keep clear of it on either side.
+      const sides = x270 === null ? [[out, -10, W + 10]] : [[out.filter(o => o.c < x270), -10, x270 - 17], [out.filter(o => o.c >= x270), x270 + 17, W + 10]];
+      sides.forEach(side => {
+        // Names whose places would overlap form a cluster. A cluster stays in one row if that keeps every name
+        // within reach of its state; otherwise it is dealt out over two rows, or three, starting with whichever
+        // name keeps them closest.
+        const [all, lo, hi] = side, clusters = [];
+        all.forEach((o, i) => { if (i && o.c - all[i - 1].c < (o.w + all[i - 1].w) / 2 + NAME.pad) clusters[clusters.length - 1].push(o); else clusters.push([o]); });
+        clusters.forEach(g => {
+          let best = null;
+          for (let rows = 1; rows <= NAME.rows && !(best && best.d <= NAME.fan); rows++) {
+            for (let first = 0; first < rows; first++) {
+              g.forEach((o, k) => { o.row = (k + first) % rows; });
+              place([g, lo, hi]);
+              const d = Math.max(...g.map(o => Math.abs(o.xs[o.row] - o.c)));
+              if (!best || d < best.d - 0.5) best = { d, rows: g.map(o => o.row) };
+            }
+          }
+          g.forEach((o, k) => { o.row = best.rows[k]; });
+        });
+        place(side);
+        // Clusters can crowd each other once they are side by side. One still out of reach gets another row.
+        const reach = g => Math.max(...g.map(o => Math.abs(o.xs[o.row] - o.c)));
+        for (let pass = 0; pass < 2; pass++) {
+          clusters.filter(g => reach(g) > NAME.fan && Math.max(...g.map(o => o.row)) < Math.min(NAME.rows, g.length) - 1).forEach(g => {
+            const rows = 2 + Math.max(...g.map(o => o.row)), was = { d: reach(g), rows: g.map(o => o.row) };
+            let best = was;
+            for (let first = 0; first < rows; first++) {
+              g.forEach((o, k) => { o.row = (k + first) % rows; });
+              place(side);
+              if (reach(g) < best.d - 0.5) best = { d: reach(g), rows: g.map(o => o.row) };
+            }
+            g.forEach((o, k) => { o.row = best.rows[k]; });
+            place(side);
+          });
+        }
+      });
+      R = 1 + Math.max(...out.map(o => o.row));
+      ok = out.every(o => Math.abs(o.xs[o.row] - o.c) <= NAME.far && o.xs[o.row] - o.w / 2 >= -12 && o.xs[o.row] + o.w / 2 <= W + 12);
+    }
+    if (ok) {
+      H = NAME.lead + R * (NAME.h + NAME.gap);
+      const f = v => Math.round(v * 10) / 10, y = q => NAME.lead + q * (NAME.h + NAME.gap);   // the bottom of row q, up from the bar
+      // A line leaves straight up, steps across on a diagonal, and arrives straight up.
+      const step = (x0, y0, x1, y1, stub) => {
+        const dx = Math.abs(x1 - x0), room = y0 - y1 - 2 * stub;
+        return dx < 0.6 || room < 1 ? `L${f(x1)} ${f(y1)}` : `L${f(x0)} ${f(y0 - stub)}L${f(x1)} ${f(y0 - stub - Math.min(dx, room))}L${f(x1)} ${f(y1)}`;
+      };
+      const line = o => {
+        let p = `M${f(o.c)} ${H}` + step(o.c, H, o.xs[0], H - y(0) + 1, NAME.stub);
+        for (let q = 0; q < o.row; q++) p += `L${f(o.xs[q])} ${H - y(q) - NAME.h + 3}` + step(o.xs[q], H - y(q) - NAME.h + 3, o.xs[q + 1], H - y(q + 1) + 1, 1);
+        return p;
+      };
+      rail.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${out.map(o => `<path data-a="${o.a}" d="${line(o)}"/>`).join('')}</svg>${out.map(o => `<span class="rl" data-a="${o.a}" style="left:${f(o.xs[o.row])}px;bottom:${y(o.row)}px">${o.n}</span>`).join('')}`;
+    } else rail.innerHTML = '';
+    el._list.hidden = ok || !out.length;
+    el._railH = ok ? Math.max(el._railH || 0, H) : 0;   // does not shrink from one line-up to the next, so the card keeps its height
+    el.style.setProperty('--rail-h', `${el._railH}px`);
+    const stage = el.closest('.bal-stage');
+    if (stage) {   // the beam needs room above it for the names, and more at the end that tips up
+      const tilt = parseFloat(el.closest('.bal-arm').dataset.tilt) || 0;
+      stage.style.setProperty('--rail-h', `${el._railH}px`);
+      stage.style.setProperty('--rise', `${el._railH ? (Math.abs(Math.tan(tilt * Math.PI / 180)) * W / 2).toFixed(1) : 0}px`);
+    }
+  }
   let fitTimer = 0;
-  const refit = () => document.querySelectorAll('.snake').forEach(fitLabels);
+  const refit = () => document.querySelectorAll('.snake').forEach(el => { el._railH = 0; nameStates(el); });
   window.addEventListener('resize', () => { clearTimeout(fitTimer); fitTimer = setTimeout(refit, 150); });
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(refit);   // label widths change when the web font arrives
+  // Names are measured again once the web font arrives. The face is asked for by name, in case nothing else has yet.
+  const remeasure = () => { inkW = {}; refit(); };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(remeasure);
+  if (document.fonts && document.fonts.load) document.fonts.load(inkFont(), 'NE-3').then(remeasure, () => {});
   const votes = n => `${n} electoral vote${n === 1 ? '' : 's'}`;
   function snake(el, readEl, items, label, onPick, lead, touchPick) {
     const { rows, tp } = tippingOf(items);
     const demEV = rows.filter(r => r.share > 50).reduce((a, r) => a + r.ev, 0);
+    const paint = r => { const fill = r.col || (r.toss ? TOSS : shareColor(r.share)); return [fill, `${r === tp ? ' tp' : ''}${r.toss || isLight(fill) ? ' toss' : ''}${darkInk(fill) ? ' dk' : ''}`]; };
     el.innerHTML = rows.map(r => {
-      const fill = r.col || (r.toss ? TOSS : shareColor(r.share));
-      return `<div class="seg${r === tp ? ' tp' : ''}${r.ev < 19 ? ' sm' : ''}${r.toss || isLight(fill) ? ' toss' : ''}${darkInk(fill) ? ' dk' : ''}" data-a="${r.abbr}" style="flex:${r.ev} 0 0;background:${fill}" tabindex="${r === tp ? 0 : -1}" role="${onPick ? 'button' : 'img'}" aria-label="${esc(byAbbr[r.abbr].name)}, ${votes(r.ev)}, ${fmt(r.share)} Democratic">${r.ev >= 9 ? dname(r.abbr) : ''}</div>`;
-    }).join('') + `<div class="mark270" style="left:${270 / 538 * 100}%"></div>`;
+      const [fill, cls] = paint(r);
+      return `<div class="seg${cls}" data-a="${r.abbr}" data-n="${dname(r.abbr)}" style="flex:${r.ev} 0 0;background:${fill}" tabindex="${r === tp ? 0 : -1}" role="${onPick ? 'button' : 'img'}" aria-label="${esc(byAbbr[r.abbr].name)}, ${votes(r.ev)}, ${fmt(r.share)} Democratic">${dname(r.abbr)}</div>`;
+    }).join('') + `<div class="mark270" style="left:${270 / 538 * 100}%"></div><div class="rail" aria-hidden="true"></div>`;
+    // The same line-up as a list, shown where the bar is too short to name its states.
+    if (!el._list) {
+      el._list = document.createElement('div');
+      el._list.className = 'snake-list'; el._list.hidden = true; el._list.setAttribute('aria-hidden', 'true');
+      (el.closest('.bal-stage') || el).insertAdjacentElement('afterend', el._list);
+    }
+    el._list.innerHTML = rows.map(r => { const [fill, cls] = paint(r); return `<span class="${cls.trim()}" data-a="${r.abbr}" style="background:${fill}">${dname(r.abbr)}</span>`; }).join('');
     el.setAttribute('role', 'group');
     el.setAttribute('aria-label', `${label}: every state from most Democratic to most Republican. The arrow keys move between states.`);
     const tpName = byAbbr[tp.abbr].name.replace(' District', '');
@@ -115,11 +248,14 @@
     const base = `${label}: ${lead ? lead + '. The' : 'the'} tipping point is <b>${esc(tpName)}</b> at ${fmt(tp.share)} Democratic, so <b>${winner}</b> reach 270 (${demEV} Democratic electoral votes).`;
     readEl.innerHTML = base;
     const segs = [...el.querySelectorAll('.seg')];
-    const show = r => { readEl.innerHTML = `<b>${esc(byAbbr[r.abbr].name)}</b>: ${votes(r.ev)}, ${fmt(r.share)} Democratic. Democrats reach ${votes(r.after)} if they win every state up to here.`; };
+    // The state being read is also picked out among the names above the bar and in the list.
+    const hot = a => [el.querySelector('.rail'), el._list].forEach(box => box.querySelectorAll('[data-a]').forEach(x => x.classList.toggle('hot', x.dataset.a === a)));
+    const rest = () => { readEl.innerHTML = base; hot(null); };
+    const show = r => { readEl.innerHTML = `<b>${esc(byAbbr[r.abbr].name)}</b>: ${votes(r.ev)}, ${fmt(r.share)} Democratic. Democrats reach ${votes(r.after)} if they win every state up to here.`; hot(r.abbr); };
     segs.forEach((s, i) => {
       const r = rows[i];
       s.addEventListener('mouseenter', () => { if (!el._touch) show(r); });
-      s.addEventListener('mouseleave', () => { if (!el._touch) readEl.innerHTML = base; });
+      s.addEventListener('mouseleave', () => { if (!el._touch) rest(); });
       // One stop for the Tab key: the state that has focus is the one Tab comes back to. A touch also moves
       // focus, to whichever state the browser snaps the finger to; the line keeps the state under the finger.
       s.addEventListener('focus', () => {
@@ -127,7 +263,7 @@
         if (performance.now() - (el._touchAt || 0) < 500) return;
         el._touch = false; segs.forEach(g => g.classList.remove('on')); show(r);
       });
-      s.addEventListener('blur', () => { if (!el._touch) readEl.innerHTML = base; });
+      s.addEventListener('blur', () => { if (!el._touch) rest(); });
       if (onPick) {
         // A touch reads the state. It also picks it only where the page says so (touchPick); elsewhere a link under the bar does.
         s.addEventListener('click', () => {
@@ -139,20 +275,36 @@
       }
     });
     // By touch: put a finger on the bar or slide along it, and the line below reads the state under it.
+    const readSeg = s => { segs.forEach(g => g.classList.toggle('on', g === s)); show(rows[segs.indexOf(s)]); };
     el._read = x => {
       // The state under the finger, taken along the middle of the bar so a finger that drifts off it still reads.
       const box = el.getBoundingClientRect(), under = document.elementFromPoint(Math.max(box.left + 1, Math.min(box.right - 1, x)), box.top + box.height / 2);
-      const s = segs.includes(under) ? under : x < box.left + box.width / 2 ? segs[0] : segs[segs.length - 1];
-      segs.forEach(g => g.classList.toggle('on', g === s));
-      show(rows[segs.indexOf(s)]);
+      readSeg(segs.includes(under) ? under : x < box.left + box.width / 2 ? segs[0] : segs[segs.length - 1]);
     };
+    // A name above the bar, or in the list, stands in for its state: point at it, tap it or click it.
+    el._readA = a => readSeg(segs.find(g => g.dataset.a === a));
+    el._lift = a => { segs.forEach(g => { g.classList.toggle('hov', g.dataset.a === a); g.classList.remove('on'); }); if (a) show(rows[segs.findIndex(g => g.dataset.a === a)]); else rest(); };
+    el._pick = onPick; el._touchPick = touchPick;
     if (!el._wired) {
       el._wired = true;
-      const touch = e => { el._touch = e.pointerType !== 'mouse'; if (el._touch) { el._touchAt = performance.now(); el._read(e.clientX); } };
+      const named = e => { const t = e.target.closest && e.target.closest('.rl, .snake-list span'); return t ? t.dataset.a : null; };
+      const touch = e => {
+        el._touch = e.pointerType !== 'mouse';
+        if (!el._touch) return;
+        el._touchAt = performance.now();
+        const a = named(e);
+        if (a) el._readA(a); else el._read(e.clientX);
+      };
       el.addEventListener('pointerdown', touch);
-      el.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' && (e.pressure > 0 || e.buttons)) { el._touchAt = performance.now(); el._read(e.clientX); } });
+      el._list.addEventListener('pointerdown', e => { if (named(e)) touch(e); });
+      el.addEventListener('pointermove', e => { if (e.pointerType !== 'mouse' && (e.pressure > 0 || e.buttons) && !named(e)) { el._touchAt = performance.now(); el._read(e.clientX); } });
       // A mouse arriving after a touch (a laptop with both) goes back to pointing.
       el.addEventListener('pointerover', e => { if (e.pointerType === 'mouse' && el._touch) { el._touch = false; el.querySelectorAll('.seg.on').forEach(g => g.classList.remove('on')); } });
+      [el, el._list].forEach(box => {
+        box.addEventListener('pointerover', e => { const a = named(e); if (a && e.pointerType === 'mouse') { el._touch = false; el._lift(a); } });
+        box.addEventListener('pointerout', e => { if (named(e) && e.pointerType === 'mouse') el._lift(null); });
+        box.addEventListener('click', e => { const a = named(e); if (a && el._pick && (!el._touch || el._touchPick)) el._pick(a); });
+      });
       el.addEventListener('keydown', e => {
         const all = [...el.querySelectorAll('.seg')], i = all.indexOf(document.activeElement);
         const to = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: all.length - 1 }[e.key];
@@ -161,7 +313,7 @@
         all[Math.max(0, Math.min(all.length - 1, to))].focus();
       });
     }
-    fitLabels(el);
+    nameStates(el);
   }
 
   // ---------- electoral-vote histogram ----------
@@ -260,6 +412,8 @@
     const whole = v => String(Math.round(100 * v));
     countTo(el.querySelector('[data-k="dem"]'), pDem, whole);
     countTo(el.querySelector('[data-k="rep"]'), pRep, whole);
+    const arm = el.querySelector('.bal-arm'), tilt = tiltOf(pDem - pRep).toFixed(2);
+    arm.dataset.tilt = tilt;   // the names above the beam need to know how far its ends rise
     snake(el.querySelector('.snake'), el.querySelector('.snake-read'), items, label, onPick, VERDICT[rateOf(pDem)], touchPick);
     el.querySelector('.snake-key').innerHTML = snakeKey(items.some(i => i.col) ? 'rate' : 'share');
     el.querySelector('.snake-more').innerHTML = more || '';
@@ -267,8 +421,7 @@
     const top = el.querySelector('.bal-top');
     top.setAttribute('role', 'img');
     top.setAttribute('aria-label', `${whole(pDem)} in 100 Democrat wins, ${whole(pRep)} in 100 Republican wins`);
-    const arm = el.querySelector('.bal-arm');
-    setTimeout(() => { arm.style.transform = `rotate(${tiltOf(pDem - pRep).toFixed(2)}deg)`; }, 80);
+    setTimeout(() => { arm.style.transform = `rotate(${tilt}deg)`; }, 80);
   }
   // The models and their average, side by side. m: { enns, desart, now }, each { pDemWin, demPopular } or null.
   const MODELS = [['enns', 'State-level approval and fundamentals model', 'Enns, Colner, Kumar and Lagodny'], ['desart', 'Long-range model', 'DeSart']];
@@ -370,7 +523,7 @@
   function board(el, states, onPick) {
     el.innerHTML = BOARD.map(([k, label]) => {
       const rows = states.filter(s => s.rating === k).sort((a, b) => b.demShare - a.demShare);
-      const chips = rows.map(s => `<button type="button" data-a="${s.abbr}"${LIGHT.has(RATE_COLOR[k]) ? ' class="toss"' : ''} style="background:${RATE_COLOR[k]}" title="${esc(byAbbr[s.abbr].name)}: ${fmt(s.demShare)} Democratic, ${s.ev} EV">${dname(s.abbr)}</button>`).join('');
+      const chips = rows.map(s => `<button type="button" data-a="${s.abbr}"${darkInk(RATE_COLOR[k]) ? ' class="toss"' : ''} style="background:${RATE_COLOR[k]}" title="${esc(byAbbr[s.abbr].name)}: ${fmt(s.demShare)} Democratic, ${s.ev} EV">${dname(s.abbr)}</button>`).join('');
       return `<div class="col ${k}"><div class="hd"><b>${label}</b><span class="num">${rows.reduce((a, s) => a + s.ev, 0)} EV</span></div><div class="chips">${chips || '<span class="none">None</span>'}</div></div>`;
     }).join('');
     el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => onPick(b.dataset.a)));
@@ -1165,6 +1318,7 @@
       if (v === 'models' && !N) document.getElementById('models-each').innerHTML = '<p class="small">This fills in after the first daily data run.</p>';
       done[v] = true;
     }
+    refit();   // a page that was hidden while the window changed size lays out its names now
     window.scrollTo(0, 0);
     if (goTo) { const id = goTo; goTo = null; scrollToWhenReady(id); }
   }
