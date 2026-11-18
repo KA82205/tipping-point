@@ -1,4 +1,4 @@
-"""Reproduces the track record on the site's Method page from the two papers' replication files.
+"""Reproduces the track record and the checks on the site's Method page from the two papers' replication files.
 
 Download the replication data (not stored in this repository) into one folder:
   Enns, Colner, Kumar & Lagodny (2024), doi:10.7910/DVN/PBGFOF   ->  Forecast2024_Replication.dta
@@ -16,6 +16,11 @@ What it does
      forecast, with the error size the approval model had at the time, to see how often results fell inside
      the stated ranges and how often the stated odds came true. Coefficient draws are left out, so the ranges
      here are slightly narrower than the site's.
+  5. Other weights: every mix of the two models in steps of five points, on both tests. The best mix in
+     hindsight, the best mix in each election, and whether a mix fitted on some elections beats equal weights
+     on an election it has not seen.
+  6. States moving together: how well each model places states relative to the national vote, two other
+     designs for the long-range equation, and where the long-range model's 2020 miss came from.
 Shares are Democratic shares of the two-party vote. National figures add up the 50 states by turnout.
 """
 import glob
@@ -152,6 +157,131 @@ def baselines(A):
     print(f"  National miss:  last election's vote {nb:.2f} points;  Nowcast {nn:.2f}")
 
 
+# ---- other weights than half each ----
+MIXES = [round(0.05 * i, 2) for i in range(21)]      # the approval and fundamentals model's share of the average
+
+
+def mix_scores(A):
+    """For every mix and election: average state miss, national miss, and whether the winner was called."""
+    S = {}
+    for w in MIXES:
+        fc = w * A.enns + (1 - w) * A.desart
+        S[w] = {}
+        for y, g in A.groupby("year"):
+            f = fc.loc[g.index]
+            natl = abs(float((f * g.TOweight).sum() / g.TOweight.sum()) - nat(g, "Result"))
+            won = ((g.loc[f > 50, "ecvotes"].sum() + 3) >= 270) == ((g.loc[g.Result > 50, "ecvotes"].sum() + 3) >= 270)
+            S[w][int(y)] = {"state": float((f - g.Result).abs().mean()), "natl": natl, "won": bool(won)}
+    return S
+
+
+def mix_avg(S, w, measure, years=None):
+    return float(np.mean([S[w][y][measure] for y in (years or sorted(S[w]))]))
+
+
+def best_mix(S, measure, years=None):
+    return min(MIXES, key=lambda w: mix_avg(S, w, measure, years))
+
+
+def weights(S, title):
+    """Every mix from the long-range model alone (0) to the approval and fundamentals model alone (1)."""
+    years = sorted(S[0.5])
+    wrong = lambda w: ", ".join(str(y) for y in years if not S[w][y]["won"]) or "none"  # noqa: E731
+    print(f"\n== Other weights, {title} ==")
+    print(f"  {'mix':>5}{'state miss':>12}{'national miss':>15}{'winners':>9}     (mix = the approval and fundamentals model's share; 0.50 is the Nowcast)")
+    for w in MIXES:
+        print(f"  {w:5.2f}{mix_avg(S, w, 'state'):12.3f}{mix_avg(S, w, 'natl'):15.3f}{sum(S[w][y]['won'] for y in years):>7}/{len(years)}")
+    for measure, name in (("state", "state results"), ("natl", "the national vote")):
+        b = best_mix(S, measure)
+        print(f"  Best mix in hindsight for {name}: {b:.2f}, a miss of {mix_avg(S, b, measure):.3f} against {mix_avg(S, 0.5, measure):.3f} at equal weights")
+        print(f"    winner called wrong: {wrong(b)} (at equal weights: {wrong(0.5)})")
+        print("    best mix in each election: " + ", ".join(f"{y} {best_mix(S, measure, [y]):.2f}" for y in years))
+
+
+def fitted_weights(scores):
+    """Would weights fitted to past results have beaten equal weights? The mix is chosen on some elections and
+    scored on one it has not seen: chosen from all the other elections, or from the earlier ones only."""
+    print("\n== Fitted weights against equal weights ==")
+    tally = {"worse": 0, "the same": 0, "better": 0}
+    for title, S in scores:
+        years = sorted(S[0.5])
+        for how in ("all the other elections", "the earlier elections only"):
+            for measure, name in (("state", "state miss"), ("natl", "national miss")):
+                fit, equal, used = [], [], []
+                for i, y in enumerate(years):
+                    pool = [t for t in years if t != y] if how.startswith("all") else years[:i]
+                    if pool:
+                        w = best_mix(S, measure, pool)
+                        fit.append(S[w][y][measure])
+                        equal.append(S[0.5][y][measure])
+                        used.append(f"{y} {w:.2f}")
+                gap = np.mean(fit) - np.mean(equal)
+                verdict = "the same" if abs(gap) < 0.01 else "worse" if gap > 0 else "better"
+                tally[verdict] += 1
+                print(f"  {title}, mix chosen from {how}, {name}: fitted {np.mean(fit):.3f}, equal weights {np.mean(equal):.3f}: {verdict}")
+                print(f"      mix used: {', '.join(used)}")
+    print(f"  Fitted weights did worse than equal weights in {tally['worse']} of {sum(tally.values())} comparisons, the same (within 0.01 points) in {tally['the same']} and better in {tally['better']}")
+    title, S = scores[-1]                                 # the longer test: fitted on its first half, scored on its second
+    years = sorted(S[0.5])
+    early, late = years[:len(years) // 2], years[len(years) // 2:]
+    w = best_mix(S, "state", early)
+    print(f"  {title}: the best mix on {early[0]}-{early[-1]} was {w:.2f}; on {late[0]}-{late[-1]} its state miss is {mix_avg(S, w, 'state', late):.2f} against {mix_avg(S, 0.5, 'state', late):.2f} at equal weights")
+
+
+# ---- states moving together ----
+def map_miss(A, col):
+    """How far each state's position relative to the national vote was off, on average: the miss in the map,
+    leaving out the miss in the national vote."""
+    return float(np.mean([((g[col] - nat(g, col)) - (g.Result - nat(g, "Result"))).abs().mean() for _, g in A.groupby("year")]))
+
+
+def moving_together(d, D, tests):
+    """The long-range model moves every state by nearly the same amount from its last result. Is that beaten?"""
+    print("\n== States moving together ==")
+    print("  Miss in each state's position relative to the national vote (points):")
+    for title, A in tests:
+        print(f"    {title}: same swing in every state {map_miss(A, 'Previous'):.2f};  long-range {map_miss(A, 'desart'):.2f};  approval and fundamentals {map_miss(A, 'enns'):.2f};  Nowcast {map_miss(A, 'avg'):.2f}")
+    spread = D.assign(swing=D.Result - D.Previous).groupby("Year").swing.std()
+    print("  Spread of state swings since the previous election (standard deviation, points): " + ", ".join(f"{int(y)} {s:.2f}" for y, s in spread.items()))
+    # Two other designs for the long-range equation, fitted and scored the same way. Results two elections back
+    # come from the approval model's data, which starts in 1980.
+    share = {(s, int(y)): v for s, y, v in zip(d.State, d.year, d.PerDem2Party)}
+    E = D.copy()
+    E["Previous2"] = [share[(s, int(y) - 8)] for s, y in zip(E.State, E.Year)]
+    E["Last2"] = (E.Previous + E.Previous2) / 2
+    rest = ["NatlPoll", "Home", "RegimeAge"]
+    designs = (("as published: the last result", ["Previous"] + rest),
+               ("adding the result two elections back", ["Previous", "Previous2"] + rest),
+               ("starting from the average of the last two results", ["Last2"] + rest))
+    for title, A in tests:
+        years = sorted(A.year.unique())
+        print(f"  Long-range equation, {title}:")
+        for name, cols in designs:
+            X = lambda t: np.column_stack([np.ones(len(t))] + [t[c].values for c in cols])  # noqa: E731
+            rows, second = [], []
+            for y in years:
+                # the one-step test starts in 2008 and fits on earlier elections only; the other fits on all the rest
+                train = range(1996, y, 4) if years[0] == 2008 else [t for t in range(1996, 2025, 4) if t != y]
+                a, te = E[E.Year.isin(train)], E[E.Year == y].copy()
+                b, *_ = np.linalg.lstsq(X(a), a.Result.values, rcond=None)
+                te["fc"], te["year"] = X(te) @ b, y
+                rows.append(te)
+                second.append(b[2])
+            F = pd.concat(rows, ignore_index=True)
+            nm = np.mean([abs(nat(g, "fc") - nat(g, "Result")) for _, g in F.groupby("year")])
+            note = f"   (fitted weight on the result two elections back: {min(second):+.2f} to {max(second):+.2f})" if "Previous2" in cols else ""
+            print(f"    {name:50} state miss {(F.fc - F.Result).abs().mean():.2f}   called {int(((F.fc > 50) == (F.Result > 50)).sum())}/{len(F)}   national miss {nm:.2f}   map miss {map_miss(F, 'fc'):.2f}{note}")
+    # Where the long-range model's 2020 miss came from (its back-test forecast for 2020 is the one DeSart published).
+    one = tests[0][1]
+    g = one[one.year == 2020]
+    err = g.desart - g.Result
+    a = D[D.Year.isin(range(1996, 2020, 4))]
+    b, *_ = np.linalg.lstsq(np.column_stack([np.ones(len(a)), a.Previous, a.NatlPoll, a.Home, a.RegimeAge]), a.Result.values, rcond=None)
+    poll, fc, res = float(D.loc[D.Year == 2020, "NatlPoll"].iloc[0]), nat(g, "desart"), nat(g, "Result")
+    print(f"  2020, long-range model: national forecast {fc:.1f}, result {res:.1f}; {100 * err.mean() ** 2 / (err ** 2).mean():.0f}% of its squared state error was a miss shared by every state")
+    print(f"    Its October 2019 polls had the Democrat at {poll:.1f}. Had they shown the result, the forecast would have been {fc - b[2] * (poll - res):.1f}: the polls account for {b[2] * (poll - res):.1f} of the {fc - res:.1f} points")
+
+
 def calibration(A, n=20000, seed=2028):
     """The site's error model on each back-test forecast: for each of seven draws of the correlation
     (0.70 to 0.97) a shared national error and a state error, total size the approval model's RMSE then."""
@@ -195,8 +325,14 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         sys.exit(__doc__)
     d, D = load(sys.argv[1])
-    one = frame(d, D, "onestep")
+    one, loo = frame(d, D, "onestep"), frame(d, D, "loo")
     summary(one, "One-step-ahead back-test, 2008-2024")
-    summary(frame(d, D, "loo"), "Leave-one-out test, 1996-2024")
+    summary(loo, "Leave-one-out test, 1996-2024")
     baselines(one)
+    tests = (("One-step-ahead back-test, 2008-2024", one), ("Leave-one-out test, 1996-2024", loo))
+    scores = [(title, mix_scores(A)) for title, A in tests]
+    for title, S in scores:
+        weights(S, title)
+    fitted_weights(scores)
+    moving_together(d, D, tests)
     calibration(one)
