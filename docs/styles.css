@@ -68,7 +68,8 @@ nav a[aria-current="page"] { color: var(--ink); background: var(--panel-2); box-
 h1, h2, h3 { font-family: var(--font-display); font-weight: 500; margin: 0; text-wrap: balance; letter-spacing: -0.012em; }
 h1 { font-size: clamp(40px, 5.6vw, 68px); line-height: 1.02; }
 h2 { font-size: clamp(28px, 3vw, 36px); line-height: 1.1; }
-h3 { font-size: 22px; line-height: 1.2; }
+/* .h3: a section heading that is second-level in the outline but keeps the smaller size. */
+h3, .h3 { font-size: 22px; line-height: 1.2; }
 p { margin: 0; max-width: 66ch; text-wrap: pretty; }
 .lede { color: var(--muted); font-size: 18px; max-width: 60ch; }
 .small { font-size: 14px; color: var(--muted); }
@@ -252,7 +253,7 @@ svg.usmap text.grp { font: 11px var(--font-body); fill: var(--muted); }
 /* What-ifs and single simulated elections, above the map */
 
 .inspector { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: grid; gap: 14px; position: sticky; top: 124px; }
-.inspector h3 { font-size: 38px; line-height: 1.05; }
+.inspector h2 { font-size: 38px; line-height: 1.05; }
 .kv { display: grid; margin: 0; }
 .kv > div { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
 .kv > div:last-child { border-bottom: 0; }
@@ -335,7 +336,7 @@ svg.usmap text.grp { font: 11px var(--font-body); fill: var(--muted); }
 .trend rect:hover { opacity: .7; }
 
 .official { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 40px 32px; display: grid; gap: 22px; justify-items: start; }
-.official h3 { font-size: clamp(26px, 3.4vw, 40px); }
+.official h2 { font-size: clamp(26px, 3.4vw, 40px); line-height: 1.2; }
 .official p { color: var(--muted); max-width: 62ch; }
 .cd { display: flex; gap: 12px; flex-wrap: wrap; }
 .cd > div { background: var(--bg); border: 1px solid var(--line-2); border-radius: 12px; padding: 16px 10px 12px; min-width: 112px; display: grid; gap: 6px; justify-items: center; }
@@ -417,7 +418,7 @@ footer p { max-width: 62ch; margin: 4px 0; }
 @media (max-width: 560px) { .mx-row, .mx-scale { grid-template-columns: 104px 1fr 46px; gap: 8px; } .mx-name b { font-size: 13px; white-space: normal; } }
 
 /* Forecast tab: inputs as they arrive, then the forecast */
-.official .fc-h { font: 600 15px var(--font-body); color: var(--ink); margin-top: 6px; }
+.official .fc-h { font: 600 15px var(--font-body); color: var(--ink); margin: 6px 0 1.33em; letter-spacing: 0; text-wrap: wrap; }
 .fc-steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; width: 100%; max-width: 760px; }
 .fc-steps li { display: grid; grid-template-columns: 104px 1fr; gap: 14px; align-items: start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
 .fc-steps li div { display: grid; gap: 2px; }

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261118a">
+<link rel="stylesheet" href="styles.css?v=20261118b">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -202,10 +202,10 @@
         <aside class="inspector" id="insp-2028" aria-live="polite"></aside>
       </div>
       <div class="official" id="official-28" hidden>
-        <h3 id="fc-head">The official prediction will be made in <span id="cd-days"></span> days</h3>
+        <h2 id="fc-head">The official prediction will be made in <span id="cd-days"></span> days</h2>
         <div class="cd" id="cd-28" aria-hidden="true"></div>
         <div class="fc-body" id="fc-body" hidden></div>
-        <h4 class="fc-h">How the forecast is coming together</h4>
+        <h3 class="fc-h">How the forecast is coming together</h3>
         <ol class="fc-steps" id="fc-steps"></ol>
         <p id="fc-about">The 2028 forecast follows each paper's own cutoff, by the date polls were conducted. The state-level approval and fundamentals model uses approval polls conducted June 1 to July 30, 2028 (100 days before the election) and the economy through June. The long-range model uses head-to-head polls conducted in October 2027, as DeSart does, and is fixed a week later, on November 7, 2027. The forecast publishes August 6, 2028, a week after the last cutoff, so polls that come out a few days late are included. Once published, it does not change: it is the Nowcast as it stood that day, frozen. In the meantime, view the Nowcast to see what the election might look like if it were held today.</p>
         <button class="btn primary" id="btn-to-nowcast" type="button">View the Nowcast</button>
@@ -213,17 +213,17 @@
     </div>
     <div class="stack-lg" id="results-detail">
       <div class="stack">
-        <h3>Where every state stands</h3>
+        <h2 class="h3">Where every state stands</h2>
         <div class="board" id="board-28"></div>
         <p class="small">Solid means a party wins the state in more than 98 of 100 simulations, Likely more than 75, Lean more than 55. Pick a state to see it on the map.</p>
       </div>
       <div class="cols2">
         <div class="stack">
-          <h3>Electoral votes across all simulations</h3>
+          <h2 class="h3">Electoral votes across all simulations</h2>
           <div class="trend" id="hist-2028"></div>
         </div>
         <div class="stack">
-          <h3>Democrat's share of simulations, day by day</h3>
+          <h2 class="h3">Democrat's share of simulations, day by day</h2>
           <div class="trend" id="trend-2028"></div>
           <div class="small" id="trend-note"></div>
         </div>
@@ -234,18 +234,18 @@
   <section class="stack-lg" id="tracker-detail">
     <div class="cols2">
       <div class="stack">
-        <h3 id="mx-anchor">Head-to-head polls in the long-range model</h3>
+        <h2 class="h3" id="mx-anchor">Head-to-head polls in the long-range model</h2>
         <div class="mx" id="mx-2028" role="img"></div>
         <p class="small" id="mx-note"></p>
         <div class="scroll-x"><table class="polls"><thead><tr><th>Ends</th><th>Pollster</th><th>Matchup</th><th class="n">Democrat</th></tr></thead><tbody id="h2h-2028"></tbody></table></div>
         <div><button class="btn" id="h2h-more" type="button" hidden></button></div>
         <p class="small" id="h2h-note"></p>
-        <h3 style="margin-top:18px">Polls in today's approval average</h3>
+        <h2 class="h3" style="margin-top:18px">Polls in today's approval average</h2>
         <div class="scroll-x"><table class="polls"><thead><tr><th>Pollster</th><th>Ends</th><th class="n">Approve</th><th class="n">Disapprove</th></tr></thead><tbody id="polls-2028"></tbody></table></div>
         <p class="small">From the VoteHub Polling API and PollResults.org (both CC BY 4.0). Each pollster's latest poll in the window; internal and partisan polls excluded.</p>
       </div>
       <div class="stack">
-        <h3>What updates on its own</h3>
+        <h2 class="h3">What updates on its own</h2>
         <p class="small" id="live-inputs"></p>
         <div class="needs needs-1">
           <div><span class="s ok" id="need-econ">Daily</span><h3>State economies</h3><p>Philadelphia Fed coincident indexes via FRED, through June 2028.</p></div>
@@ -567,6 +567,6 @@
 <script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261113a"></script>
 <script src="combine.js?v=20261113k"></script>
-<script src="app.js?v=20261118a"></script>
+<script src="app.js?v=20261118b"></script>
 </body>
 </html>

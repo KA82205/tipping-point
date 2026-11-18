@@ -431,7 +431,7 @@
     const el = document.getElementById('insp-2024');
     if (!a) {
       const e = NAT.fc - natActual;
-      el.innerHTML = `<span class="tag">United States · 538 electoral votes</span><h3>National vote</h3>
+      el.innerHTML = `<span class="tag">United States · 538 electoral votes</span><h2>National vote</h2>
         <dl class="kv">
           <div><dt>Forecast D share</dt><dd class="d-ink">${fmt(NAT.fc, 2)}</dd></div>
           <div><dt>Actual D share</dt><dd class="d-ink">${fmt(natActual, 2)}</dd></div>
@@ -448,7 +448,7 @@
       return;
     }
     const r = byAbbr[a], e = err(r), ok = (r.fc > 50) === (r.share > 50);
-    el.innerHTML = `<span class="tag">${dname(a)} · ${r.ev} electoral vote${r.ev > 1 ? 's' : ''}</span><h3>${r.name}</h3>
+    el.innerHTML = `<span class="tag">${dname(a)} · ${r.ev} electoral vote${r.ev > 1 ? 's' : ''}</span><h2>${r.name}</h2>
       <dl class="kv">
         <div><dt>Forecast D share</dt><dd class="d-ink">${fmt(r.fc, 2)}</dd></div>
         <div><dt>Actual D share</dt><dd class="d-ink">${fmt(r.share, 2)}</dd></div>
@@ -904,10 +904,10 @@
 
   function insp28(a) {
     const el = document.getElementById('insp-2028');
-    if (!cur) { el.innerHTML = `<span class="tag">2028 Nowcast</span><h3>Waiting for data</h3><p class="small">This fills in after the first daily data run.</p>`; return; }
+    if (!cur) { el.innerHTML = `<span class="tag">2028 Nowcast</span><h2>Waiting for data</h2><p class="small">This fills in after the first daily data run.</p>`; return; }
     const s = a ? cur.byAbbr[a] : null;
     if (!s) {
-      el.innerHTML = `<span class="tag">2028 Nowcast${N.fixture_run ? '<span class="test-flag">TEST DATA</span>' : ''}</span><h3>National picture</h3>
+      el.innerHTML = `<span class="tag">2028 Nowcast${N.fixture_run ? '<span class="test-flag">TEST DATA</span>' : ''}</span><h2>National picture</h2>
         <dl class="kv">
           <div><dt>Democratic two-party vote</dt><dd class="d-ink">${fmt(cur.demPopular)}</dd></div>
           <div><dt>Democrat wins</dt><dd>${pct(cur.pDemWin)} of simulations</dd></div>
@@ -920,7 +920,7 @@
       return;
     }
     const r = byAbbr[a], base = N.scenario.states.find(x => x.abbr === a);
-    el.innerHTML = `<span class="tag">${dname(a)} · ${r.ev} electoral vote${r.ev > 1 ? 's' : ''}</span><h3>${r.name}</h3>
+    el.innerHTML = `<span class="tag">${dname(a)} · ${r.ev} electoral vote${r.ev > 1 ? 's' : ''}</span><h2>${r.name}</h2>
       <dl class="kv">
         <div><dt>Nowcast D share</dt><dd class="d-ink">${fmt(s.demShare)}</dd></div>
         <div><dt>2024 D share</dt><dd>${fmt(r.share, 2)}</dd></div>
