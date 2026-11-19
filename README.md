@@ -49,7 +49,7 @@ says so on the Method page.
 |---|---|---|
 | State economies | Philadelphia Fed State Coincident Indexes via FRED (`{ST}PHCI`) | Daily |
 | National Trump approval | VoteHub and PollResults.org (both CC BY 4.0), merged and averaged | Daily |
-| State-by-state approval | A copy of Civiqs's state tracker in `pipeline/state_approval.csv`; only the gaps between states are used, re-centred on the national average | Fixed copy (see below) |
+| State-by-state approval | A copy of Civiqs's state tracker in `pipeline/state_approval.csv`; only the gaps between states are used, re-centred on the national average | By hand, from a saved copy of the page (see below) |
 | Head-to-head polls, primary polls | PollResults.org 2028 feed | Daily |
 | Nominees, running mates, home states, sitting VP | Wikipedia infoboxes, with `pipeline/candidates.json` as the curated list | Daily |
 | Vice-president adjustment | VoteHub job approval of the sitting VP and the president (favorability as fallback) | Daily |
@@ -58,7 +58,9 @@ says so on the Method page.
 **State approval.** The paper estimates approval in each state with MRP on survey microdata. No
 free feed publishes that, so `config.json → approval.state_source` is set to `csv`: a dated copy of
 Civiqs's public state tracker. Civiqs's site turns away automatic reads, so the copy is not
-refreshed daily. G. Elliott Morris's Trump Approval Explorer has state MRP estimates, but its page
+refreshed daily. It is refreshed by hand: open the tracker page in a browser, save it, and run
+`python pipeline/civiqs.py "saved page.html"`. A saved copy shows whole percentages. Civiqs licenses
+what it publishes under Creative Commons BY-NC-SA 3.0. G. Elliott Morris's Trump Approval Explorer has state MRP estimates, but its page
 says the data may not be republished without written permission. Neither is read automatically
 unless its owner agrees.
 
