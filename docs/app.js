@@ -975,7 +975,7 @@
       ${trend.length > 2 ? `<p class="dc-read" id="appr-read" aria-live="polite"></p><div class="dc-chart" id="appr-chart"></div>` : ''}
       <h3>Newest approval polls</h3>
       <ul class="dc-list">${ap.map(p => `<li><span>${linkOr(p.url, pollsterCell(p.pollster))}<small>Conducted to ${shortDay(p.date)}${p.added ? `, added ${shortDay(p.added)}` : ''}</small></span><b class="num">${Math.round(p.approve)}–${Math.round(p.disapprove)}</b></li>`).join('')}</ul>
-      <p class="foot">This is the national figure. Each state sits above or below it by a fixed gap, taken from ${A.state_data && A.state_data.name ? esc(A.state_data.name) + "'s" : 'a'} state-by-state tracker${A.state_data && A.state_data.as_of ? ' on ' + niceDate(A.state_data.as_of) : ''}; the gaps do not update yet. ${A.official_wait ? `The model moves to polls finished June 1 to July 30, 2028, the paper's window, once ${A.official_wait.needed} pollsters have one in it (${A.official_wait.pollsters} so far).` : N.mode === 'official' ? 'The model now uses polls finished June 1 to July 30, 2028, as the paper does.' : 'From June 2028 the model uses polls finished June 1 to July 30, 2028, as the paper does, once ten pollsters have one in that window.'}</p>`;
+      <p class="foot">This is the national figure. Each state sits above or below it by a gap taken from ${A.state_data && A.state_data.name ? esc(A.state_data.name) + "'s" : 'a'} state-by-state tracker${A.state_data && A.state_data.as_of ? ' on ' + niceDate(A.state_data.as_of) : ''}; the gaps are refreshed by hand, not daily. ${A.official_wait ? `The model moves to polls finished June 1 to July 30, 2028, the paper's window, once ${A.official_wait.needed} pollsters have one in it (${A.official_wait.pollsters} so far).` : N.mode === 'official' ? 'The model now uses polls finished June 1 to July 30, 2028, as the paper does.' : 'From June 2028 the model uses polls finished June 1 to July 30, 2028, as the paper does, once ten pollsters have one in that window.'}</p>`;
     if (trend.length > 2) lineChart(box('appr-chart'), box('appr-read'), trend,
       [{ key: 'dis', color: '#94a1b5', label: 'Disapprove' }, { key: 'a', color: '#f2a65e', label: 'Approve' }],
       { label: `Trump's approval, a 30-day average each week since ${trend[0].d}: now ${fmt(A.approve)} approve, ${fmt(A.disapprove)} disapprove`,
@@ -1350,6 +1350,12 @@
       if (steady < 10) setTimeout(step, 150);
     };
     step();
+  }
+  // The day the copy of Civiqs's state figures was taken, wherever the text gives it.
+  const civiqsDay = N && N.approval && N.approval.state_data && N.approval.state_data.as_of;
+  if (civiqsDay) {
+    const long = new Date(civiqsDay + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    document.querySelectorAll('[data-civiqs-date]').forEach(e => { e.textContent = long; });
   }
   window.addEventListener('hashchange', route);
   finalLabels();
