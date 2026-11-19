@@ -62,7 +62,9 @@ refreshed daily. It is refreshed by hand: open the tracker page in a browser, sa
 `python pipeline/civiqs.py "saved page.html"`. A saved copy shows whole percentages. Civiqs licenses
 what it publishes under Creative Commons BY-NC-SA 3.0. G. Elliott Morris's Trump Approval Explorer has state MRP estimates, but its page
 says the data may not be republished without written permission. Neither is read automatically
-unless its owner agrees.
+unless its owner agrees. To run the Nowcast with no state source at all, set `approval.state_source`
+to `vote_swing`: each state then gets the national average shifted by its 2024 vote. The Method
+page reports what that changes.
 
 ## Run locally
 
