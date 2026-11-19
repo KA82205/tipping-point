@@ -42,7 +42,6 @@ def refresh_civiqs_state_approval(csv_path, cache_path, offline=False, fixture=N
     """State approval from Civiqs's public tracker (pipeline/civiqs.py), written to state_approval.csv.
     If today's read fails, the last good read (pipeline/cache) is used, and failing that the CSV in the
     repository, so the run never stops for this. Returns {"name", "url", "as_of", "live"}."""
-    import csv as _csv
     data, live = None, False
     try:
         if offline:           # a test run: the saved fixture, never the network
@@ -59,14 +58,7 @@ def refresh_civiqs_state_approval(csv_path, cache_path, offline=False, fixture=N
             data = json.load(open(cache_path))
     info = {"name": "Civiqs", "url": civiqs.URL, "as_of": None, "live": live}
     if data:
-        rows = {st: v["approve"] for st, v in data["states"].items()}
-        # DC is not in the tracker: assumed 24 points below the average of the 50 states.
-        rows["DC"] = round(sum(rows.values()) / len(rows) - 24.0, 2)
-        with open(csv_path, "w", newline="") as f:
-            w = _csv.writer(f)
-            w.writerow(["state", "approve"])
-            for st in sorted(rows):
-                w.writerow([st, rows[st]])
+        civiqs.write_csv(data, csv_path)   # the 50 states, and DC by the rule kept there
         info["as_of"] = data.get("as_of") or None
     else:   # the CSV kept in the repository: a Civiqs snapshot, dated in config.json
         info["as_of"] = None
@@ -234,8 +226,9 @@ def main():
                                                        os.path.join(cache, "civiqs_state_approval.json") if cache else None,
                                                        offline=bool(fx),
                                                        fixture=fx_json("civiqs_state_approval.json") if fx else None)
-        else:   # no daily request: Civiqs's site turns automatic reads away (HTTP 403), so the dated copy
-            state_info = {"name": "Civiqs", "url": civiqs.URL, "as_of": None, "live": False}   # in the repository is used
+        else:   # no daily request: Civiqs's site turns automatic reads away (HTTP 403), so the dated copy in the
+            # repository is used. It is refreshed by hand from a saved copy of the page (pipeline/civiqs.py).
+            state_info = {"name": "Civiqs", "url": civiqs.URL, "as_of": None, "live": False}
         if not state_info["as_of"]:
             state_info["as_of"] = cfg["approval"].get("state_csv_as_of")
 
