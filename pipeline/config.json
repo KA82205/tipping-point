@@ -40,8 +40,8 @@
     "vp_net": null,
     "president_net": null,
     "trailing_days": 120,
-    "full_weight_polls": 20,
-    "_full_weight_note": "ASSUMPTION, not in the paper, daily Nowcast only: the gap is scaled by (polls of the vice president / full_weight_polls), capped at 1, so a handful of polls cannot swing the result. Once the approval model is on the paper's window (June 1 - July 30, 2028), and so in the final forecast, the gap is applied in full, as in the paper. Set to 0 to always use the full gap."
+    "full_weight_polls": 5,
+    "_full_weight_note": "ASSUMPTION, not in the paper, daily Nowcast only: the gap counts in full once this many surveys have asked about both the vice president and the president. Five is the number the authors had for 2024 (four for 2000, one for 1988). With fewer surveys the gap is scaled by (surveys / full_weight_polls). The site waited for 20 until November 20, 2026, which held back most of the gap. Once the approval model is on the paper's window (June 1 - July 30, 2028), and so in the final forecast, the gap is applied in full whatever the count, as in the paper. Set to 0 to always use the full gap."
   },
   "economy": {
     "fred_series_template": "{state}PHCI",
@@ -84,7 +84,7 @@
     "state_poll_extra_days": 60,
     "_state_source_note": "csv (used): state differences come from a copy of Civiqs's public Trump approval tracker kept in pipeline/state_approval.csv (columns state,approve), dated by state_csv_as_of; the differences between states are kept and re-centered on the national poll average, each state weighted by its adult population (pipeline/adult_population.json), because a national poll of all adults is that kind of average. state_live_read: false = no daily request to Civiqs. Its site answers automatic reads with HTTP 403, so the copy is refreshed by hand from a copy of the page saved from a browser (python pipeline/civiqs.py saved-page.html, which also sets state_csv_as_of); set true only if Civiqs agrees to regular access (pipeline/civiqs.py does the read). Other options: state_polls: vote_swing, pulled toward any state approval polls from the window plus 60 days. vote_swing: state = national + k * (Trump 2024 two-party share in state - national).",
     "vote_swing_k": 1.0,
-    "state_csv_as_of": "2026-11-18"
+    "state_csv_as_of": "2026-11-19"
   },
   "head_to_head": {
     "_comment": "Second model: DeSart (2025), doi:10.1017/S1049096524000805. National head-to-head general-election polls between one named Democrat and one named Republican, from PollResults.org.",

@@ -10,7 +10,8 @@ pipeline/state_approval.csv is refreshed by hand instead, from a copy of the pag
 
     python pipeline/civiqs.py "saved page.html"
 
-A saved copy has no data block, only what the page shows, so its figures are whole percentages.
+Save the page's source (Ctrl+U in the browser, then save): it still carries the data block, with the figures to
+two decimals. A copy of the page as shown has no data block, only whole percentages; that is read too.
 
 How the Nowcast uses it (pipeline/approval.py, state_source "csv"): only the differences between states are
 kept. They are re-centered on the national poll average, so the national level never comes from Civiqs.
@@ -138,7 +139,7 @@ def write_csv(data, csv_path):
 
 if __name__ == "__main__":
     # Refreshing the copy by hand:
-    #   1. open the tracker page (URL above) in a browser and save it (Ctrl+S)
+    #   1. open the tracker page (URL above) in a browser, open its source (Ctrl+U) and save that (Ctrl+S)
     #   2. python pipeline/civiqs.py "path/to/saved page.html"
     # This rewrites pipeline/state_approval.csv and the date of the copy in pipeline/config.json.
     if len(sys.argv) != 2:
