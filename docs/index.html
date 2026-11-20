@@ -93,7 +93,7 @@
         <p>Tipping Point is a personal, non-commercial project. Both models are published research in <em>PS: Political Science &amp; Politics</em>: the State Presidential Approval/State Economy Model by Peter K. Enns (Cornell University and Verasight), Jonathan Colner, Anusha Kumar and Julius Lagodny, and Jay A. DeSart's long-range state-level forecast. The models and their published forecasts are theirs. This site is not affiliated with or endorsed by any of the authors, and any errors in the code are its own.</p>
       </div>
       <div class="stack">
-        <p>The Nowcast runs both models every morning on the latest polls and state economic data and averages them. It shows what the models say if the election were held today. It is not the forecast, which publishes August 6, 2028. The name comes from the state that decides the Electoral College, and the logo is that idea drawn as districts on a balance beam.</p>
+        <p>The Nowcast runs both models every morning on the latest polls and state economic data and averages them. It shows what the models say if the election were held today. It is not the forecast. The final forecast, due August 6, 2028, will average the forecasts that the two models' authors publish themselves. The name comes from the state that decides the Electoral College, and the logo is that idea drawn as districts on a balance beam.</p>
         <p class="small">Data: FRED (Philadelphia Fed state coincident indexes), VoteHub and PollResults.org (poll data, CC BY 4.0), Civiqs (state approval, CC BY-NC-SA 3.0), Wikipedia, certified 2024 returns.</p>
       </div>
     </div>
@@ -109,7 +109,7 @@
   <section class="stack-lg" style="padding-top:44px">
     <div class="stack">
       <h1 style="font-size:clamp(34px,4.4vw,52px)">Archive</h1>
-      <p class="lede">How the Nowcast's method did in each election from 2008 to 2024, state by state. The Nowcast began in November 2026, so it forecast none of these. Each page is a look back, and says how it was made.</p>
+      <p class="lede">How the two models did in each election from 2008 to 2024, state by state, and what the Nowcast's method would have made of them. For 2020 and 2024 the models are shown as their authors published them before the election. No state forecasts were published for 2008 to 2016, so those years are back-tests. The Nowcast began in November 2026, so its own view is a look back in every year.</p>
     </div>
     <div class="tabs years" role="tablist" aria-label="Election">
       <button class="tab" role="tab" data-year24="2024" aria-selected="true">2024</button>
@@ -151,7 +151,7 @@
     <div class="st-tools">
       <div class="stack" style="gap:6px">
         <h2>Every state, forecast to result</h2>
-        <p class="small">Amber is the forecast with its 90% range, white is the result. Scale runs 30% to 70% Democratic; values beyond it sit at the edge.</p>
+        <p class="small">Amber is the forecast with its 90% range, white is the result. Scale runs 30% to 70% Democratic; values beyond it sit at the edge. Results are the official counts. Scores count the 50 states.</p>
       </div>
       <div class="tabs" role="group" aria-label="Filter">
         <button class="tab" id="flt-all" aria-pressed="true" aria-selected="true">All 56</button>
@@ -178,7 +178,7 @@
     <div class="stack">
       <span class="live" id="live-pill">Live</span>
       <h1 style="font-size:clamp(34px,4.6vw,56px)" id="title-28">2028 Nowcast</h1>
-      <p class="lede" id="lede-28">What two published models say, averaged, if the election were held today: one from today's Trump approval polls and state economies, one from head-to-head polls. <strong class="warn">This is not the forecast.</strong> The real forecast publishes August 6, 2028, in <span id="d-forecast"></span> days.</p>
+      <p class="lede" id="lede-28">What two published models say, averaged, if the election were held today: one from today's Trump approval polls and state economies, one from head-to-head polls. <strong class="warn">This is not the forecast.</strong> The final forecast will average the two forecasts the authors publish for 2028. It is due August 6, 2028, in <span id="d-forecast"></span> days.</p>
     </div>
     <div class="stack" id="hero-28">
       <div class="balance-card">
@@ -219,7 +219,7 @@
         <div class="fc-body" id="fc-body" hidden></div>
         <h3 class="fc-h">How the forecast is coming together</h3>
         <ol class="fc-steps" id="fc-steps"></ol>
-        <p id="fc-about">The 2028 forecast follows each paper's own cutoff, by the date polls were conducted. The state-level approval and fundamentals model uses approval polls conducted June 1 to July 30, 2028 (100 days before the election) and the economy through June. The long-range model uses head-to-head polls conducted in October 2027, as DeSart does, and is fixed a week later, on November 7, 2027. The forecast publishes August 6, 2028, a week after the last cutoff, so polls that come out a few days late are included. Once published, it does not change: it is the Nowcast as it stood that day, frozen. In the meantime, view the Nowcast to see what the election might look like if it were held today.</p>
+        <p id="fc-about">The final 2028 forecast will be the average of the two forecasts the authors themselves publish. DeSart's long-range forecast comes first, from head-to-head polls conducted in October 2027. Enns and colleagues' comes about 100 days before the election, from approval polls conducted in June and July 2028 and the economy through June. Until each is out, the site's own run of that model stands in: the long-range run is fixed on November 7, 2027 and the approval run on August 6, 2028, a week after each paper's cutoff so that polls published a few days late are included. The forecast is posted here on August 6, 2028 with whatever the authors have published by then, and is final once both of their forecasts are in. In the meantime, view the Nowcast to see what the election might look like if it were held today.</p>
         <button class="btn primary" id="btn-to-nowcast" type="button">View the Nowcast</button>
       </div>
     </div>
@@ -350,7 +350,7 @@
       <li><b>Fitted weights fail a fair test.</b> Chosen from other elections and scored on one left out, a fitted mix did worse than equal weights in six of eight comparisons, the same in one and better in one. The eight: both back-tests, chosen from all the other elections or only the earlier ones, judged on state results and on the national vote.</li>
     </ul>
     <p><b>The method was fixed on November 12, 2026</b>, and will not be changed on the strength of these same back-tests again, so that 2028 is a fair test of it.</p>
-    <p><b>The one exception is the authors' own updates:</b> if Enns and colleagues or DeSart publish a revised version of their model for 2028 before the final forecast, the site switches to it and says so here. Their published track records come from the version each author used at the time, so following their updates keeps the site on the version with that record. If they do not, the current versions stand. The site does not choose between versions itself.</p>
+    <p><b>The final forecast is the authors' own.</b> The site's runs of the two models are for the Nowcast. The final forecast will be the average of the two forecasts the authors themselves publish for 2028, state by state. DeSart's comes first, about a year before the election: when it is out, his state forecasts replace the site's run of his model and stay fixed. Enns and colleagues publish about 100 days before the election: when theirs is out, it replaces the site's run of their model, and the forecast is final. Until each is out, the site's own run of that model stands in, fixed at its paper's cutoff (November 7, 2027 for the long-range model, August 6, 2028 for the approval model). If an author publishes no state forecasts before Election Day, that stand-in is used and marked as one. The reason is accuracy: the authors work from data the site can only approximate, above all approval measured state by state, and the forecasts they published did as well as the back-tests or better. This was set on November 20, 2026, before either 2028 forecast existed. Until then the plan was to freeze the site's own runs on August 6, 2028 and call that the forecast. If an author also revises the model itself, the site's stand-in run switches to the revised version and says so here.</p>
     <p><b>Three corrections since then.</b> On November 20, 2026 the site was checked line by line against both papers, their appendices and the authors' own code, and three things did not follow the approval model's paper. They were changed to follow it. None came from a back-test or from any result.</p>
     <ul>
       <li><b>Who is polled.</b> The national approval average counted polls of registered and likely voters. The paper measures approval among all adults, so only polls of all adults count now.</li>
@@ -390,7 +390,7 @@
         </tbody>
       </table>
     </div>
-    <p class="small">2008 to 2024 are the elections both models can be tested on fairly: the long-range model's data starts in 1996, and with fewer than three past elections its equation cannot be estimated properly. The national figures add up the 50 states by turnout, leaving out the District of Columbia, so they differ slightly from the papers' own. Each election is shown state by state in the <a href="#archive">Archive</a>.</p>
+    <p class="small">2008 to 2024 are the elections both models can be tested on fairly: the long-range model's data starts in 1996, and with fewer than three past elections its equation cannot be estimated properly. The national figures add up the 50 states by turnout, leaving out the District of Columbia, so they differ slightly from the papers' own. Each election is shown state by state in the <a href="#archive">Archive</a>, which counts the District and uses the official national vote, so its national figures sit about a tenth of a point from these. For 2020 and 2024 the Archive shows the forecasts the authors published, not these back-tests.</p>
     <p class="small">The Nowcast called four of the five winners; like both models on their own, it called 2016 wrong, giving Clinton 285 electoral votes. Its average miss in a state was 2.1 points, against 2.6 and 2.2 for the two models alone, and it called 240 of the 250 state results, against 236 and 238.</p>
     <p class="small"><b>Against a simple baseline.</b> Safe states make any method look good, so the fair comparison is with assuming every state votes as it did four years earlier. That gets 222 of the 250 results (89%), against the Nowcast's 240 (96%). In the 73 results decided by under 10 points it gets 49 (67%), against 64 (88%). Of the 28 results where a state changed party, the Nowcast called 21. On the national vote, assuming a repeat of the last election misses by 2.3 points on average, against 1.0.</p>
     <p class="small">Its national miss is smaller than either model's because their misses often point in opposite directions and partly cancel: in 2012 the state-level approval and fundamentals model was 2.0 points too low and the long-range model 1.7 too high, so the average was off by 0.2. When both miss the same way, as in 2020, the average does too.</p>
@@ -427,7 +427,7 @@
     </div>
     <p class="small">Democratic share of the two-party vote, in percent. Rows of states called have no result of their own: the count already compares each forecast with the results. Enns and colleagues' 2020 forecast missed only Georgia (Enns and Lagodny 2021); their 2024 forecast had Trump at exactly 312 electoral votes. DeSart's 2020 forecast, made from October 2019 polls, missed Florida and North Carolina; the back-test reproduces its state forecasts exactly, because his model had the same design then (his replication files for 2020). His 2016 figure is his national forecast as reported in his 2024 paper (table 1), which gives no count of states for that year; his 2024 forecast was published a year before the election. Published figures are the authors' own national numbers; back-tests and results are for the 50 states, as in the tables above, which moves a figure by a tenth of a point at most.</p>
     <p class="small">The authors' own versions did as well as the back-tests or better: two more states and 1.5 points closer in 2020 for Enns and colleagues, and no difference to speak of for DeSart. The 2020 gap comes from changes Enns and colleagues made for 2024, which the back-test applies to 2020 as well. They dropped an indicator for Southern states that their 2020 model had: put it back and the back-test also misses only Georgia. Putting it back does not close the gap in the national vote; that part comes from the data they revised for 2024, with state approval re-estimated from more surveys and the 2020 economy measured differently.</p>
-    <p><b>What this means for 2028.</b> The published records come from each author's latest version at the time, so the site follows their updates. If Enns and colleagues or DeSart publish a revised version of their model for 2028 before August 6, 2028, the site switches to it and says so here. If they do not, the current versions stand. The site never chooses between versions itself.</p>
+    <p><b>What this means for 2028.</b> The published records belong to the forecasts the authors made themselves, so the final 2028 forecast uses those: DeSart's and Enns and colleagues' own state forecasts, averaged half and half. The site's own runs of the two models stand in only until each author publishes, or if one does not. The site never chooses between versions itself.</p>
     <p><b>What this means for the track record.</b> The 96% of states and 1-point national miss quoted on this site come from the back-tests, the harder of the two tests. They are a cautious figure: the forecasts the authors actually published did as well or better.</p>
   </section>
 
@@ -512,7 +512,9 @@
       <p>DeSart (2025), <a href="https://doi.org/10.1017/S1049096524000805">“Long-Range State-Level 2024 Presidential Election Forecast: How Can You Forecast an Election When You Don't Know Who the Candidates Are Yet?”</a>, <em>PS: Political Science &amp; Politics</em>. Replication data: <a href="https://doi.org/10.7910/DVN/HZGLY9">Harvard Dataverse</a>.</p>
       <p>Models tested and left out: Lichtman, <em>The Keys to the White House</em>, his ratings for 1864–2024 as tabulated on <a href="https://en.wikipedia.org/wiki/The_Keys_to_the_White_House">Wikipedia</a>; Norpoth's forecasts from his articles in <em>PS: Political Science &amp; Politics</em> (2008, 2012, 2016, 2020) and, for 2024, Stony Brook University; Abramowitz (2024), <a href="https://centerforpolitics.org/crystalball/">Sabato's Crystal Ball</a>.</p>
       <p>On averaging forecasts and on states moving together: Graefe, Armstrong, Jones &amp; Cuzán (2014), <a href="https://doi.org/10.1016/j.ijforecast.2013.02.005">“Combining Forecasts: An Application to Elections”</a>, <em>International Journal of Forecasting</em>; Graefe, Küchenhoff, Stierle &amp; Riedl (2015), <a href="https://doi.org/10.1016/j.ijforecast.2014.12.001">“Limitations of Ensemble Bayesian Model Averaging for Forecasting Social Science Problems”</a>, <em>International Journal of Forecasting</em>; Jackman (2014), <a href="https://doi.org/10.1017/S1049096514000109">“The Predictive Power of Uniform Swing”</a>, <em>PS: Political Science &amp; Politics</em>.</p>
-      <p>To reproduce the track record, the baseline, the tests of other weights and of states moving together, and the check of the simulated ranges: <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/backtest_2008_2024.py">pipeline/backtest_2008_2024.py</a> in the site's repository, run on the two papers' replication files. The Archive's pages for 2008 to 2020 come from the same back-test, written out state by state by <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/make_archive.py">pipeline/make_archive.py</a>.</p>
+      <p>To reproduce the track record, the baseline, the tests of other weights and of states moving together, and the check of the simulated ranges: <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/backtest_2008_2024.py">pipeline/backtest_2008_2024.py</a> in the site's repository, run on the two papers' replication files. The Archive's pages for 2008, 2012 and 2016 come from the same back-test, written out state by state by <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/make_archive.py">pipeline/make_archive.py</a>.</p>
+      <p>The Archive's 2020 page shows the two forecasts as published. Enns and Lagodny's article prints its state forecasts only as a chart, in which every simulated outcome is a dot; <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/extract_fig3_2020.py">pipeline/extract_fig3_2020.py</a> reads the dots and averages them state by state. The result reproduces the article's own figures: the 25 contests it colors Democratic, their 290 electoral votes, a national vote of 54.5%, and a Biden win in 59 of 100 simulations. State figures read this way are good to about a tenth of a point. DeSart's 2020 state forecasts and state chances are from his replication file.</p>
+      <p>State results in the Archive are official counts for the two nominees (<code>pipeline/results_2008_2020.json</code> and the certified 2024 returns), and the national result is the official two-party vote. Every year is scored on the 50 states, with Maine and Nebraska counted whole.</p>
       <p>2024 results: certified state returns. Map outlines: us-atlas (Census cartographic boundaries).</p>
     </div>
   </section>
@@ -528,7 +530,7 @@
       <p><b>One more model is averaged in.</b> Each state's forecast is half the Enns model and half DeSart's long-range model, then simulated together. The paper uses its model alone. Why: see "How they are combined" above.</p>
       <p><b>Each party's field is weighted until its nominee is known.</b> The paper forecasts once the nominees are set, so it has no rule for this. Home-state effects are spread across the possible nominees, an idea taken from DeSart, but by each candidate's share of primary polling. DeSart's own model, as run here, spreads them by how often each candidate appears in the head-to-head polls. The vice-president adjustment is applied in the same proportion: if the sitting vice president has 38% of his party's primary polling, 38% of the adjustment applies.</p>
       <p><b>The vice-president adjustment is phased in until June 2028.</b> The authors apply the gap between the vice president's and the president's net approval in full, from a handful of July polls. In the daily Nowcast it is scaled by the number of polls of the vice president and reaches full size at 20 polls, so a few polls cannot move every state at once. Once the approval model is on the paper's window, June 1 to July 30, 2028, the gap is applied in full, as the authors apply it, so the final forecast uses the full adjustment. When there are too few polls in the last 120 days, the window widens to 240 and then 365 days, and as a last resort a single poll is used.</p>
-      <p><b>It runs every day.</b> The paper forecasts once, about 100 days before the election, from approval polls taken in June and July and the economy through June. The Nowcast uses today's polls and the latest economic month, so it describes today, not November 2028. The final forecast follows the paper's timing: approval polls conducted June 1 to July 30, 2028 and the economy through June. The Nowcast moves to that window in June 2028, once ten pollsters have a poll in it; until then it keeps the last 30 days, so the first days of June do not rest on one or two polls.</p>
+      <p><b>It runs every day.</b> The paper forecasts once, about 100 days before the election, from approval polls taken in June and July and the economy through June. The Nowcast uses today's polls and the latest economic month, so it describes today, not November 2028. The site's last run follows the paper's timing: approval polls conducted June 1 to July 30, 2028 and the economy through June. It stands in for this model's half of the final forecast until Enns and colleagues publish their own. The Nowcast moves to that window in June 2028, once ten pollsters have a poll in it; until then it keeps the last 30 days, so the first days of June do not rest on one or two polls.</p>
       <p><b>National vote.</b> The authors add up the national vote by weighting each state by its 2020 population. The Nowcast weights states by the votes cast in 2024, which is how DeSart adds up his. On the Nowcast of November 20, 2026 the two ways gave the same figure to within 0.01 points.</p>
     </div>
     <div>
@@ -560,7 +562,7 @@
     <div class="cols2">
       <div>
         <p><b>Refitted with 2024.</b> The coefficients come from refitting his replication data with 2024 added: his October 2023 poll average (49.53%), the actual nominees' home states and the result. That lowers the home-state effect from 2.54 to 1.91 points.</p>
-        <p><b>Timing.</b> DeSart forecasts once, from polls taken in October of the year before the election. The final forecast does the same: polls conducted in October 2027, fixed on November 7, 2027, with home states spread by poll appearances whoever the nominees turn out to be. Until those polls are fixed, the Nowcast stands in with the last 180 days of polls; from November 7, 2027 it uses the fixed October set, so on August 6, 2028 the Nowcast and the final forecast are the same.</p>
+        <p><b>Timing.</b> DeSart forecasts once, from polls taken in October of the year before the election. The site's run does the same: polls conducted in October 2027, fixed on November 7, 2027, with home states spread by poll appearances whoever the nominees turn out to be. Until those polls are fixed, the Nowcast uses the last 180 days of polls. When DeSart publishes his own forecast from the October 2027 polls, his state forecasts replace the site's run and are what the final forecast uses.</p>
         <p><b>Error.</b> It is simulated with the correlated error described above, not his independent state errors.</p>
       </div>
       <div>
@@ -581,13 +583,13 @@
 
 <script src="us-states.js"></script>
 <script src="backtest2024.js?v=20261113a"></script>
-<script src="archive.js?v=20261120a" onerror="void 0"></script>
+<script src="archive.js?v=20261120b" onerror="void 0"></script>
 <script src="data.js"></script>
 <script src="nowcast.js" onerror="void 0"></script>
 <script src="history.js" onerror="void 0"></script>
 <script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261120a"></script>
 <script src="combine.js?v=20261113k"></script>
-<script src="app.js?v=20261120c"></script>
+<script src="app.js?v=20261120d"></script>
 </body>
 </html>
