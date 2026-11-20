@@ -78,8 +78,9 @@ each forecast: the value that best fits the earlier elections. Their file uses 4
 **State approval.** The paper estimates approval in each state with MRP on survey microdata. No
 free feed publishes that, so `config.json → approval.state_source` is set to `csv`: a dated copy of
 Civiqs's public state tracker. Civiqs's site turns away automatic reads, so the copy is not
-refreshed daily. It is refreshed by hand: open the tracker page in a browser, save it, and run
-`python pipeline/civiqs.py "saved page.html"`. A saved copy shows whole percentages. Civiqs licenses
+refreshed daily. It is refreshed by hand: open the tracker page in a browser, open its source (Ctrl+U), save
+that, and run `python pipeline/civiqs.py "saved page.html"`. The page's source carries Civiqs's own
+figures to two decimals; a copy of the page as shown gives whole percentages. Civiqs licenses
 what it publishes under Creative Commons BY-NC-SA 3.0. G. Elliott Morris's Trump Approval Explorer has state MRP estimates, but its page
 says the data may not be republished without written permission. Neither is read automatically
 unless its owner agrees. To run the Nowcast with no state source at all, set `approval.state_source`
