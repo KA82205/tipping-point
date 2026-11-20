@@ -53,7 +53,7 @@ says so on the Method page.
 |---|---|---|
 | State economies | Philadelphia Fed State Coincident Indexes via FRED (`{ST}PHCI`) | Daily |
 | National Trump approval | VoteHub and PollResults.org (both CC BY 4.0), merged and averaged; polls of all adults only | Daily |
-| State-by-state approval | A copy of Civiqs's state tracker in `pipeline/state_approval.csv`; only the gaps between states are used, re-centred on the national average with each state weighted by its adult population (`pipeline/adult_population.json`) | By hand, from a saved copy of the page (see below) |
+| State-by-state approval | A copy of Civiqs's state tracker in `pipeline/state_approval.csv`; only the gaps between states are used, counted at half (`approval.state_gap_scale`) and re-centred on the national average with each state weighted by its adult population (`pipeline/adult_population.json`) | By hand, from a saved copy of the page (see below) |
 | Head-to-head polls, primary polls | PollResults.org 2028 feed | Daily |
 | Nominees, running mates, home states, sitting VP | Wikipedia infoboxes, with `pipeline/candidates.json` as the curated list | Daily |
 | Vice-president adjustment | VoteHub job approval of the sitting VP and the president (favorability as fallback), compared in surveys that asked about both among the same group of people | Daily |
@@ -86,6 +86,16 @@ says the data may not be republished without written permission. Neither is read
 unless its owner agrees. To run the Nowcast with no state source at all, set `approval.state_source`
 to `vote_swing`: each state then gets the national average shifted by its 2024 vote. The Method
 page reports what that changes.
+
+**How far apart the states sit.** The model was fitted on the authors' own state estimates, whose
+gaps between states are narrower than Civiqs's: 0.56 times as wide for Trump in 2020 and 0.35 times
+for Biden in 2024, 0.48 times with the two together. So each state's gap from the Civiqs average
+counts at half (`config.json → approval.state_gap_scale`; 1 would count it in full). Run before the
+fact, the authors' model missed the average state by 3.89 points in 2020 and 1.73 in 2024 with
+Civiqs's gaps in full, by 3.60 and 1.16 with them at half, and by 3.75 and 1.37 with the authors'
+own figures. `python pipeline/state_gap_scale.py <replication folder> <first-term Trump page> <Biden page>`
+reproduces this from the authors' replication file and saved copies of the page source of Civiqs's
+two finished trackers; neither is kept in this repository.
 
 ## Run locally
 
