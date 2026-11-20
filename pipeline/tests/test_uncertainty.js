@@ -29,7 +29,7 @@ for (const a of ['PA', 'MI', 'WI', 'NC']) {
 // The Archive (docs/archive.js). Its back-tests of 2008, 2012 and 2016 must agree with the Method page's track
 // record: states called of 50 and the Democrat's chance in 100 for the Nowcast's method. Its 2020 page must show
 // the forecasts as published: Enns and Lagodny missed only Georgia with 290 electoral votes, DeSart missed Florida
-// and North Carolina with 350.
+// and North Carolina with 350, and each keeps the chance of winning its authors published (59.16% and 99.85%).
 require(path.join(__dirname, '..', '..', 'docs', 'archive.js'));
 const TRACK = { 2008: [47, 91], 2012: [49, 72], 2016: [46, 61] };
 const fail = m => { console.error('FAIL: archive ' + m); process.exit(1); };
@@ -46,6 +46,7 @@ for (const y of [2008, 2012, 2016, 2020]) {
   const Y = window.ARCHIVE.years[2020], st = Object.entries(Y.states), miss = k => st.filter(([a, s]) => a !== 'DC' && (s[k].fc > 50) !== (s.share > 50)).map(([a]) => a).join(' ');
   const ev = k => st.filter(([, s]) => s[k].fc > 50).reduce((t, [, s]) => t + s.ev, 0);
   if (miss('enns') !== 'GA' || ev('enns') !== 290 || miss('desart') !== 'FL NC' || ev('desart') !== 350) fail(`2020 as published: missed ${miss('enns')} (${ev('enns')}) and ${miss('desart')} (${ev('desart')})`);
+  if (Y.nat.enns.pDemWin !== 0.5916 || Y.nat.desart.pDemWin !== 0.9985) fail(`2020 as published: chances of ${Y.nat.enns.pDemWin} and ${Y.nat.desart.pDemWin}`);
 }
 console.log('archive agrees with the track record and the published 2020 forecasts');
 console.log('ok');
