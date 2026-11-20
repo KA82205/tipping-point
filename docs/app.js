@@ -970,7 +970,7 @@
     const ap = [...(A.polls || [])].sort((a, b) => (b.added || '').localeCompare(a.added || '') || b.date.localeCompare(a.date)).slice(0, 6);
     const trend = (A.trend || []).filter(t => t.a && t.dis);
     box('dc-appr').innerHTML = `<div class="dc-head"><div><h2 id="dc-appr-h">Trump's approval</h2>
-        <p class="small">The approval model's national figure: the latest poll of all adults from each of ${A.pollsters} pollsters, finished ${shortDay(A.window[0])} to ${shortDay(A.window[1])}, newer and larger polls counting more.</p></div></div>
+        <p class="small">The approval model's national figure: ${A.pooled ? `every poll of all adults conducted ${shortDay(A.window[0])} to ${shortDay(A.window[1])}, from ${A.pollsters} pollsters, each counted by its sample size, as the paper pools them.` : `the latest poll of all adults from each of ${A.pollsters} pollsters, finished ${shortDay(A.window[0])} to ${shortDay(A.window[1])}, newer and larger polls counting more.`}</p></div></div>
       <div class="dc-big"><span><b id="appr-big-a">${fmt(A.approve)}</b> approve</span><span><b id="appr-big-d">${fmt(A.disapprove)}</b> disapprove</span></div>
       ${trend.length > 2 ? `<p class="dc-read" id="appr-read" aria-live="polite"></p><div class="dc-chart" id="appr-chart"></div>` : ''}
       <h3>Newest approval polls</h3>
