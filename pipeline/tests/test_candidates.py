@@ -140,4 +140,13 @@ assert _all["pollsters"] == 2 and _ad["pollsters"] == 1, (_all, _ad)
 assert _ad["approve"] == 34 and _ad["disapprove"] == 62, _ad   # pollster A's sample of adults, not its later sample of voters
 assert _all["approve"] > 36, _all
 assert CFG["approval"]["national_populations"] == ["a"]
+# In the paper's window every poll counts, by its sample size alone (pooled), not only each pollster's latest.
+_pp = [_ap("A", "2026-06-05", "a", 40, 55, 1000), _ap("A", "2026-07-20", "a", 30, 65, 3000), _ap("B", "2026-07-01", "a", 36, 60, 1000),
+       _ap("B", "2026-07-01", "rv", 50, 45, 9000)]
+_po = approval.national_average(_pp, dt.date(2026, 6, 1), dt.date(2026, 7, 30), populations=["a"], pooled=True)
+assert _po["pollsters"] == 2 and len(_po["polls"]) == 3, _po
+assert abs(_po["approve"] - (40 * 1000 + 30 * 3000 + 36 * 1000) / 5000) < 1e-9, _po
+_la = approval.national_average(_pp, dt.date(2026, 6, 1), dt.date(2026, 7, 30), populations=["a"])
+assert _la["pollsters"] == 2 and len(_la["polls"]) == 2 and _la["approve"] < _po["approve"], _la
+assert CFG["approval"]["constant"] == 43
 print("ok (approval of all adults)")
