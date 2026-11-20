@@ -128,7 +128,9 @@
    */
   // asPublished: DeSart's half as he publishes it, before the nominees are known: the plain average of every
   // matchup and home states spread by poll appearances, whoever the nominees turn out to be (the final forecast).
-  function run(N, picks = {}, { n = 10000, seed = 2028, forceVpShift = null, parts = true, keep = 0, asPublished = false } = {}) {
+  // own: also return the site's own runs of both models as `own`, when an author's published forecast has
+  // replaced one of them (N.published); the daily run keeps them in its record (pipeline/daily_log.py).
+  function run(N, picks = {}, { n = 10000, seed = 2028, forceVpShift = null, parts = true, keep = 0, asPublished = false, own = false } = {}) {
     const S = N.scenario, { dp, rp, dv, rv } = picks;
     const lagW = S.homeLagWeight || { dem: 1, rep: 1 };
     const fieldD = primaryField(S.candidates, 'D'), fieldR = primaryField(S.candidates, 'R');
@@ -174,21 +176,54 @@
         hD(s.abbr) - hR(s.abbr) - (s.abbr === S.homeLag.dem ? 1 : 0) + (s.abbr === S.homeLag.rep ? 1 : 0), h.terms)]));
       info.polls = { avg: sel.avg, n: sel.polls.length, basis: sel.basis, total: h.polls.length, pollD, pollR };
     }
-    if (!dPoint) {
-      const enns = sim(1, null, keep);
-      return { combined: enns, enns, desart: null, info };
+    // Each model's numbers next to the average, state by state.
+    const attach = (combined, enns, desart) => {
+      const by = m => m && Object.fromEntries(m.states.map(x => [x.abbr, x]));
+      const eBy = by(enns), dBy = by(desart);
+      combined.states.forEach(x => {
+        x.enns = eBy[x.abbr].demShare; x.ennsP = eBy[x.abbr].pDem;
+        if (dBy) { x.desart = dBy[x.abbr].demShare; x.desartP = dBy[x.abbr].pDem; }
+      });
+    };
+    // The site's own runs of the two models and their average.
+    const ownRuns = (kp, withParts) => {
+      if (!dPoint) {
+        const enns = sim(1, null, kp);
+        return { combined: enns, enns, desart: null };
+      }
+      // Equal weights, state by state: half the approval and economy model, half the polls model.
+      const combined = sim(0.5, dPoint, kp);
+      if (!withParts) return { combined, enns: null, desart: null };
+      const enns = sim(1), desart = sim(0, dPoint);
+      attach(combined, enns, desart);
+      return { combined, enns, desart };
+    };
+    const P = N.published || {}, pubD = P.desart && P.desart.states, pubE = P.enns && P.enns.states;
+    info.sources = { enns: pubE ? 'published' : 'site run', desart: pubD ? 'published' : dPoint ? 'site run' : null };
+    if (!pubD && !pubE) return { ...ownRuns(keep, parts), info };
+
+    // An author's own published 2028 forecast replaces the site's run of that model (pipeline/published/, put in
+    // by hand with pipeline/put_in.py). A published half is held at its published value in every simulation,
+    // as the long-range half always is, and the model error is added as before. With both halves published
+    // nothing is drawn but that error, with its seven draws of how closely the states move together.
+    // A state the authors give no number for keeps the site's own.
+    const ePoint = Object.fromEntries(states.map(s => [s.abbr, SPASE.predict(s.inputs)]));
+    const fill = (pub, fall) => Object.fromEntries(states.map(s => [s.abbr, pub[s.abbr] != null ? pub[s.abbr] : fall(s.abbr)]));
+    const D = pubD ? fill(pubD, a => dPoint ? dPoint[a] : ePoint[a]) : dPoint;
+    const held = (point, kp = 0) => SPASE.simulate({ states, districts: S.districts, n, seed, econVariants: S.econVariants, mix: { weight: 0, point }, keep: kp });
+    let combined, enns = null, desart = null;
+    if (pubE) {
+      const E = fill(pubE, a => ePoint[a]);
+      combined = held(D ? Object.fromEntries(states.map(s => [s.abbr, (E[s.abbr] + D[s.abbr]) / 2])) : E, keep);
+      if (parts) { enns = held(E); desart = D ? sim(0, D) : null; }
+    } else {
+      combined = sim(0.5, D, keep);
+      if (parts) { enns = sim(1); desart = sim(0, D); }
     }
-    // Equal weights, state by state: half the approval and economy model, half the polls model.
-    const combined = sim(0.5, dPoint, keep);
-    if (!parts) return { combined, enns: null, desart: null, info };
-    const enns = sim(1), desart = sim(0, dPoint);
-    const by = m => m && Object.fromEntries(m.states.map(x => [x.abbr, x]));
-    const eBy = by(enns), dBy = by(desart);
-    combined.states.forEach(x => {
-      x.enns = eBy[x.abbr].demShare; x.ennsP = eBy[x.abbr].pDem;
-      if (dBy) { x.desart = dBy[x.abbr].demShare; x.desartP = dBy[x.abbr].pDem; }
-    });
-    return { combined, enns, desart, info };
+    if (parts) attach(combined, enns, desart);
+    const out = { combined, enns, desart, info };
+    if (own) out.own = ownRuns(0, true);
+    return out;
   }
 
   const api = { DESART, DESART_PAPER, desartPredict, desartSimulate, pickPolls, pollField, primaryField, run };

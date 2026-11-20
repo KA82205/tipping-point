@@ -43,6 +43,16 @@
   const fmt = (x, d = 1) => x.toFixed(d) + '%';
   const sgn = (x, d = 2) => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toFixed(d);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // An author's own published 2028 forecast, once it is out and has been put in (pipeline/published/, by hand). It
+  // replaces the site's own run of that model, so the page says whose numbers each half is.
+  const PUB = (N && N.published) || {};
+  const HALF = { enns: 'approval and fundamentals', desart: 'long-range' };
+  const pubShort = k => esc(PUB[k].short || PUB[k].authors || '');
+  const pubDay = k => new Date(PUB[k].published + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  // "the forecast DeSart published on Nov 14, 2027", with a link to it where one is given
+  const pubName = (k, link) => `the forecast ${link && PUB[k].url ? `<a href="${esc(PUB[k].url)}">${pubShort(k)} published</a>` : `${pubShort(k)} published`} on ${pubDay(k)}`;
+  // The authors' own headline figures, where they give them.
+  const pubOwn = k => { const p = PUB[k], f = [p.national != null && `${p.national.toFixed(1)}% of the two-party vote for the Democrat`, p.electoral_votes != null && `${p.electoral_votes} Democratic electoral votes`, p.p_dem_win != null && `${Math.round(100 * p.p_dem_win)} in 100 for the Democrat`].filter(Boolean); return f.length ? ` The authors' own figures: ${f.join(', ')}.` : ''; };
 
   // ---------- color ----------
   const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -425,7 +435,7 @@
     const have = MODELS.filter(([k]) => m[k]);
     el.style.setProperty('--cols', have.length > 1 ? Array(have.length + 1).fill('minmax(0, 1fr)').join(' auto ') : 'minmax(0, 1fr)');
     el.innerHTML = have.length > 1
-      ? have.map(([k, name, by]) => card('m-' + k, name, by, m[k])).join('<span class="op" aria-hidden="true">+</span>') + '<span class="op" aria-hidden="true">=</span>' +
+      ? have.map(([k, name, by]) => card('m-' + k, name, PUB[k] ? `${by}, as published ${pubDay(k)}` : by, m[k])).join('<span class="op" aria-hidden="true">+</span>') + '<span class="op" aria-hidden="true">=</span>' +
         card('now', 'The Nowcast', 'Their average, state by state', m.now)
       : card('now', 'The Nowcast', 'The state-level approval and fundamentals model alone today', m.now);
   }
@@ -556,7 +566,7 @@
       balance(hb, views.today[0], views.today[1], s.pDemWin, rep, () => { location.hash = 'nowcast'; }, '<a href="#nowcast">See every state</a>');
       ensemble(document.getElementById('ens-home'), { enns: M.enns || s, desart: M.desart || null, now: s });
       MODELS.forEach(([k]) => { const el = document.getElementById('odds-' + k); if (el && M[k]) el.textContent = Math.round(100 * M[k].pDemWin); });
-      document.getElementById('hero-date').textContent = window.FORECAST ? `Published ${niceDate(window.FORECAST.published)}. Final: it does not change.` : `Updated ${niceDate(N.generated_at)}. Not the forecast, which is due August 6, 2028.`;
+      document.getElementById('hero-date').textContent = window.FORECAST ? `Published ${niceDate(window.FORECAST.published)}. ${PUB.enns && PUB.desart ? 'Final: it does not change.' : 'It changes only if an author\'s forecast that is not out yet is published.'}` : `Updated ${niceDate(N.generated_at)}. Not the forecast, which is due August 6, 2028.`;
       if (window.FORECAST) document.getElementById('hero-live').textContent = 'Final 2028 forecast';
       setGlow(s.pDemWin, rep);
     } else {
@@ -849,8 +859,9 @@
     waffle(document.getElementById('waffle-28'), s.pDemWin, s.pTie);
     document.getElementById('waffle-cap').textContent = `Out of 100 simulated elections${window.FORECAST ? '' : ' held today'}, the Democrat wins ${nD} and the Republican wins ${100 - nD - nT}${nT ? `, with ${nT} tied` : ''}. A simulation is one possible outcome given how far off the models have been in the past.`;
     const mo = document.getElementById('models-28');
+    const pubNote = ['desart', 'enns'].filter(k => PUB[k]).map(k => `The ${HALF[k]} half is ${pubName(k, true)}, and it no longer changes.`).join(' ');
     if (mo) mo.innerHTML = s.desart
-      ? `Each state's number is the average of the state-level approval and fundamentals model and the long-range model, half each. The whole map is then simulated together, so the Nowcast's odds are not simply the average of the two models' odds. ${nomineesNote()} ${s.desart ? POLLS_NOTE(s.info) : ''} <a href="#method">How they work</a>`
+      ? `Each state's number is the average of the state-level approval and fundamentals model and the long-range model, half each. The whole map is then simulated together, so ${window.FORECAST ? 'the forecast' : 'the Nowcast'}'s odds are not simply the average of the two models' odds. ${pubNote ? pubNote + ' ' : ''}${PUB.enns && PUB.desart ? '' : nomineesNote()} ${PUB.desart ? '' : POLLS_NOTE(s.info)} <a href="#method">How they work</a>`
       : `Today's Nowcast is the state-level approval and fundamentals model on its own, because no head-to-head polls are available. <a href="#method">How it works</a> · <a href="#models">Each model on its own</a>`;
     document.getElementById('figs-2028').innerHTML = [
       [fmt(s.demPopular), 'Democratic share of the two-party vote'],
@@ -891,8 +902,9 @@
       const row = x => `<li><span>${esc(byAbbr[x.abbr].name)}</span><b class="${x.demShare > 50 ? 'd-ink' : 'r-ink'}">${chance(x.pDem) || (x.pDem > .5 ? 'D >98%' : 'R >98%')}</b></li>`;
       const drow = x => { const d = x.demShare - now[x.abbr].demShare; return `<li><span>${esc(byAbbr[x.abbr].name)}</span><b class="${d > 0 ? 'd-ink' : 'r-ink'}">${d > 0 ? 'D' : 'R'} +${Math.abs(d).toFixed(1)}</b></li>`; };
       return `<section class="model-alone" aria-label="${name}, on its own">
-        <div class="ma-head"><div><h2>${name}</h2><span class="by">${by}</span></div><span class="ma-tag">One half of ${label}</span></div>
+        <div class="ma-head"><div><h2>${name}</h2><span class="by">${by}${PUB[k] ? `, as published ${pubDay(k)}` : ''}</span></div><span class="ma-tag">One half of ${label}</span></div>
         <p class="ma-reads">${reads}</p>
+        ${PUB[k] ? `<p class="ma-reads">These are the state forecasts ${PUB[k].url ? `<a href="${esc(PUB[k].url)}">${pubShort(k)} published</a>` : `${pubShort(k)} published`} on ${pubDay(k)}, simulated the same way as ${label}. They are not the site's own run of the model.${pubOwn(k)}${PUB[k].read_from === 'chart' ? ' The state forecasts were printed as a chart and read from it, which is good to about a tenth of a point.' : ''}</p>` : ''}
         <div class="ma-figs">
           <div><span class="v d-ink">${nD}</span><span class="l">in 100 for the Democrat</span></div>
           <div><span class="v r-ink">${100 - nD - nT}</span><span class="l">in 100 for the Republican</span></div>
@@ -1004,10 +1016,11 @@
       <td class="num c-g ${p.share > 50 ? 'd-ink' : p.share < 50 ? 'r-ink' : ''}">${marginOf(p.share)}</td><td class="num muted c-c"><span class="lbl">Conducted to </span>${shortDay(p.date)}</td></tr>`;
     const SHOW = 8;
     box('dc-h2h').innerHTML = `<div class="dc-head"><div><h2 id="dc-h2h-h">Head-to-head polls</h2>
-        <p class="small">${fixed ? `The long-range model is fixed on ${N.desart_final.polls.length} polls conducted in October 2027${pollAvg !== null ? `, where the Democrat averages ${fmt(pollAvg)} of the two-party vote` : ''}. Below are the ${hp.length} polls conducted since ${shortDay(h2h.window[0])}.`
-          : `${hp.length} poll${hp.length === 1 ? '' : 's'} conducted ${shortDay(h2h.window[0])} to ${shortDay(h2h.window[1])} count toward the long-range model${pollAvg !== null ? `; the Democrat averages ${fmt(pollAvg)} of the two-party vote` : ''}.`} ${nRecent ? `${nRecent} added in the last week.` : 'None added in the last week.'}</p></div>
+        <p class="small">${fixed ? `${PUB.desart ? 'The site\'s own run of the long-range model' : 'The long-range model'} is fixed on ${N.desart_final.polls.length} polls conducted in October 2027${pollAvg !== null ? `, where the Democrat averages ${fmt(pollAvg)} of the two-party vote` : ''}. Below are the ${hp.length} polls conducted since ${shortDay(h2h.window[0])}.`
+          : `${hp.length} poll${hp.length === 1 ? '' : 's'} conducted ${shortDay(h2h.window[0])} to ${shortDay(h2h.window[1])} count toward ${PUB.desart ? 'the site\'s own run of the long-range model' : 'the long-range model'}${pollAvg !== null ? `; the Democrat averages ${fmt(pollAvg)} of the two-party vote` : ''}.`} ${nRecent ? `${nRecent} added in the last week.` : 'None added in the last week.'}</p></div>
         <a class="dc-link" href="#nowcast" data-goto="mx-anchor">Matchups chart</a></div>
-      ${fixed ? `<p class="note">Since November 7, 2027 the long-range model uses only polls conducted in October 2027, as DeSart does. Newer polls are listed here but no longer move ${window.FORECAST ? 'the forecast' : 'the Nowcast'}.</p>` : ''}
+      ${PUB.desart ? `<p class="note">The long-range half is now ${pubName('desart', true)}. These polls are listed for the record and no longer move ${window.FORECAST ? 'the forecast' : 'the Nowcast'}.</p>`
+        : fixed ? `<p class="note">Since November 7, 2027 the long-range model uses only polls conducted in October 2027, as DeSart does. Newer polls are listed here but no longer move ${window.FORECAST ? 'the forecast' : 'the Nowcast'}.</p>` : ''}
       ${hp.length ? `<div class="dt-wrap"><table class="dt cards"><thead><tr><th>Added</th><th>Pollster</th><th>Matchup</th><th class="num">Margin</th><th class="num">Conducted</th></tr></thead>
         <tbody>${hp.slice(0, SHOW).map(hRow).join('')}</tbody><tbody class="more" hidden>${hp.slice(SHOW).map(hRow).join('')}</tbody></table></div>
         ${hp.length > SHOW ? `<button class="btn ghost dc-more" type="button" aria-expanded="false">Show all ${hp.length} polls</button>` : ''}` : '<p class="small">No head-to-head polls in the window yet.</p>'}
@@ -1023,6 +1036,7 @@
     const trend = (A.trend || []).filter(t => t.a && t.dis);
     box('dc-appr').innerHTML = `<div class="dc-head"><div><h2 id="dc-appr-h">Trump's approval</h2>
         <p class="small">The approval model's national figure: ${A.pooled ? `every poll of all adults conducted ${shortDay(A.window[0])} to ${shortDay(A.window[1])}, from ${A.pollsters} pollsters, each counted by its sample size, as the paper pools them.` : `the latest poll of all adults from each of ${A.pollsters} pollsters, finished ${shortDay(A.window[0])} to ${shortDay(A.window[1])}, newer and larger polls counting more.`}</p></div></div>
+      ${PUB.enns ? `<p class="note">The approval and fundamentals half is now ${pubName('enns', true)}. These polls are listed for the record and no longer move ${window.FORECAST ? 'the forecast' : 'the Nowcast'}.</p>` : ''}
       <div class="dc-big"><span><b id="appr-big-a">${fmt(A.approve)}</b> approve</span><span><b id="appr-big-d">${fmt(A.disapprove)}</b> disapprove</span></div>
       ${trend.length > 2 ? `<p class="dc-read" id="appr-read" aria-live="polite"></p><div class="dc-chart" id="appr-chart"></div>` : ''}
       <h3>Newest approval polls</h3>
@@ -1131,12 +1145,25 @@
         <div><dt>2024 D share</dt><dd>${fmt(r.share, 2)}</dd></div>
         <div><dt>Democrat wins</dt><dd>${pct(s.pDem)} of simulations</dd></div>
         <div><dt>Rating</dt><dd>${RATING[s.rating] || s.rating}</dd></div>
-        ${base ? `<div title="${esc(approvalNote())}"><dt>Trump approval the model uses</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
+        ${base && !PUB.enns ? `<div title="${esc(approvalNote())}"><dt>Trump approval the model uses</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
       </dl>
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>
       ${s.desart != null ? modelTable([['State-level approval and fundamentals', s.enns, s.ennsP], ['Long-range model', s.desart, s.desartP], ['Nowcast', s.demShare, s.pDem, 'avg']], 'the state') : ''}
-      ${a === N.scenario.homeLag.rep || a === N.scenario.homeLag.dem ? `<p class="hint">Both models take back part of the 2024 ${a === N.scenario.homeLag.rep ? 'Republican' : 'Democratic'} nominee's home-state boost here, which moves this state toward the ${a === N.scenario.homeLag.rep ? 'Democrat' : 'Republican'}: ${(-window.SPASE.coef('homeLag') * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[a === N.scenario.homeLag.rep ? 'rep' : 'dem']).toFixed(1)} points in the state-level approval and fundamentals model${s.desart != null ? `, ${window.TP.DESART.home.toFixed(1)} in the long-range model` : ''}.</p>` : ''}`;
+      ${homeLagHint(a, s)}`;
+  }
+  // Both models take back part of the last nominee's home-state boost. Said only of a half that is still the
+  // site's own run: a published forecast carries its authors' own handling of it.
+  function homeLagHint(a, s) {
+    const L = N.scenario.homeLag, rep = a === L.rep;
+    if (!rep && a !== L.dem) return '';
+    const parts = [];
+    if (!PUB.enns) parts.push(`${(-window.SPASE.coef('homeLag') * (N.scenario.homeLagWeight || { dem: 1, rep: 1 })[rep ? 'rep' : 'dem']).toFixed(1)} points in the state-level approval and fundamentals model`);
+    if (s.desart != null && !PUB.desart) parts.push(`${window.TP.DESART.home.toFixed(1)} in the long-range model`);
+    if (!parts.length) return '';
+    const who = parts.length === 2 ? 'Both models take' : PUB.enns ? 'The site\'s run of the long-range model takes' : s.desart != null ? 'The site\'s run of the approval and fundamentals model takes' : 'The model takes';
+    const amount = parts.length === 2 ? parts.join(', ') : parts[0].replace(/ in the .*$/, parts[0].includes('points') ? '' : ' points');
+    return `<p class="hint">${who} back part of the 2024 ${rep ? 'Republican' : 'Democratic'} nominee's home-state boost here, which moves this state toward the ${rep ? 'Democrat' : 'Republican'}: ${amount}.</p>`;
   }
   function fill28(a) {
     const s = cur && cur.byAbbr[a];
@@ -1180,17 +1207,22 @@
     const steps = [];
     const step = (name, what, state, note) => steps.push(`<li class="${state}"><span class="st">${{ wait: 'Not started', open: 'Collecting', done: 'Done' }[state]}</span><div><b>${name}</b><span>${what}</span>${note ? `<em>${note}</em>` : ''}</div></li>`);
     // 1. Long-range model: October 2027 head-to-head polls
-    if (F || (df && df.frozen)) {
+    // An author's own published forecast replaces the site's run of that model; until it is out the site's run stands in.
+    const standIn = k => F ? ` ${k === 'desart' ? 'DeSart' : 'Enns and colleagues'} had not published state forecasts by the publish date, so the site's own run stands in.` : '';
+    if (PUB.desart) {
+      step('Long-range model (DeSart)', `DeSart's own 2028 forecast, published ${pubDay('desart')}`, 'done', `His published state forecasts are the long-range half${F ? '' : ' of the Nowcast'}. They do not change.`);
+    } else if (F || (df && df.frozen)) {
       const n = F ? F.desart_polls.n : df.polls.length, avg = F ? F.desart_polls.avg : df.polls.reduce((a, p) => a + p.share, 0) / df.polls.length;
-      step('Long-range model (DeSart)', 'Head-to-head polls conducted in October 2027', 'done', `Fixed November 7, 2027: ${n} polls averaging ${fmt(avg)} Democratic. The Nowcast uses them from then on.`);
+      step('Long-range model (DeSart)', 'Head-to-head polls conducted in October 2027', 'done', `Fixed November 7, 2027: ${n} polls averaging ${fmt(avg)} Democratic. The Nowcast uses them from then on.${standIn('desart')}`);
     } else if (df) {
       const n = df.polls.length;
       step('Long-range model (DeSart)', 'Head-to-head polls conducted in October 2027', 'open', `${n ? `${n} poll${n === 1 ? '' : 's'} so far` : 'No polls from the window yet'}. Fixed November 7, 2027.`);
     } else step('Long-range model (DeSart)', 'Head-to-head polls conducted in October 2027', 'wait', 'Starts October 1, 2027.');
     // 2. Approval polls: June 1 - July 30, 2028
     const apState = F ? 'done' : t < AP_WIN[0] ? 'wait' : 'open';
-    step('State-level approval and fundamentals (Enns et al.)', 'Trump approval polls conducted June 1 to July 30, 2028', apState,
-      F ? `${fmt(F.approval.approve)} approve, from ${F.approval.pollsters} pollsters.` : apState === 'wait' ? 'Starts June 1, 2028.' : N ? `${fmt(N.approval.approve)} approve so far, from ${N.approval.pollsters} pollsters.` : '');
+    if (PUB.enns) step('State-level approval and fundamentals (Enns et al.)', `Enns and colleagues' own 2028 forecast, published ${pubDay('enns')}`, 'done', `Their published state forecasts are the approval and fundamentals half${F ? '' : ' of the Nowcast'}. They do not change.`);
+    else step('State-level approval and fundamentals (Enns et al.)', 'Trump approval polls conducted June 1 to July 30, 2028', apState,
+      F ? `${fmt(F.approval.approve)} approve, from ${F.approval.pollsters} pollsters.${standIn('enns')}` : apState === 'wait' ? 'Starts June 1, 2028.' : N ? `${fmt(N.approval.approve)} approve so far, from ${N.approval.pollsters} pollsters.` : '');
     // 3. State economies through June 2028
     const ec = F ? F.economy.through : N && N.economy.through;
     step('State economies', 'Philadelphia Fed state indexes through June 2028', F || (ec && ec >= '2028-06') ? 'done' : 'open',
@@ -1200,7 +1232,7 @@
     step('Nominees and running mates', 'Read from Wikipedia once confirmed', named.length === 4 || F ? 'done' : named.length ? 'open' : 'wait',
       named.length ? named.map(x => esc(x.name)).join(', ') + (F && named.length < 4 ? '. The rest were not known by the publish date.' : '')
         : F ? 'None were confirmed by the publish date, so each party\'s possible nominees were averaged by their polling.' : 'None confirmed yet.');
-    step('Publish', 'August 6, 2028, a week after the last cutoff', F ? 'done' : 'wait', F ? `Published ${niceDate(F.published)}. Final: it does not change.` : 'Polls published a few days late are included. After that, nothing changes.');
+    step('Publish', 'August 6, 2028, a week after the last cutoff', F ? 'done' : 'wait', F ? `Published ${niceDate(F.published)}.${F.updated ? ` Redone ${niceDate(F.updated)}, when an author's forecast that came out later replaced the site's own run.` : ''} Final: it does not change${PUB.enns && PUB.desart ? '' : ' unless an author\'s forecast that is not out yet is published'}.` : 'Polls published a few days late are included. After that, nothing changes.');
     document.getElementById('fc-steps').innerHTML = steps.join('');
 
     // The forecast itself is shown only once published (docs/forecast.js); until then, only the countdown.
@@ -1222,7 +1254,7 @@
         <div><span class="v">${fmt(R.demPopular)}</span><span class="l">Democratic two-party vote</span></div>
         <div><span class="v">${med}</span><span class="l">Democratic electoral votes</span></div>
       </div>
-      <p class="small">Half the state-level approval and fundamentals model (${m.enns ? `${Math.round(100 * m.enns.pDemWin)} in 100, ${fmt(m.enns.demPopular)}` : '—'}), half the long-range model from October 2027 (${m.desart ? `${Math.round(100 * m.desart.pDemWin)} in 100, ${fmt(m.desart.demPopular)}` : '—'}), simulated together.</p>
+      <p class="small">Half ${PUB.enns ? pubName('enns', true) : 'the site\'s run of the state-level approval and fundamentals model, standing in for a forecast that is not out'} (${m.enns ? `${Math.round(100 * m.enns.pDemWin)} in 100, ${fmt(m.enns.demPopular)}` : '—'}), half ${PUB.desart ? pubName('desart', true) : 'the site\'s run of the long-range model on polls from October 2027, standing in for a forecast that is not out'} (${m.desart ? `${Math.round(100 * m.desart.pDemWin)} in 100, ${fmt(m.desart.demPopular)}` : '—'}), simulated together.</p>
       <svg class="usmap" id="map-fc" role="img" aria-label="Forecast map by rating"></svg>`;
     const by = Object.fromEntries(R.states.map(s => [s.abbr, s]));
     mapFc = () => drawUS(document.getElementById('map-fc'), { fill: a => by[a] ? RATE_COLOR[rateOf(by[a].pDem)] : greyColor(), sub: a => by[a] ? chance(by[a].pDem) : '',
@@ -1243,13 +1275,29 @@
     set('[data-snake="today"]', '2028 forecast');
     set('#hero-live', 'Final 2028 forecast');
     const lede = document.getElementById('lede-28');
-    if (lede) lede.innerHTML = `The final forecast, published ${when}: two published models, averaged state by state, each on its own paper's data. Approval polls conducted June 1 to July 30, 2028 and the economy through June (Enns et al.); head-to-head polls conducted in October 2027 (DeSart). <strong>It does not change.</strong>`;
+    const half = k => PUB[k] ? pubName(k, true) : k === 'enns'
+      ? 'the site\'s own run of Enns and colleagues\' model on approval polls conducted June 1 to July 30, 2028 and the economy through June, standing in until their forecast is out'
+      : 'the site\'s own run of DeSart\'s model on head-to-head polls conducted in October 2027, standing in until his forecast is out';
+    const redone = F.updated ? ` It was redone on ${niceDate(F.updated)}, when a forecast that came out after the publish date replaced the site's own run.` : '';
+    if (lede) lede.innerHTML = PUB.enns && PUB.desart
+      ? `The final forecast, published ${when}: the average, state by state, of the two forecasts the authors published for 2028, ${half('desart')} and ${half('enns')}.${redone} <strong>It does not change.</strong>`
+      : `The final forecast, published ${when}: the average, state by state, of ${half('enns')}, and ${half('desart')}.${redone} <strong>It changes only if a forecast that is not out yet is published.</strong>`;
     const tab = document.querySelector('[data-layer28="official"]');
     if (tab) tab.hidden = true;
   }
 
   function render2028() {
     const days = daysTo(FORECAST_DATE);
+    // Once an author's own forecast is in, the Nowcast is no longer two runs on today's data: say whose numbers it is.
+    const lede28 = document.getElementById('lede-28');
+    if (lede28 && !window.FORECAST && (PUB.desart || PUB.enns)) {
+      const due = 'It is due August 6, 2028, in <span id="d-forecast"></span> days.';
+      lede28.innerHTML = PUB.desart && PUB.enns
+        ? `The two forecasts the authors published for 2028, averaged state by state: ${pubName('desart', true)} and ${pubName('enns', true)}. Both are in, so these numbers no longer change. The final forecast is posted on August 6, 2028, in <span id="d-forecast"></span> days.`
+        : PUB.desart
+        ? `What two published models say, averaged: the state-level approval and fundamentals model on today's Trump approval polls and state economies, and ${pubName('desart', true)}. <strong class="warn">This is not the forecast.</strong> The final forecast will average the two forecasts the authors publish for 2028. ${due}`
+        : `What two published models say, averaged: ${pubName('enns', true)}, and the long-range model on head-to-head polls. <strong class="warn">This is not the forecast.</strong> The final forecast will average the two forecasts the authors publish for 2028. ${due}`;
+    }
     const dEl = document.getElementById('d-forecast');
     if (dEl && days < 1) { const p = dEl.parentNode; p.innerHTML = p.innerHTML.replace(/, in <span id="d-forecast"><\/span> days\./, ' today.'); } else if (dEl) dEl.textContent = days;
     document.getElementById('cd-days').textContent = days;
@@ -1404,6 +1452,17 @@
     };
     step();
   }
+  // Method page: where the authors' own published forecasts stand, once one is in.
+  (function () {
+    const el = document.getElementById('pub-status');
+    if (!el || (!PUB.desart && !PUB.enns)) return;
+    const whose = k => k === 'desart' ? 'DeSart\'s' : 'Enns and colleagues\'';
+    const inNow = k => `${whose(k)} forecast was published on ${pubDay(k)}${PUB[k].url ? ` (<a href="${esc(PUB[k].url)}">source</a>)` : ''} and is the ${HALF[k]} half${PUB[k].read_from === 'chart' ? '; its state forecasts were printed as a chart and read from it, which is good to about a tenth of a point' : ''}.${pubOwn(k)}${PUB[k].note ? ' ' + esc(PUB[k].note) : ''}`;
+    const notYet = k => `${whose(k)} is not out yet, so the site's own run of ${k === 'desart' ? 'his' : 'their'} model is the other half.`;
+    el.innerHTML = '<b>Where this stands.</b> ' + ['desart', 'enns'].map(k => PUB[k] ? inNow(k) : notYet(k)).join(' ') +
+      (PUB.desart && PUB.enns ? ' Both halves are now the authors\' own, so each state\'s number is the average of the two published forecasts and no longer changes.' : '');
+    el.hidden = false;
+  })();
   // The day the copy of Civiqs's state figures was taken, wherever the text gives it.
   const civiqsDay = N && N.approval && N.approval.state_data && N.approval.state_data.as_of;
   if (civiqsDay) {
