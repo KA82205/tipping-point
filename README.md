@@ -34,13 +34,17 @@ conducted.
 | When | What happens |
 |---|---|
 | Until November 7, 2027 | Long-range model: head-to-head polls conducted in the last 180 days |
-| November 7, 2027 | Long-range model fixed on polls conducted in October 2027, as DeSart does (`pipeline/frozen/desart_2028.json`) |
+| November 7, 2027 | Long-range model fixed on polls conducted in October 2027, as DeSart does (`pipeline/frozen/desart_2028.json`). When DeSart publishes his own 2028 forecast, his state forecasts replace this run |
 | Until June 1, 2028 | Approval model: approval polls from the last 30 days, latest economic month |
 | June 2028 | Approval model switches to polls conducted June 1 to July 30, 2028, once ten pollsters have a poll in that window; economy through June |
-| August 6, 2028 | The Nowcast that day is saved as the final forecast (`pipeline/frozen/forecast_2028.json`, `docs/forecast.js`). It never changes, and the daily update stops |
+| August 6, 2028 | The site's own runs are frozen (`pipeline/frozen/forecast_2028.json`, `docs/forecast.js`) and the daily update stops. The forecast is posted with whatever the authors have published by then |
 
-Both models are refitted with the 2024 results, as their authors refit before each forecast. If
-either author publishes a revised 2028 version before August 6, 2028, the site switches to it and
+**The final forecast is the authors' own** (set November 20, 2026). It will be the average of the two
+forecasts the authors themselves publish for 2028: DeSart's, about a year before the election, and
+Enns and colleagues', about 100 days before it. The site's own runs of the two models are for the
+Nowcast. They stand in for a published forecast until it is out, or if it never is, and are marked
+as stand-ins. Both models are refitted with the 2024 results, as their authors refit before each
+forecast. If an author revises the model itself, the site's run switches to the revised version and
 says so on the Method page.
 
 ## Data sources
@@ -92,7 +96,7 @@ python pipeline/tests/make_fixtures.py          # fake data for an offline run..
 python pipeline/update.py --fixtures pipeline/tests/fixtures   # ...shown with a TEST DATA flag
 python pipeline/update.py                       # live data (needs FRED_API_KEY)
 python pipeline/backtest_2008_2024.py FOLDER    # the Method page's track record and checks, from the papers' replication files
-python pipeline/make_archive.py FOLDER          # the Archive page's back-tests of 2008 to 2020, state by state (docs/archive.js)
+python pipeline/make_archive.py FOLDER          # the Archive page's 2008 to 2020, state by state (docs/archive.js)
 ```
 
 Build `docs/data.js` and `docs/us-states.js` first (see the workflow), then open
@@ -113,7 +117,12 @@ Build `docs/data.js` and `docs/us-states.js` first (see the workflow), then open
   reproduces them, with a last-election baseline, the tests of other weights and of states moving
   together, and a check of the simulated ranges, from the replication files on Harvard Dataverse
   (doi:10.7910/DVN/PBGFOF and doi:10.7910/DVN/HZGLY9; the data are not stored here).
-- The Archive page shows every one of those elections state by state. 2008 to 2020 are the same
-  back-tests (`pipeline/make_archive.py` writes them to `docs/archive.js`), labeled as back-tests,
-  with what the authors published at the time noted beside them. 2024 shows the two forecasts the
-  authors published and their average. The Nowcast began in November 2026 and forecast none of them.
+- The Archive page shows every one of those elections state by state, scored on the 50 states.
+  For 2020 and 2024 it shows the forecasts the authors published and their average. Enns and
+  Lagodny's 2020 state forecasts are printed only as a chart; `pipeline/extract_fig3_2020.py` reads
+  its dots and reproduces the article's 290 electoral votes, 54.5% national vote and 59-in-100
+  chance (`pipeline/forecast_2020_fig3.json`). DeSart's 2020 forecast is from his replication file
+  (`pipeline/forecast_2020_desart.json`). 2008, 2012 and 2016 had no published state forecasts, so
+  they are the same back-tests as the track record, labeled as back-tests. State results are
+  official counts (`pipeline/results_2008_2020.json`). `pipeline/make_archive.py` writes
+  `docs/archive.js`. The Nowcast began in November 2026 and forecast none of these elections.
