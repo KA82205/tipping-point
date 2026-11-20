@@ -5,8 +5,9 @@ shows a back-test and says so.
 
 2020  Both models were published. The approval and fundamentals forecast is Enns and Lagodny's, read from the
       chart in their article (pipeline/extract_fig3_2020.py -> pipeline/forecast_2020_fig3.json). The long-range
-      forecast is DeSart's, from his replication file (pipeline/forecast_2020_desart.json). The Nowcast's method
-      is the plain average of the two, state by state, which nobody published at the time.
+      forecast is DeSart's, from his replication file (pipeline/forecast_2020_desart.json), with the chance of
+      winning from table 2 of his article. The Nowcast's method is the plain average of the two, state by state,
+      which nobody published at the time.
 2008, 2012, 2016
       No state forecasts were published: the approval and fundamentals model's first forecast was for 2020, and
       only the national figure of DeSart's 2016 forecast is on record. Each model is refitted on the elections
@@ -25,7 +26,9 @@ national figure their authors published.
 Ranges and odds. For a back-test, and for the average of the two published 2020 forecasts, they come from the
 site's error model as in the track record: for each of seven draws of the correlation (0.70 to 0.97) a shared
 national error and a state error, total size the approval model's standard error at the time. Coefficient draws
-are left out, so ranges are slightly narrow. Published forecasts keep their authors' own ranges and state chances.
+are left out, so ranges are slightly narrow. Published forecasts keep their authors' own ranges, state chances
+and chance of winning. DeSart's 2020 chance comes from simulations in which every state misses on its own;
+year_2020 reruns them from his state forecasts and stops if they do not give his figure.
 
 The District of Columbia is not in the long-range model's data before 2020. In those years its row is the approval
 and fundamentals back-test in every view, capped at 100, and its 3 electoral votes are counted for the Democrat in
@@ -85,7 +88,7 @@ TEXTS_2020 = {
              "note": "The national vote, the 290 electoral votes and the chance of winning are the article's own. The chance is the share of its simulations with 270 or more electoral votes."},
     "desart": {"kind": "published", "tab": "Long-range model, as published",
                "lede": "The long-range model's forecast as Jay DeSart announced it in November 2019, a year before the election, from head-to-head polls taken that October.",
-               "note": "The state forecasts, state chances and national vote are from DeSart's own file. His chance of winning the Electoral College is not on record here; his article called a Biden win highly probable."},
+               "note": "The state forecasts, state chances and national vote are from DeSart's own file. The chance of winning is from his article: Biden won an Electoral College majority in 99.85% of its 100,000 simulated elections. In those simulations each state misses on its own, so they do not allow for a forecast that is off in the same direction everywhere."},
 }
 
 
@@ -156,9 +159,16 @@ def year_2020(g, name2ab):
     nat = {"bt": {"fc": round(sum(S["turnout"][a] * states[a]["bt"]["fc"] for a in states) / tw, 2), "pDemWin": round(float(p_win), 4),
                   "demEV": int(ev[avg > 50].sum() + 3)},
            "enns": {"fc": E["national"], "pDemWin": E["p_dem_win"], "demEV": E["electoral_votes"]},
-           "desart": {"fc": S["national"], "pDemWin": None, "demEV": S["electoral_votes"]}}
+           "desart": {"fc": S["national"], "pDemWin": S["table2"]["p_dem_win"], "demEV": S["electoral_votes"]}}
     assert sum(states[a]["ev"] for a in states if states[a]["enns"]["fc"] > 50) == E["electoral_votes"]
     assert sum(states[a]["ev"] for a in states if states[a]["desart"]["fc"] > 50) == S["electoral_votes"]
+    # DeSart's chance of winning is the one he published. His simulations draw every state on its own: rerun from
+    # his state forecasts, they must give his figure and his 95% range of electoral votes.
+    every = sorted(states)
+    draws = np.array([S["forecast"][a] for a in every]) + se * np.random.default_rng(20201103).standard_normal((S["table2"]["simulations"], len(every)))
+    won = (draws > 50) @ np.array([states[a]["ev"] for a in every])
+    assert abs(np.mean(won >= 270) - S["table2"]["p_dem_win"]) < 0.0006, np.mean(won >= 270)
+    assert all(abs(np.percentile(won, q) - x) <= 2 for q, x in zip((2.5, 97.5), S["table2"]["electoral_votes_95"])), np.percentile(won, (2.5, 97.5))
     return states, nat, sd, TEXTS_2020
 
 
@@ -198,7 +208,7 @@ def main(folder):
     for y, v in out.items():
         st = {a: s for a, s in v["states"].items() if a != "DC"}
         called = {k: sum((s[k]["fc"] > 50) == (s["share"] > 50) for s in st.values()) for k in ("bt", "enns", "desart")}
-        print(y, "result", v["natActual"], "| national", {k: n["fc"] for k, n in v["nat"].items()}, "| chance", {k: n["pDemWin"] and round(n["pDemWin"], 2) for k, n in v["nat"].items()},
+        print(y, "result", v["natActual"], "| national", {k: n["fc"] for k, n in v["nat"].items()}, "| chance", {k: round(n["pDemWin"], 4) for k, n in v["nat"].items()},
               "| D electoral votes", {k: n["demEV"] for k, n in v["nat"].items()}, "| called of 50", called, "| actual by whole states", v["wholeEV"]["dem"])
         if y == "2020":
             print("     missed in 2020:", {k: [a for a, s in st.items() if (s[k]["fc"] > 50) != (s["share"] > 50)] for k in ("bt", "enns", "desart")})

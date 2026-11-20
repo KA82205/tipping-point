@@ -1,8 +1,9 @@
 {
-"_comment": "Jay DeSart's published long-range forecast for 2020, made from head-to-head polls taken in October 2019 (DeSart 2021, 'A Long-Range State-Level Forecast of the 2020 Presidential Election', PS 54 (1): 73-76, doi:10.1017/S1049096520001468). From his replication file 'PS - DeSart 2020 Predictions.sav': forecast is the Democratic share of the two-party vote, winprob his chance of a Democratic win in the state, turnout the weights he uses to add the states into a national vote. se is the forecast error his state chances imply (the same in every state).",
+"_comment": "Jay DeSart's published long-range forecast for 2020, made from head-to-head polls taken in October 2019 (DeSart 2021, 'A Long-Range State-Level Forecast of the 2020 Presidential Election', PS 54 (1): 73-76, doi:10.1017/S1049096520001468). From his replication file 'PS - DeSart 2020 Predictions.sav': forecast is the Democratic share of the two-party vote, winprob his chance of a Democratic win in the state, turnout the weights he uses to add the states into a national vote. se is the forecast error his state chances imply (the same in every state). table2 is table 2 of the article, from his 100,000 simulated elections: p_dem_win is the share with an Electoral College majority for Biden, p_rep_win the share with one for Trump (every one of them with Biden ahead in the national vote), p_tie the share ending 269 to 269; the two ranges are his 95% intervals; the tipping point is Wisconsin, which the article gives a 0.857 chance. Drawing every state on its own from forecast and se reproduces all of these (pipeline/make_archive.py checks the chance).",
 "se": 3.2074,
 "national": 54.82,
 "electoral_votes": 350,
+"table2": {"p_dem_win": 0.9985, "p_rep_win": 0.0013, "p_tie": 0.0002, "simulations": 100000, "national_95": [53.6, 56.1], "electoral_votes_95": [295, 406], "tipping_point": "WI"},
 "forecast": {
 "AL": 39.054,
 "AK": 45.215,
