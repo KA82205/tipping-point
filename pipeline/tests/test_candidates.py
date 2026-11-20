@@ -213,3 +213,59 @@ _none_cfg = copy.deepcopy(CFG)
 del _none_cfg["approval"]["state_gap_scale"]                 # a config without the setting reads the gaps in full
 assert approval.state_approval(_none_cfg, 34.0, _res)[0] == _full
 print("ok (state gaps counted at %g of the source's)" % _k)
+
+# The daily record (pipeline/daily_log.py): one record a day, a later run on the same day replaces it, and what
+# changed since the last record is put in words.
+import csv as _csv  # noqa: E402
+import tempfile  # noqa: E402
+import daily_log  # noqa: E402
+_N1 = {"generated_at": "2026-11-20T11:20:00Z", "as_of": "2026-11-20", "mode": "nowcast", "fixture_run": False,
+       "approval": {"approve": 34.0, "disapprove": 62.0, "window": ["2026-10-22", "2026-11-20"], "pollsters": 2,
+                    "polls": [{"date": "2026-11-16", "approve": 32, "disapprove": 66, "n": 1521, "pollster": "Ipsos", "population": "a"},
+                              {"date": "2026-11-10", "approve": 36, "disapprove": 60, "n": 1000, "pollster": "Gallup", "population": "a"}],
+                    "state_data": {"name": "Civiqs", "as_of": "2026-11-19", "gap_scale": 0.5}},
+       "economy": {"through": "2026-09"}, "tickets": {"dem": {}, "rep": {}}, "sitting_vp": "JD Vance",
+       "vp": {"gap": 2.5, "raw_gap": 7.14, "polls": 7, "weight": 0.35, "kind": "approval", "applied": False, "basis": "7 polls"},
+       "h2h": {"polls": [{"d": "Gavin Newsom", "r": "JD Vance", "share": 51.0, "date": "2026-11-05", "pollster": "Emerson"}]},
+       "desart_final": None, "scenario": {"candidates": [{"name": "JD Vance", "party": "R", "primary": 36.5}]},
+       "summary": {"pDemWin": 0.5606, "pTie": 0.0013, "demPopular": 50.76, "demEvPoint": 286},
+       "models": {"enns": {"pDemWin": 0.666, "pTie": 0.0009, "demPopular": 51.69},
+                  "desart": {"pDemWin": 0.4441, "pTie": 0.0027, "demPopular": 49.85}, "polls": {"avg": 51.0, "n": 1}},
+       "states": [{"abbr": "PA", "ev": 19, "demShare": 50.53, "pDem": 0.56, "rating": "TD", "enns": 51.32, "ennsP": 0.65,
+                   "desart": 49.7, "desartP": 0.47, "approve": 35.4, "econ": 0.08},
+                  {"abbr": "NE2", "ev": 1, "demShare": 53.95, "pDem": 0.87, "rating": "LD", "enns": 55.03, "ennsP": 0.93,
+                   "desart": 52.9, "desartP": 0.8, "approve": None, "econ": None}]}
+with tempfile.TemporaryDirectory() as _d:
+    assert daily_log.record(_N1, CFG, dt.date(2026, 11, 20), log_dir=_d) == ["Record starts."]
+    assert daily_log.record(_N1, CFG, dt.date(2026, 11, 20), log_dir=_d) == []           # the same run again: nothing to note
+    _N2 = copy.deepcopy(_N1)                                                              # a later day with news
+    _N2["approval"]["polls"][1] = {"date": "2026-11-19", "approve": 33, "disapprove": 63, "n": 1100, "pollster": "Gallup", "population": "a"}
+    _N2["approval"]["approve"] = 33.6
+    _N2["approval"]["state_data"]["as_of"] = "2026-12-03"
+    _N2["economy"]["through"] = "2026-10"
+    _N2["summary"]["pDemWin"] = 0.57
+    _cfg2 = copy.deepcopy(CFG)
+    _cfg2["approval"]["state_gap_scale"] = 0.6
+    _said = " ".join(daily_log.record(_N2, _cfg2, dt.date(2026, 12, 4), log_dir=_d))
+    for _want in ("33.6% approve (was 34.0%)", "in: Gallup to Nov 19", "out: Gallup to Nov 10", "through October 2026",
+                  "Civiqs copy of December 3, 2026 (was November 19, 2026)", "approval.state_gap_scale 0.5 to 0.6"):
+        assert _want in _said, (_want, _said)
+    assert "Head-to-head" not in _said and "Code changed" not in _said, _said
+    _days = list(_csv.DictReader(open(os.path.join(_d, "daily.csv"))))
+    assert [r["date"] for r in _days] == ["2026-11-20", "2026-12-04"] and _days[1]["dem_win"] == "0.57"
+    assert _days[0]["approval_model_from"] == _days[0]["long_range_from"] == "site run"
+    _st = list(_csv.DictReader(open(os.path.join(_d, "states.csv"))))
+    assert [r["state"] for r in _st] == ["PA", "NE2", "PA", "NE2"] and _st[3]["trump_approval_used"] == ""
+    _ch = list(_csv.DictReader(open(os.path.join(_d, "changes.csv"))))
+    assert len(_ch) == 2 and _ch[1]["dem_win_before"] == "0.5606" and _ch[1]["dem_win_after"] == "0.57"
+    assert sorted(os.listdir(os.path.join(_d, "days"))) == ["2026-11-20.json", "2026-12-04.json"]
+    _N3 = copy.deepcopy(_N2)                                                              # a second run the same day
+    _N3["summary"]["pDemWin"] = 0.58
+    assert daily_log.record(_N3, _cfg2, dt.date(2026, 12, 4), log_dir=_d)[0].startswith("The numbers moved with none of the listed inputs changing")
+    assert daily_log.record(_N3, _cfg2, dt.date(2026, 12, 5), log_dir=_d) == []           # the next day, nothing new
+    _N3["summary"]["pDemWin"] = 0.581
+    assert daily_log.record(_N3, _cfg2, dt.date(2026, 12, 6), log_dir=_d) == ["No new data: the polls are a day older, which shifts their weights a little."]
+    _days = list(_csv.DictReader(open(os.path.join(_d, "daily.csv"))))
+    assert [r["dem_win"] for r in _days] == ["0.5606", "0.58", "0.58", "0.581"]           # the second run of December 4 replaced the first
+    assert len(list(_csv.DictReader(open(os.path.join(_d, "states.csv"))))) == 8
+print("ok (daily record)")
