@@ -11,12 +11,13 @@ Every run of pipeline/update.py that is not a test run writes here:
                                       polls in or out, a new month of state economies, a new copy of the state
                                       approval figures (refreshed by hand), a setting, the code
 
-The two models recorded here are the site's own runs of the published models. When their authors publish their own
-2028 forecasts and those are put on the site, the site's own runs must go on being computed and recorded here,
-marked "site run", so that after the election three things can be compared with the result: the authors'
-forecasts, the site's own runs on the day before each was published, and the site's own runs on the last day.
-(Decided November 20, 2026. The step that puts the authors' forecasts in is not written yet; when it is, it passes
-its sources in payload["model_sources"] and keeps the site's own runs in the record.)
+Two sets of numbers are kept side by side. The plain columns are what the site shows. The columns that start
+with site_run are the site's own runs of the two published models. Until an author's own 2028 forecast is put on
+the site (pipeline/put_in.py) the two sets are the same. From then on the plain columns hold the authors' forecast
+for that model (approval_model_from / long_range_from say "authors' forecast") and the site_run columns go on
+holding the site's own run. After the election that allows three things to be compared with the result: the
+authors' forecasts, the site's own runs on the day before each was published, and the site's own runs on the last
+day. (Decided November 20, 2026.)
 """
 import csv
 import datetime as dt
@@ -48,10 +49,12 @@ Kept for later research. Nothing on the site reads these files. The daily run wr
 
 Days are US Eastern dates. The record starts on November 20, 2026.
 
-The two models recorded here are the site's own runs. When the authors' own 2028 forecasts are put on the site,
-the site's own runs keep being computed and recorded here, marked "site run". After the election that allows a
-three-way comparison with the result: the authors' forecasts, the site's own runs on the day before each was
-published, and the site's own runs on the last day.
+Two sets of numbers sit side by side. The plain columns are what the site shows. The columns that start with
+`site_run` are the site's own runs of the two models. Until an author's own 2028 forecast is put on the site the
+two sets are the same. From then on the plain columns hold the authors' forecast for that model (the columns
+`approval_model_from` and `long_range_from` say so) and the `site_run` columns keep the site's own run. After the
+election that allows a three-way comparison with the result: the authors' forecasts, the site's own runs on the
+day before each was published, and the site's own runs on the last day.
 """
 
 DAILY_FIELDS = ["date", "last_run_utc", "mode", "dem_win", "tie", "dem_popular_vote", "dem_electoral_votes",
@@ -61,10 +64,15 @@ DAILY_FIELDS = ["date", "last_run_utc", "mode", "dem_win", "tie", "dem_popular_v
                 "approval_window_start", "approval_window_end",
                 "head_to_head_dem_average", "head_to_head_matchups", "economy_through",
                 "vp_adjustment", "vp_gap_measured", "vp_polls", "vp_weight",
-                "state_approval_copy", "state_gap_scale", "dem_nominee", "rep_nominee"]
+                "state_approval_copy", "state_gap_scale", "dem_nominee", "rep_nominee",
+                "site_run_dem_win", "site_run_dem_popular_vote", "site_run_dem_electoral_votes",
+                "site_run_approval_model_dem_win", "site_run_approval_model_dem_popular_vote",
+                "site_run_long_range_dem_win", "site_run_long_range_dem_popular_vote"]
 STATE_FIELDS = ["date", "state", "electoral_votes", "nowcast_dem_share", "dem_win", "rating",
                 "approval_model_dem_share", "approval_model_dem_win", "long_range_dem_share", "long_range_dem_win",
-                "trump_approval_used", "economy"]
+                "trump_approval_used", "economy",
+                "site_run_nowcast_dem_share", "site_run_dem_win",
+                "site_run_approval_model_dem_share", "site_run_long_range_dem_share"]
 CHANGE_FIELDS = ["time_utc", "date", "dem_win_before", "dem_win_after", "what_changed"]
 
 
@@ -192,8 +200,18 @@ def describe_changes(prev, cur):
                    if b.get("mode") == "official" else f"Mode: {b.get('mode')} (was {a.get('mode')}).")
     if not (a.get("desart_final") or {}).get("frozen") and (b.get("desart_final") or {}).get("frozen"):
         out.append("The long-range model's polls are now fixed: those conducted in October 2027.")
-    if (a.get("model_sources") or {}) != (b.get("model_sources") or {}):
-        out.append(f"Where each model's numbers come from changed: {json.dumps(b.get('model_sources') or {}, sort_keys=True)}.")
+    # An author's own published forecast put in, corrected or taken out.
+    half = {"desart": "long-range", "enns": "approval"}
+    pa, pb = a.get("published") or {}, b.get("published") or {}
+    for m in ("desart", "enns"):
+        who = (pb.get(m) or pa.get(m) or {}).get("short") or (pb.get(m) or pa.get(m) or {}).get("authors") or m
+        if m in pb and m not in pa:
+            out.append(f"The {half[m]} half is now the forecast {who} published on {_day(pb[m]['published'], True)}, "
+                       "put in by hand; the site's own run of that model stays in the site_run columns.")
+        elif m in pa and m not in pb:
+            out.append(f"The forecast {who} published was taken out; the {half[m]} half is the site's own run again.")
+        elif m in pa and pa[m] != pb[m]:
+            out.append(f"The forecast {who} published was corrected.")
 
     # Settings, code and data files.
     s0, s1 = prev.get("settings") or {}, cur.get("settings") or {}
@@ -233,14 +251,18 @@ def _upsert(path, fields, rows, day):
         w.writerows(rows)
 
 
-def record(payload, cfg, today, approval_polls=None, log_dir=LOG_DIR, root=ROOT):
-    """Write the day's record. Returns what changed since the last record, as sentences (empty: nothing changed)."""
+def record(payload, cfg, today, approval_polls=None, own=None, log_dir=LOG_DIR, root=ROOT):
+    """Write the day's record. Returns what changed since the last record, as sentences (empty: nothing changed).
+    own: the site's own runs ({"summary", "models", "states"}) when an author's published forecast has replaced
+    one of them on the site; left out, the site's own runs are what the site shows."""
     day = today.isoformat()
     days_dir = os.path.join(log_dir, "days")
     os.makedirs(days_dir, exist_ok=True)
     cur = {"date": day, "nowcast": payload, "settings": settings(cfg), "files": file_ids(root)}
     if approval_polls is not None and len(approval_polls) > len(payload["approval"].get("polls") or []):
         cur["approval_polls"] = approval_polls       # the site's copy shows the first 25 only
+    if own:
+        cur["own"] = own
 
     earlier = sorted(f for f in glob.glob(os.path.join(days_dir, "*.json")) if os.path.basename(f)[:10] <= day)
     prev = None
@@ -257,6 +279,11 @@ def record(payload, cfg, today, approval_polls=None, log_dir=LOG_DIR, root=ROOT)
     polls_avg = m.get("polls") or {}
     who = lambda side: (((N.get("tickets") or {}).get(side) or {}).get("president") or {}).get("name")  # noqa: E731
     model = lambda k, f: (m.get(k) or {}).get(f)  # noqa: E731
+    # The site's own runs: given separately once an author's forecast is in, otherwise what the site shows.
+    o = own or {"summary": s, "models": m, "states": N.get("states") or []}
+    os_, om = o["summary"], o.get("models") or {}
+    omodel = lambda k, f: (om.get(k) or {}).get(f)  # noqa: E731
+    own_state = {x["abbr"]: x for x in o.get("states") or []}
     _upsert(os.path.join(log_dir, "daily.csv"), DAILY_FIELDS, [{
         "date": day, "last_run_utc": N.get("generated_at"), "mode": N.get("mode"),
         "dem_win": round(s["pDemWin"], 4), "tie": round(s["pTie"], 4),
@@ -273,6 +300,10 @@ def record(payload, cfg, today, approval_polls=None, log_dir=LOG_DIR, root=ROOT)
         "vp_adjustment": vp.get("gap"), "vp_gap_measured": vp.get("raw_gap"), "vp_polls": vp.get("polls"), "vp_weight": vp.get("weight"),
         "state_approval_copy": sd.get("as_of"), "state_gap_scale": sd.get("gap_scale"),
         "dem_nominee": who("dem"), "rep_nominee": who("rep"),
+        "site_run_dem_win": round(os_["pDemWin"], 4), "site_run_dem_popular_vote": round(os_["demPopular"], 2),
+        "site_run_dem_electoral_votes": os_["demEvPoint"],
+        "site_run_approval_model_dem_win": omodel("enns", "pDemWin"), "site_run_approval_model_dem_popular_vote": omodel("enns", "demPopular"),
+        "site_run_long_range_dem_win": omodel("desart", "pDemWin"), "site_run_long_range_dem_popular_vote": omodel("desart", "demPopular"),
     }], day)
     r4 = lambda x: None if x is None else round(x, 4)  # noqa: E731
     _upsert(os.path.join(log_dir, "states.csv"), STATE_FIELDS, [{
@@ -281,6 +312,10 @@ def record(payload, cfg, today, approval_polls=None, log_dir=LOG_DIR, root=ROOT)
         "approval_model_dem_share": x.get("enns"), "approval_model_dem_win": r4(x.get("ennsP")),
         "long_range_dem_share": x.get("desart"), "long_range_dem_win": r4(x.get("desartP")),
         "trump_approval_used": x.get("approve"), "economy": x.get("econ"),
+        "site_run_nowcast_dem_share": (own_state.get(x["abbr"]) or {}).get("demShare"),
+        "site_run_dem_win": r4((own_state.get(x["abbr"]) or {}).get("pDem")),
+        "site_run_approval_model_dem_share": (own_state.get(x["abbr"]) or {}).get("enns"),
+        "site_run_long_range_dem_share": (own_state.get(x["abbr"]) or {}).get("desart"),
     } for x in N.get("states") or []], day)
 
     if changes:

@@ -16,9 +16,14 @@ Writes:
     pipeline/history.json
     pipeline/cache/      raw responses from the last run
     pipeline/log/        a fuller record of every day, kept for later research (pipeline/daily_log.py)
+
+Reads, when they exist:
+    pipeline/published/desart_2028.json, enns_2028.json    the authors' own published 2028 forecasts, put in by
+                         hand with pipeline/put_in.py. Each replaces the site's own run of that model.
 """
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import re
@@ -131,23 +136,180 @@ def slug(name):
     return re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
 
 
+# ---- the authors' own published forecasts (pipeline/published/, put in by hand with pipeline/put_in.py) ----
+MODELS = ("enns", "desart")
+
+
+def load_published(cfg, results, folder=None):
+    """{"desart": {...}, "enns": {...}} for the authors' published forecasts that have been put in; {} before any.
+    Each has "states": {abbr: Democratic share of the two-party vote} and what is known about the publication.
+    A file that cannot be used is skipped with a warning, and the site's own run of that model stays in."""
+    out, need = {}, [k for k in results if len(k) == 2 and k != "DC"]
+    for model in MODELS:
+        path = os.path.join(folder or os.path.join(HERE, "published"), f"{model}_{cfg['election']['year']}.json")
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, encoding="utf-8") as f:
+                d = json.load(f)
+            st = {k: float(v) for k, v in d["states"].items() if k in results and len(k) == 2}
+            missing = [k for k in need if k not in st]
+            odd = [k for k, v in st.items() if not 0 < v < 100]
+            if missing or odd:
+                raise ValueError(f"missing {missing}" if missing else f"not a share of the vote: {odd}")
+            dt.date.fromisoformat(d["published"])
+            out[model] = {**{k: v for k, v in d.items() if not k.startswith("_") and k != "states"}, "states": st}
+        except Exception as e:  # noqa: BLE001
+            print(f"WARNING: {os.path.relpath(path, ROOT)} was not used ({e}); the site's own run of that model stays in")
+    return out
+
+
+def published_id(published):
+    """A fingerprint of the published forecasts in use, to tell when one is added, corrected or taken out."""
+    return hashlib.sha1(json.dumps(published, sort_keys=True).encode()).hexdigest()[:12] if published else ""
+
+
+def sources_of(published):
+    return {m: "authors' forecast" if m in published else "site run" for m in MODELS}
+
+
+def run_models(sim_in):
+    """Run both models with the same code the site uses (docs/combine.js), so the numbers agree."""
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump(sim_in, f)
+    out = json.loads(subprocess.check_output(["node", os.path.join(HERE, "run_forecast.js"), f.name]))
+    os.unlink(f.name)
+    return out
+
+
+def brief(m):
+    return m and {"pDemWin": round(m["pDemWin"], 4), "pTie": round(m["pTie"], 4), "demPopular": round(m["demPopular"], 2)}
+
+
+def state_rows(res, extra):
+    """One row per state and district, as the site reads them. extra: {abbr: {"approve", "econ"}} for the states."""
+    return [{**{k: (round(v, 2) if k in ("demShare", "enns", "desart") else v) for k, v in s.items()},
+             "pDem": round(s["pDem"], 4),
+             "approve": extra[s["abbr"]]["approve"] if s["abbr"] in extra else None,
+             "econ": extra[s["abbr"]]["econ"] if s["abbr"] in extra else None}
+            for s in res["states"]]
+
+
+def results_into(payload, out, extra):
+    """Put a run's results into the payload. Returns (the combined result, electoral votes with each state to
+    whoever is ahead in it)."""
+    res = out["combined"]
+    dem_ev_point = sum(s["ev"] for s in res["states"] if s["demShare"] > 50)
+    payload["summary"] = {"pDemWin": res["pDemWin"], "pTie": res["pTie"], "demPopular": res["demPopular"],
+                          "demEvPoint": dem_ev_point, "simulations": res["simulations"]}
+    payload["models"] = {"enns": brief(out["enns"]), "desart": brief(out["desart"]),
+                         "polls": out["info"]["polls"] and {"avg": round(out["info"]["polls"]["avg"], 2), "n": out["info"]["polls"]["n"]}}
+    payload["evHistogram"] = [round(x, 5) for x in res["evHistogram"]]
+    payload["states"] = state_rows(res, extra)
+    return res, dem_ev_point
+
+
+def own_runs(out, extra):
+    """The site's own runs of both models, when an author's published forecast has replaced one of them on the
+    site. They go to the daily record only (pipeline/log), so the two can be compared after the election."""
+    o = out.get("own")
+    if not o:
+        return None
+    res = o["combined"]
+    return {"summary": {"pDemWin": res["pDemWin"], "pTie": res["pTie"], "demPopular": res["demPopular"],
+                        "demEvPoint": sum(s["ev"] for s in res["states"] if s["demShare"] > 50)},
+            "models": {"enns": brief(o["enns"]), "desart": brief(o["desart"])},
+            "states": state_rows(res, extra)}
+
+
+def final_forecast(payload, out, tickets, desart_final, day, published, updated=None):
+    """The forecast as posted: the Nowcast as it stands on the publish day. Each half is the authors' own published
+    forecast or, where that is not out, the site's own run standing in for it; "sources" says which."""
+    res = out["combined"]
+    final = {"published": day, "tickets": tickets,
+             "approval": payload["approval"], "economy": payload["economy"], "vp": payload["vp"],
+             "desart_polls": {"window": desart_final["window"], "n": len(desart_final["polls"]),
+                              "avg": out["info"]["polls"] and round(out["info"]["polls"]["avg"], 2)},
+             "summary": {"pDemWin": res["pDemWin"], "pTie": res["pTie"], "demPopular": res["demPopular"],
+                         "demEvPoint": sum(s["ev"] for s in res["states"] if s["demShare"] > 50)},
+             "models": {"enns": brief(out["enns"]), "desart": brief(out["desart"])},
+             "evHistogram": [round(x, 5) for x in res["evHistogram"]],
+             "states": [{**{k: (round(v, 2) if k in ("demShare", "enns", "desart") else v) for k, v in s.items()},
+                         "pDem": round(s["pDem"], 4)} for s in res["states"]],
+             "sources": sources_of(published),
+             "authors": {m: {k: v for k, v in p.items() if k != "states"} for m, p in published.items()},
+             "published_id": published_id(published)}
+    if updated:
+        final["updated"] = updated
+    return final
+
+
+def write_js(name, comment, var, obj):
+    with open(os.path.join(ROOT, "docs", name), "w") as f:
+        f.write(f"// {comment}\nwindow.{var} = " + json.dumps(obj) + ";\n")
+
+
+def late_put_in(cfg, results, today, log_dir=None):
+    """After the forecast is posted the daily update stops. One thing can still change it: an author's forecast
+    that comes out late replaces the site's own run that stood in for it. The inputs stay as they were frozen.
+    Returns True when the posted forecast was redone."""
+    frozen_dir = os.path.join(HERE, "frozen")
+    fc_path, in_path = os.path.join(frozen_dir, "forecast_2028.json"), os.path.join(frozen_dir, "nowcast_2028.json")
+    final = json.load(open(fc_path))
+    published = load_published(cfg, results)
+    if published_id(published) == final.get("published_id", ""):
+        return False
+    if not os.path.exists(in_path):
+        print("WARNING: a published forecast was put in after the final forecast was posted, but the frozen inputs "
+              "(pipeline/frozen/nowcast_2028.json) are missing, so the posted forecast was left as it is")
+        return False
+    kept = json.load(open(in_path))
+    payload, sim = kept["payload"], kept["sim"]
+    payload.pop("published", None)
+    payload.pop("model_sources", None)
+    if published:
+        payload["published"], payload["model_sources"] = published, sources_of(published)
+    out = run_models({"N": payload, **sim, "own": bool(published)})
+    extra = {s["abbr"]: {"approve": s.get("approve"), "econ": s.get("econ")} for s in payload["states"] if len(s["abbr"]) == 2}
+    res, _ = results_into(payload, out, extra)
+    final = final_forecast(payload, out, payload["tickets"], payload["desart_final"], final["published"], published,
+                           updated=today.isoformat())
+    json.dump(final, open(fc_path, "w"), indent=1)
+    json.dump({"sim": sim, "payload": payload}, open(in_path, "w"))
+    write_js("forecast.js", "The final 2028 forecast, frozen on its publish day. Do not edit.", "FORECAST", final)
+    write_js("nowcast.js", "Generated by pipeline/update.py. Do not edit.", "NOWCAST", payload)
+    try:
+        noted = daily_log.record(payload, cfg, today, own=own_runs(out, extra), log_dir=log_dir or daily_log.LOG_DIR)
+        print("Daily record: " + (" ".join(noted) if noted else "nothing changed since the last run"))
+    except Exception as e:  # noqa: BLE001
+        print(f"WARNING: the daily record was not written ({e})")
+    print(f"The posted 2028 forecast was redone with the published forecasts now in ({', '.join(sorted(published)) or 'none'}): "
+          f"Dem win {res['pDemWin']:.1%}, Dem popular {res['demPopular']:.2f}%")
+    return True
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--fixtures", help="read every source from this folder instead of the network")
     ap.add_argument("--today", help="YYYY-MM-DD, defaults to today in US Eastern time")
     ap.add_argument("--log-dir", help="write the daily record here (a test run writes none unless this is given)")
+    ap.add_argument("--freeze-in-test", action="store_true",
+                    help="let a test run fix and post the forecast on its days, to try those days in a scratch copy")
     args = ap.parse_args()
 
     cfg = json.load(open(os.path.join(HERE, "config.json")))
-    # Once the final forecast is published (Aug 6, 2028), nothing updates again: the last Nowcast is the forecast.
-    if not args.fixtures and os.path.exists(os.path.join(HERE, "frozen", "forecast_2028.json")):
-        print("The final 2028 forecast is published; the Nowcast is frozen with it. Nothing to update.")
-        return
+    live = not args.fixtures or args.freeze_in_test      # a test run fixes and posts nothing unless asked to
     results = json.load(open(os.path.join(HERE, "results_2024.json")))
-    registry = json.load(open(os.path.join(HERE, "candidates.json")))["candidates"]
     # The day is the US Eastern date, not UTC's: a run on a US evening belongs to that day, and the cutoff
     # days (the poll windows, the freeze days, the publish day) start at midnight Eastern.
     today = dt.date.fromisoformat(args.today) if args.today else dt.datetime.now(ZoneInfo("America/New_York")).date()
+    # Once the final forecast is posted (Aug 6, 2028), nothing updates again: the last Nowcast is the forecast.
+    # The one exception is an author's forecast that comes out after that day (late_put_in).
+    if live and os.path.exists(os.path.join(HERE, "frozen", "forecast_2028.json")):
+        if not late_put_in(cfg, results, today, args.log_dir):
+            print("The final 2028 forecast is published; the Nowcast is frozen with it. Nothing to update.")
+        return
+    registry = json.load(open(os.path.join(HERE, "candidates.json")))["candidates"]
     cache = os.path.join(HERE, "cache")
     pres_stale = False   # True when the 2028 polls come from the last good copy, not today's read
     degraded = []        # sources that could not be read fresh today; nothing is frozen for good on such a day
@@ -379,13 +541,13 @@ def main():
     ds_lo, ds_hi = (dt.date.fromisoformat(d) for d in el["desart_poll_window"])
     ds_path = os.path.join(frozen_dir, "desart_2028.json")
     desart_final = None
-    if os.path.exists(ds_path) and not fx:
+    if os.path.exists(ds_path) and live:
         desart_final = json.load(open(ds_path))
     elif today >= ds_lo:
         ds_rows, ds_skipped = candidates.general_matchups(pres_raw, ds_lo, ds_hi, approval._iso, registry, exclude=barred)
         desart_final = {"window": [ds_lo.isoformat(), ds_hi.isoformat()], "polls": ds_rows, "skipped": ds_skipped,
                         "people": off_list(ds_rows), "terms": terms, "as_of": today.isoformat(), "frozen": False}
-        if not fx and today >= dt.date.fromisoformat(el["desart_freeze_day"]):
+        if live and today >= dt.date.fromisoformat(el["desart_freeze_day"]):
             # Not frozen from a stale copy of the polls, unless the feed has been unreadable for a week.
             late = (today - dt.date.fromisoformat(el["desart_freeze_day"])).days >= el.get("freeze_retry_days", 7)
             if ds_rows and pres_raw and (not pres_stale or late):
@@ -433,68 +595,54 @@ def main():
         },
     }
 
+    # An author's own published 2028 forecast, once it is out and has been put in (pipeline/put_in.py), replaces
+    # the site's own run of that model: DeSart's the long-range half, Enns and colleagues' the approval half.
+    # The site's own runs are still computed and go to the daily record, so the two can be compared later.
+    published = load_published(cfg, results)
+    if published:
+        payload["published"], payload["model_sources"] = published, sources_of(published)
+        print("Published forecasts in use: " + "; ".join(f"{m} ({p.get('short') or p.get('authors')}, published {p['published']})"
+                                                           for m, p in published.items()))
+
     # Run both models on the payload with the same code the site uses, so the numbers agree.
     def pick(role, side, key):
         t = tickets[side].get(key) or {}
         return {"name": t.get("name") or "", "state": codes[role]} if codes[role] else None
-    sim_in = {"N": payload, "n": cfg["simulation"]["n_per_delta"], "seed": cfg["simulation"]["seed"],
-              "picks": {"dp": pick("dem_president_home", "dem", "president"), "rp": pick("rep_president_home", "rep", "president"),
-                        "dv": pick("dem_vp_home", "dem", "vp"), "rv": pick("rep_vp_home", "rep", "vp")},
-              "force_vp_shift": gap if vpc.get("mode") == "manual" and gap is not None else None}
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        json.dump(sim_in, f)
-    out = json.loads(subprocess.check_output(["node", os.path.join(HERE, "run_forecast.js"), f.name]))
-    os.unlink(f.name)
-    res = out["combined"]
-    dem_ev_point = sum(s["ev"] for s in res["states"] if s["demShare"] > 50)
-    brief = lambda m: m and {"pDemWin": round(m["pDemWin"], 4), "pTie": round(m["pTie"], 4),  # noqa: E731
-                             "demPopular": round(m["demPopular"], 2)}
-    payload["summary"] = {"pDemWin": res["pDemWin"], "pTie": res["pTie"], "demPopular": res["demPopular"],
-                          "demEvPoint": dem_ev_point, "simulations": res["simulations"]}
-    payload["models"] = {"enns": brief(out["enns"]), "desart": brief(out["desart"]),
-                         "polls": out["info"]["polls"] and {"avg": round(out["info"]["polls"]["avg"], 2), "n": out["info"]["polls"]["n"]}}
-    payload["evHistogram"] = [round(x, 5) for x in res["evHistogram"]]
-    payload["states"] = [{**{k: (round(v, 2) if k in ("demShare", "enns", "desart") else v) for k, v in s.items()},
-                          "pDem": round(s["pDem"], 4),
-                          "approve": round(by_abbr[s["abbr"]]["approve"], 1) if s["abbr"] in by_abbr else None,
-                          "econ": round(by_abbr[s["abbr"]]["inputs"]["econ"], 4) if s["abbr"] in by_abbr else None}
-                         for s in res["states"]]
+    sim = {"n": cfg["simulation"]["n_per_delta"], "seed": cfg["simulation"]["seed"],
+           "picks": {"dp": pick("dem_president_home", "dem", "president"), "rp": pick("rep_president_home", "rep", "president"),
+                     "dv": pick("dem_vp_home", "dem", "vp"), "rv": pick("rep_vp_home", "rep", "vp")},
+           "force_vp_shift": gap if vpc.get("mode") == "manual" and gap is not None else None}
+    out = run_models({"N": payload, **sim, "own": bool(published)})
+    extra = {a: {"approve": round(s["approve"], 1), "econ": round(s["inputs"]["econ"], 4)} for a, s in by_abbr.items()}
+    res, dem_ev_point = results_into(payload, out, extra)
 
     # The final forecast: the Nowcast as it stands on publish_day (Aug 6, 2028), frozen and never changed after.
     # By then its approval half uses polls conducted June 1 - July 30 (the paper's window) and its polls half the
     # frozen October 2027 set, so the Nowcast that day is each paper's forecast.
     fc_path = os.path.join(frozen_dir, "forecast_2028.json")
-    if not fx and os.path.exists(fc_path):
+    if live and os.path.exists(fc_path):
         final = json.load(open(fc_path))
-    elif (not fx and today >= dt.date.fromisoformat(el["publish_day"]) and desart_final and desart_final.get("frozen")
+    elif (live and today >= dt.date.fromisoformat(el["publish_day"]) and desart_final and desart_final.get("frozen")
           and degraded and (today - dt.date.fromisoformat(el["publish_day"])).days < el.get("publish_retry_days", 3)):
         # A source could not be read today. The forecast is frozen for good, so it waits for a clean read
         # (the next run, or tomorrow's); after publish_retry_days it is published with what there is.
         print(f"WARNING: the final forecast was NOT published today: could not read {', '.join(sorted(set(degraded)))}; will retry")
         final = None
-    elif not fx and today >= dt.date.fromisoformat(el["publish_day"]) and desart_final and desart_final.get("frozen"):
-        fo, fr = out, res   # the Nowcast already runs the frozen October 2027 polls as DeSart publishes them
-        final = {"published": today.isoformat(), "tickets": tickets,
-                 "approval": payload["approval"], "economy": payload["economy"], "vp": payload["vp"],
-                 "desart_polls": {"window": desart_final["window"], "n": len(desart_final["polls"]),
-                                  "avg": fo["info"]["polls"] and round(fo["info"]["polls"]["avg"], 2)},
-                 "summary": {"pDemWin": fr["pDemWin"], "pTie": fr["pTie"], "demPopular": fr["demPopular"],
-                             "demEvPoint": sum(s["ev"] for s in fr["states"] if s["demShare"] > 50)},
-                 "models": {"enns": brief(fo["enns"]), "desart": brief(fo["desart"])},
-                 "evHistogram": [round(x, 5) for x in fr["evHistogram"]],
-                 "states": [{**{k: (round(v, 2) if k in ("demShare", "enns", "desart") else v) for k, v in s.items()},
-                             "pDem": round(s["pDem"], 4)} for s in fr["states"]]}
+    elif live and today >= dt.date.fromisoformat(el["publish_day"]) and desart_final and desart_final.get("frozen"):
+        # The Nowcast already runs the frozen October 2027 polls as DeSart publishes them, and any published
+        # forecast that has been put in. The inputs are kept too, so that an author's forecast that comes out
+        # after today can still replace the site's own run that stood in for it (late_put_in).
+        final = final_forecast(payload, out, tickets, desart_final, today.isoformat(), published)
         os.makedirs(frozen_dir, exist_ok=True)
         json.dump(final, open(fc_path, "w"), indent=1)
-        print(f"Published the final 2028 forecast: Dem win {fr['pDemWin']:.1%}, Dem popular {fr['demPopular']:.2f}%")
+        json.dump({"sim": sim, "payload": payload}, open(os.path.join(frozen_dir, "nowcast_2028.json"), "w"))
+        print(f"Published the final 2028 forecast: Dem win {res['pDemWin']:.1%}, Dem popular {res['demPopular']:.2f}%")
     else:
         final = None
     if final is not None:
-        with open(os.path.join(ROOT, "docs", "forecast.js"), "w") as f:
-            f.write("// The final 2028 forecast, frozen on its publish day. Do not edit.\nwindow.FORECAST = " + json.dumps(final) + ";\n")
+        write_js("forecast.js", "The final 2028 forecast, frozen on its publish day. Do not edit.", "FORECAST", final)
 
-    with open(os.path.join(ROOT, "docs", "nowcast.js"), "w") as f:
-        f.write("// Generated by pipeline/update.py. Do not edit.\nwindow.NOWCAST = " + json.dumps(payload) + ";\n")
+    write_js("nowcast.js", "Generated by pipeline/update.py. Do not edit.", "NOWCAST", payload)
 
     hist_path = os.path.join(HERE, "history.json")
     hist = json.load(open(hist_path)) if os.path.exists(hist_path) else []
@@ -519,11 +667,12 @@ def main():
     # A fuller record of the day, kept for later research: the whole Nowcast, a row of headline numbers, a row for
     # every state, and what changed since the last run in plain words (pipeline/daily_log.py). Nothing on the site
     # reads it, and a problem writing it never stops the run.
-    # These are the site's own runs of the two models. When the authors' published 2028 forecasts are put in, the
-    # site's own runs must still be computed and recorded here, so the two can be compared after the election.
+    # When an author's published forecast has been put in, the site's own runs of the two models are still
+    # computed (out["own"]) and recorded here, marked "site run", so the two can be compared after the election.
     if not fx or args.log_dir:
         try:
-            noted = daily_log.record(payload, cfg, today, approval_polls=nat["polls"], log_dir=args.log_dir or daily_log.LOG_DIR)
+            noted = daily_log.record(payload, cfg, today, approval_polls=nat["polls"], own=own_runs(out, extra),
+                                     log_dir=args.log_dir or daily_log.LOG_DIR)
             print("Daily record: " + (" ".join(noted) if noted else "nothing changed since the last run"))
         except Exception as e:  # noqa: BLE001
             print(f"WARNING: the daily record was not written ({e})")
