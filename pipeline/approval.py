@@ -135,10 +135,16 @@ def window_for(cfg, today):
     return today - dt.timedelta(days=cfg["approval"]["nowcast_window_days"]), today, "nowcast"
 
 
-def national_average(polls, start, end, half_life_days=14.0):
+def national_average(polls, start, end, half_life_days=14.0, populations=None):
+    """The latest poll from each pollster in the window, weighted by sample size and by age.
+    populations: when given, only polls of those groups count, e.g. ["a"] for polls of all adults,
+    the group the paper's approval figures describe ("rv" registered voters, "lv" likely voters)."""
+    want = {str(x).lower() for x in populations} if populations else None
     latest = {}
     for p in polls:
         if p.get("internal") or p.get("partisan"):
+            continue
+        if want is not None and str(p.get("population") or "").lower() not in want:
             continue
         try:
             d = dt.date.fromisoformat(_iso(p.get("end_date") or p.get("endDate")))

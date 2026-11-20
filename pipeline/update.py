@@ -242,24 +242,34 @@ def main():
     # than official_min_pollsters have a poll in it, the Nowcast keeps its trailing window, so the first days
     # of June do not rest on one or two polls. Once the window has closed it is used whatever it holds.
     trailing = cfg["approval"]["nowcast_window_days"]
+    # Which polls count, by who was surveyed. The paper estimates approval among all adults, so only polls of
+    # all adults count (config: approval.national_populations).
+    pops = cfg["approval"].get("national_populations") or None
     official_wait = None
     if mode == "official" and today <= dt.date.fromisoformat(cfg["election"]["approval_window"][1]):
         need = cfg["approval"].get("official_min_pollsters", 10)
         try:
-            have = approval.national_average(national_polls, w_lo, w_hi)["pollsters"]
+            have = approval.national_average(national_polls, w_lo, w_hi, populations=pops)["pollsters"]
         except RuntimeError:
             have = 0
         if have < need:
             official_wait = {"pollsters": have, "needed": need}
             w_lo, w_hi, mode = today - dt.timedelta(days=trailing), today, "nowcast"
-    nat = approval.national_average(national_polls, w_lo, w_hi)
+    nat = approval.national_average(national_polls, w_lo, w_hi, populations=pops)
+    # For the site's "latest data" page only: the same average with every poll counted, voters included.
+    nat_all = None
+    if pops:
+        try:
+            nat_all = approval.national_average(national_polls, w_lo, w_hi)
+        except RuntimeError:
+            pass
     # For the site's "latest data" page only: the approval average as it stood each week of the term, as a
     # trailing 30-day average. The models read only today's value.
     appr_trend, span = [], trailing
     t_day = dt.date.fromisoformat(cfg["election"]["term_start_month"] + "-01") + dt.timedelta(days=span)
     while t_day < w_hi:
         try:
-            a_t = approval.national_average(national_polls, t_day - dt.timedelta(days=span), t_day)
+            a_t = approval.national_average(national_polls, t_day - dt.timedelta(days=span), t_day, populations=pops)
             appr_trend.append({"d": t_day.isoformat(), "a": round(a_t["approve"], 1), "dis": round(a_t["disapprove"], 1)})
         except RuntimeError:
             pass
@@ -387,6 +397,9 @@ def main():
         "approval": {"approve": round(nat["approve"], 1), "disapprove": round(nat["disapprove"], 1),
                      "window": [w_lo.isoformat(), w_hi.isoformat()], "pollsters": nat["pollsters"],
                      "polls": nat["polls"][:25], "trend": appr_trend, "official_wait": official_wait, "state_source": cfg["approval"]["state_source"],
+                     "populations": pops,
+                     "all_polls": nat_all and {"approve": round(nat_all["approve"], 1), "disapprove": round(nat_all["disapprove"], 1),
+                                               "pollsters": nat_all["pollsters"]},
                      "state_data": state_info, "state_polls_used": state_used},
         "economy": {"through": econ_last, "delta": cfg["economy"]["delta"], **econ_summary(econ_raw, econ_last)},
         "tickets": tickets,
@@ -477,11 +490,12 @@ def main():
     hist_path = os.path.join(HERE, "history.json")
     hist = json.load(open(hist_path)) if os.path.exists(hist_path) else []
     if not fx:
-        # v4: average of three models. Earlier days used fewer models and are dropped.
+        # v5, from November 20, 2026: the national approval average counts polls of all adults only. Days before
+        # that counted polls of voters too; they are kept in pipeline/history_v4.json and are not part of this series.
         # Today's row is replaced; a row dated after today (written by a run stamped with the wrong day) is dropped.
-        hist = [h for h in hist if h.get("v") == 4 and h["date"] < today.isoformat()]
+        hist = [h for h in hist if h.get("v") == 5 and h["date"] < today.isoformat()]
         mp = payload["models"]
-        hist.append({"v": 4, "date": today.isoformat(), "pDemWin": round(res["pDemWin"], 4),
+        hist.append({"v": 5, "date": today.isoformat(), "pDemWin": round(res["pDemWin"], 4),
                      "demPopular": round(res["demPopular"], 2), "approve": round(nat["approve"], 1),
                      "econThrough": econ_last,
                      # Added Nov 2026 for the "latest data" page; earlier days lack them.
