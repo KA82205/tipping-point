@@ -98,6 +98,9 @@ section + section { border-top: 1px solid var(--line); }
 .tab:hover { color: var(--ink); }
 .tab[aria-selected="true"] { color: var(--ink); background: var(--raise); box-shadow: inset 0 -2px 0 var(--accent); }
 .tab:disabled { color: var(--faint); cursor: not-allowed; }
+.nw { white-space: nowrap; }
+/* The Archive's five elections stay on one line on the narrowest phones. */
+@media (max-width: 400px) { .tabs.years { display: grid; grid-template-columns: repeat(5, 1fr); justify-self: stretch; } .tabs.years .tab { padding-left: 4px; padding-right: 4px; } }
 .switch { display: inline-flex; border: 1px solid var(--line-2); border-radius: 9px; overflow: hidden; }
 .switch button { all: unset; cursor: pointer; font: 500 13px var(--font-body); color: var(--muted); padding: 6px 12px; }
 .switch button[aria-pressed="true"] { background: var(--panel-2); color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
@@ -236,6 +239,7 @@ section + section { border-top: 1px solid var(--line); }
 .record > div:hover, .figs > div:hover { background: var(--panel-2); }
 .record .v, .figs .v { font: 600 34px/1.05 var(--font-num); font-variant-numeric: tabular-nums; }
 .figs .l { font-size: 14px; color: var(--muted); }
+.figs .l b { color: var(--ink); font-weight: 600; }
 .figs .v.d-ink { color: var(--dem-ink); } .figs .v.r-ink { color: var(--rep-ink); }
 .figs-3 { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 860px) { .record, .figs { grid-template-columns: repeat(2, 1fr); } .figs-3 { grid-template-columns: 1fr; } }

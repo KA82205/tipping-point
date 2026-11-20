@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tipping Point</title>
-<meta name="description" content="A daily Nowcast of the 2028 presidential race: the average of two published models, the Enns et al. state-level approval and fundamentals model and DeSart's long-range model, with the 2024 scorecard.">
+<meta name="description" content="A daily Nowcast of the 2028 presidential race: the average of two published models, the Enns et al. state-level approval and fundamentals model and DeSart's long-range model, with an archive of how the method did in every election since 2008.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261118c">
+<link rel="stylesheet" href="styles.css?v=20261120a">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -25,7 +25,7 @@
       <a href="#nowcast" data-view="nowcast" aria-label="2028 Nowcast"><span class="nl">2028 Nowcast</span><span class="ns">Nowcast</span></a>
       <a href="#models" data-view="models" aria-label="Each model"><span class="nl">Each model</span><span class="ns">Models</span></a>
       <a href="#data" data-view="data" aria-label="Latest data"><span class="nl">Latest data</span><span class="ns">Data</span></a>
-      <a href="#results-2024" data-view="results-2024" aria-label="2024 scorecard"><span class="nl">2024 scorecard</span><span class="ns">2024</span></a>
+      <a href="#archive" data-view="archive">Archive</a>
       <a href="#method" data-view="method">Method</a>
     </nav>
     <button class="contact-btn" type="button" id="contact-open" aria-haspopup="dialog">Contact <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -52,7 +52,7 @@
         <p class="lede">A daily Nowcast of the presidential race, built as the average of two published models: the State Presidential Approval/State Economy Model by Peter K. Enns and colleagues, and Jay DeSart's long-range model. One reads how voters rate the president and how state economies are doing; the other reads early head-to-head polls.</p>
         <div class="btns">
           <a class="btn primary" href="#nowcast">Explore the Nowcast</a>
-          <a class="btn" href="#results-2024">See how 2024 went</a>
+          <a class="btn" href="#archive">See past elections</a>
         </div>
       </div>
     </div>
@@ -71,7 +71,7 @@
       <div><span class="v">4 of 5</span><span class="small">Winners called, missing only 2016</span></div>
       <div><span class="v">50 of 50</span><span class="small">States called right in 2024</span></div>
     </div>
-    <p class="small">Each election from 2008 to 2024 was forecast as each model would have at the time, from earlier elections only, then averaged half and half. Nothing in the average was tuned to these results. For comparison, assuming every state votes as it did last time gets 89% of states and misses the national vote by 2.3 points. Five elections is a small sample: in 2020 both models were too high, and the average missed by 3.2 points. <a href="#method">Track record in full</a></p>
+    <p class="small">Each election from 2008 to 2024 was forecast as each model would have at the time, from earlier elections only, then averaged half and half. Nothing in the average was tuned to these results. For comparison, assuming every state votes as it did last time gets 89% of states and misses the national vote by 2.3 points. Five elections is a small sample: in 2020 both models were too high, and the average missed by 3.2 points. <a href="#method">Track record in full</a> · <a href="#archive">Each election, state by state</a></p>
   </section>
 
   <section class="stack-lg">
@@ -104,15 +104,27 @@
   </section>
 </div>
 
-<!-- ================= 2024 ================= -->
-<div id="view-results-2024" class="wrap" hidden>
+<!-- ================= ARCHIVE: 2008 to 2024 ================= -->
+<div id="view-archive" class="wrap" hidden>
   <section class="stack-lg" style="padding-top:44px">
     <div class="stack">
-      <h1 style="font-size:clamp(34px,4.4vw,52px)">2024: the forecast against the result</h1>
-      <p class="lede" id="lede-2024"></p>
+      <h1 style="font-size:clamp(34px,4.4vw,52px)">Archive</h1>
+      <p class="lede">How the Nowcast's method did in each election from 2008 to 2024, state by state. The Nowcast began in November 2026, so it forecast none of these. Each page is a look back, and says how it was made.</p>
+    </div>
+    <div class="tabs years" role="tablist" aria-label="Election">
+      <button class="tab" role="tab" data-year24="2024" aria-selected="true">2024</button>
+      <button class="tab" role="tab" data-year24="2020" aria-selected="false">2020</button>
+      <button class="tab" role="tab" data-year24="2016" aria-selected="false">2016</button>
+      <button class="tab" role="tab" data-year24="2012" aria-selected="false">2012</button>
+      <button class="tab" role="tab" data-year24="2008" aria-selected="false">2008</button>
+    </div>
+    <div class="stack">
+      <h2 id="h-2024">2024: the <span class="nw">back-test</span> against the result</h2>
+      <p id="lede-2024"></p>
+      <p class="small" id="pub-2024" hidden></p>
     </div>
     <div class="tabs" role="tablist" aria-label="Which forecast to score">
-      <button class="tab" role="tab" data-src24="bt" aria-selected="true">Nowcast method, back-tested</button>
+      <button class="tab" role="tab" data-src24="bt" aria-selected="true">Nowcast method, <span class="nw">back-tested</span></button>
       <button class="tab" role="tab" data-src24="pub" aria-selected="false">State-level approval and fundamentals, as published</button>
       <button class="tab" role="tab" data-src24="ds" aria-selected="false">Long-range model, as published</button>
     </div>
@@ -120,13 +132,13 @@
 
     <div class="stack">
       <div class="tabs" role="tablist" aria-label="Map layer">
-        <button class="tab" role="tab" data-layer="forecast" aria-selected="true">Published forecast</button>
+        <button class="tab" role="tab" data-layer="forecast" aria-selected="true">Back-test</button>
         <button class="tab" role="tab" data-layer="actual" aria-selected="false">Actual result</button>
         <button class="tab" role="tab" data-layer="error" aria-selected="false">Absolute error</button>
       </div>
       <div class="desk">
         <div class="map-panel">
-          <svg class="usmap" id="map-2024" role="img" aria-label="Map of 2024 forecast and results by state"></svg>
+          <svg class="usmap" id="map-2024" role="img" aria-label="Map of the 2024 forecast and results by state"></svg>
           <div class="map-foot"><div class="ramp" id="ramp-2024"></div><div class="switch" role="group" aria-label="Map style"><button type="button" data-mapmode="geo" aria-pressed="true">Map</button><button type="button" data-mapmode="hex" aria-pressed="false">Hexagons</button></div></div>
         </div>
         <aside class="inspector" id="insp-2024" aria-live="polite"></aside>
@@ -292,7 +304,7 @@
   <section class="stack-lg" style="padding-top:44px">
     <div class="stack">
       <h1 style="font-size:clamp(34px,4.4vw,52px)">How the models work</h1>
-      <p class="lede">The 2028 Nowcast runs two published models and averages them. Each predicts the Democratic share of the two-party vote in every state; the Electoral College is then simulated from their average. The 2024 scorecard grades that same average on 2024, and each model's published forecast on its own.</p>
+      <p class="lede">The 2028 Nowcast runs two published models and averages them. Each predicts the Democratic share of the two-party vote in every state; the Electoral College is then simulated from their average. The <a href="#archive">Archive</a> shows how that same average, and each model on its own, did in every election from 2008 to 2024.</p>
     </div>
   </section>
 
@@ -378,7 +390,7 @@
         </tbody>
       </table>
     </div>
-    <p class="small">2008 to 2024 are the elections both models can be tested on fairly: the long-range model's data starts in 1996, and with fewer than three past elections its equation cannot be estimated properly. The national figures add up the 50 states by turnout, leaving out the District of Columbia, so they differ slightly from the papers' own.</p>
+    <p class="small">2008 to 2024 are the elections both models can be tested on fairly: the long-range model's data starts in 1996, and with fewer than three past elections its equation cannot be estimated properly. The national figures add up the 50 states by turnout, leaving out the District of Columbia, so they differ slightly from the papers' own. Each election is shown state by state in the <a href="#archive">Archive</a>.</p>
     <p class="small">The Nowcast called four of the five winners; like both models on their own, it called 2016 wrong, giving Clinton 285 electoral votes. Its average miss in a state was 2.1 points, against 2.6 and 2.2 for the two models alone, and it called 240 of the 250 state results, against 236 and 238.</p>
     <p class="small"><b>Against a simple baseline.</b> Safe states make any method look good, so the fair comparison is with assuming every state votes as it did four years earlier. That gets 222 of the 250 results (89%), against the Nowcast's 240 (96%). In the 73 results decided by under 10 points it gets 49 (67%), against 64 (88%). Of the 28 results where a state changed party, the Nowcast called 21. On the national vote, assuming a repeat of the last election misses by 2.3 points on average, against 1.0.</p>
     <p class="small">Its national miss is smaller than either model's because their misses often point in opposite directions and partly cancel: in 2012 the state-level approval and fundamentals model was 2.0 points too low and the long-range model 1.7 too high, so the average was off by 0.2. When both miss the same way, as in 2020, the average does too.</p>
@@ -481,7 +493,7 @@
     <div>
       <h2 style="margin-bottom:14px">Ratings</h2>
       <p>Solid when a candidate wins more than 98 in 100 simulations, Likely above 75, Lean above 55, Toss-up otherwise.</p>
-      <p>The 2024 scorecard's state forecasts, 90% ranges and odds come from rerunning the authors' simulation on their replication data. They match the paper's Figure A-2 to within 0.2 points. The ratings shown are the paper's published ones.</p>
+      <p>The Archive's 2024 state forecasts, 90% ranges and odds for this model come from rerunning the authors' simulation on their replication data. They match the paper's Figure A-2 to within 0.2 points. The ratings shown are the paper's published ones.</p>
     </div>
   </section>
 
@@ -489,10 +501,10 @@
     <div>
       <h2 style="margin-bottom:14px">Data behind the Nowcast</h2>
       <p>State economies come from the Philadelphia Fed State Coincident Indexes via FRED. Trump's national approval is an average of public polls of all adults from VoteHub and PollResults.org. State-by-state approval comes from <a href="https://civiqs.com/results/approve_president_trump_2025">Civiqs's daily tracker of Trump's job approval</a> (registered voters, all 50 states), as a copy taken on <span data-civiqs-date>November 18, 2026</span>; only the differences between states are used. Civiqs publishes its results under the <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/">Creative Commons BY-NC-SA 3.0</a> license, and the state gaps taken from them are shared here on the same terms.</p>
-      <p>The 2024 back-test on the scorecard: DeSart's published state forecasts for 2024, from the file dated November 5, 2023 in his replication data (doi:10.7910/DVN/HZGLY9), averaged with the state-level approval and fundamentals forecast published in July 2024.</p>
+      <p>The 2024 back-test in the Archive: DeSart's published state forecasts for 2024, from the file dated November 5, 2023 in his replication data (doi:10.7910/DVN/HZGLY9), averaged with the state-level approval and fundamentals forecast published in July 2024.</p>
       <p>Nominees, running mates and their home states are read from Wikipedia each morning. The vice-president adjustment uses job-approval polls of the vice president from VoteHub, or favorability when there are none, as the authors did for 1988. The list of possible candidates follows national 2028 primary polls from PollResults.org.</p>
       <p>Head-to-head polls are national general-election polls between one named Democrat and one named Republican: those conducted in the last 180 days until November 7, 2027, and those conducted in October 2027 from then on. They come from the PollResults.org feed behind its <a href="https://pollresults.org/races/president-2028/">2028 presidential polls page</a>, which carries the New York Times poll data, and every record in it is read each morning. A poll that tests several pairings counts once for each. Left out: state polls, generic party ballots, questions that name a third candidate, and pairings that name a president who cannot run again. People who are not on the site's candidate list still count. VoteHub supplies the approval polls; it does not publish general-election pairings yet.</p>
-      <p>The 2024 scorecard is the paper's own forecast, recomputed exactly from the authors' replication files. The Nowcast differs from the two papers in the ways listed below.</p>
+      <p>The Archive's 2024 page for this model is the paper's own forecast, recomputed exactly from the authors' replication files. The Nowcast differs from the two papers in the ways listed below.</p>
     </div>
     <div>
       <h2 style="margin-bottom:14px">Sources</h2>
@@ -500,14 +512,14 @@
       <p>DeSart (2025), <a href="https://doi.org/10.1017/S1049096524000805">“Long-Range State-Level 2024 Presidential Election Forecast: How Can You Forecast an Election When You Don't Know Who the Candidates Are Yet?”</a>, <em>PS: Political Science &amp; Politics</em>. Replication data: <a href="https://doi.org/10.7910/DVN/HZGLY9">Harvard Dataverse</a>.</p>
       <p>Models tested and left out: Lichtman, <em>The Keys to the White House</em>, his ratings for 1864–2024 as tabulated on <a href="https://en.wikipedia.org/wiki/The_Keys_to_the_White_House">Wikipedia</a>; Norpoth's forecasts from his articles in <em>PS: Political Science &amp; Politics</em> (2008, 2012, 2016, 2020) and, for 2024, Stony Brook University; Abramowitz (2024), <a href="https://centerforpolitics.org/crystalball/">Sabato's Crystal Ball</a>.</p>
       <p>On averaging forecasts and on states moving together: Graefe, Armstrong, Jones &amp; Cuzán (2014), <a href="https://doi.org/10.1016/j.ijforecast.2013.02.005">“Combining Forecasts: An Application to Elections”</a>, <em>International Journal of Forecasting</em>; Graefe, Küchenhoff, Stierle &amp; Riedl (2015), <a href="https://doi.org/10.1016/j.ijforecast.2014.12.001">“Limitations of Ensemble Bayesian Model Averaging for Forecasting Social Science Problems”</a>, <em>International Journal of Forecasting</em>; Jackman (2014), <a href="https://doi.org/10.1017/S1049096514000109">“The Predictive Power of Uniform Swing”</a>, <em>PS: Political Science &amp; Politics</em>.</p>
-      <p>To reproduce the track record, the baseline, the tests of other weights and of states moving together, and the check of the simulated ranges: <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/backtest_2008_2024.py">pipeline/backtest_2008_2024.py</a> in the site's repository, run on the two papers' replication files.</p>
+      <p>To reproduce the track record, the baseline, the tests of other weights and of states moving together, and the check of the simulated ranges: <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/backtest_2008_2024.py">pipeline/backtest_2008_2024.py</a> in the site's repository, run on the two papers' replication files. The Archive's pages for 2008 to 2020 come from the same back-test, written out state by state by <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/make_archive.py">pipeline/make_archive.py</a>.</p>
       <p>2024 results: certified state returns. Map outlines: us-atlas (Census cartographic boundaries).</p>
     </div>
   </section>
 
   <section class="stack" id="divergences">
     <h2>Everything that differs from the Enns model</h2>
-    <p class="small">The 2024 scorecard is the Enns model's own forecast. The 2028 Nowcast runs the same model, refitted with 2024 from the authors' replication files. These are all the places where it does something the authors did not, or fills in something their files do not give. Each is a setting in <code>pipeline/config.json</code> or a line in the site's code.</p>
+    <p class="small">The Archive's 2024 page shows the Enns model's own forecast. The 2028 Nowcast runs the same model, refitted with 2024 from the authors' replication files. These are all the places where it does something the authors did not, or fills in something their files do not give. Each is a setting in <code>pipeline/config.json</code> or a line in the site's code.</p>
   </section>
 
   <section class="cols2">
@@ -569,12 +581,13 @@
 
 <script src="us-states.js"></script>
 <script src="backtest2024.js?v=20261113a"></script>
+<script src="archive.js?v=20261120a" onerror="void 0"></script>
 <script src="data.js"></script>
 <script src="nowcast.js" onerror="void 0"></script>
 <script src="history.js" onerror="void 0"></script>
 <script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261120a"></script>
 <script src="combine.js?v=20261113k"></script>
-<script src="app.js?v=20261120b"></script>
+<script src="app.js?v=20261120c"></script>
 </body>
 </html>

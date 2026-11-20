@@ -16,8 +16,25 @@
   const DS = BT && BT.desartPub ? BT.desartPub : null;
   R.forEach(r => { r.pub = Object.fromEntries(F24.map(k => [k, r[k]])); r.bt = BT && BT.states[r.abbr] ? BT.states[r.abbr] : null; r.ds = DS && DS.states[r.abbr] ? DS.states[r.abbr] : null; });
   NAT.pub = { fc: NAT.fc, pDemWin: NAT.pDemWin }; NAT.bt = BT ? BT.national : null; NAT.ds = DS ? DS.national : null;
+  // The Archive: the election on show. 2024 is the rows above. 2008 to 2020 come from docs/archive.js: each model
+  // refitted on the elections before that year only, and their average (pipeline/make_archive.py).
+  const ARCH = window.ARCHIVE && window.ARCHIVE.years ? window.ARCHIVE.years : {};
+  const META24 = { dem: 'Harris', rep: 'Trump', realEV: { dem: 226, rep: 312 }, wholeEV: { dem: 226, rep: 312 }, evNote: '' };
+  const SRC_OLD = { bt: 'bt', pub: 'enns', ds: 'desart' };
+  let year24 = '2024', Rv = R, NATv = NAT, natV = natActual, byV = byAbbr, metaV = META24;
   let src24 = 'pub';
   function useSrc24(k) {
+    if (year24 !== '2024' && ARCH[year24]) {
+      const Y = ARCH[year24];
+      src24 = SRC_OLD[k] ? k : 'bt';
+      const s = SRC_OLD[src24];
+      Rv = Object.keys(Y.states).map(x => ({ name: byAbbr[x].name, abbr: x, ev: Y.states[x].ev, share: Y.states[x].share, ...Y.states[x][s], old: Y.states[x] }));
+      byV = Object.fromEntries(Rv.map(r => [r.abbr, r]));
+      NATv = { fc: Y.nat[s].fc, pDemWin: Y.nat[s].pDemWin, all: Y.nat };
+      natV = Y.natActual; metaV = Y;
+      return;
+    }
+    year24 = '2024'; Rv = R; NATv = NAT; natV = natActual; byV = byAbbr; metaV = META24;
     src24 = k === 'bt' && BT ? 'bt' : k === 'ds' && DS ? 'ds' : 'pub';
     R.forEach(r => F24.forEach(f => { r[f] = (r[src24] || r.pub)[f]; }));
     NAT.fc = NAT[src24].fc; NAT.pDemWin = NAT[src24].pDemWin;
@@ -342,7 +359,7 @@
   };
   const hexD = (cx, cy, r) => 'M' + [0, 1, 2, 3, 4, 5].map(k => { const t = Math.PI / 180 * (60 * k - 90); return (cx + r * Math.cos(t)).toFixed(1) + ',' + (cy + r * Math.sin(t)).toFixed(1); }).join('L') + 'Z';
 
-  function drawUS(svg, { fill, sub, onPick, onHover, selected }) {
+  function drawUS(svg, { fill, sub, onPick, onHover, selected, districts = true }) {
     const W = 1075, H = 610, hex = mapMode === 'hex';
     svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     const shape = {}, at = {};
@@ -360,8 +377,8 @@
       o += `<line class="leader" x1="${c[0]}" y1="${c[1]}" x2="${bx}" y2="${y + bh / 2}"></line>`;
       o += `<g class="box" data-a="${a}" tabindex="0" aria-label="${byAbbr[a].name}"><rect x="${bx}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${fill(a)}"></rect><text x="${bx + bw / 2}" y="${y + 14.5}">${a}<tspan class="bp" data-bp="${a}"></tspan></text></g>`;
     });
-    o += `<text class="grp" x="${bx}" y="${dy0 - 8}">Districts</text>`;
-    DISTRICTS.forEach((a, i) => {
+    if (districts) o += `<text class="grp" x="${bx}" y="${dy0 - 8}">Districts</text>`;
+    (districts ? DISTRICTS : []).forEach((a, i) => {
       const y = dy0 + i * 27;
       o += `<g class="box" data-a="${a}" tabindex="0" aria-label="${byAbbr[a].name}"><rect x="${bx}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${fill(a)}"></rect><text x="${bx + bw / 2}" y="${y + 14.5}">${dname(a)}<tspan class="bp" data-bp="${a}"></tspan></text></g>`;
     });
@@ -578,40 +595,53 @@
   // ================= 2024 =================
   let layer24 = 'forecast', pinned24 = null, map24;
   const err = r => r.fc - r.share;
-  const repEV24 = () => 538 - R.filter(r => r.fc > 50).reduce((a, r) => a + r.ev, 0);
+  const repEV24 = () => 538 - Rv.filter(r => r.fc > 50).reduce((a, r) => a + r.ev, 0);
+  const old24 = () => year24 !== '2024';
+  // The candidate who won that year: the forecast is read against their electoral votes and their chance.
+  const won24 = () => {
+    const dem = metaV.wholeEV.dem >= 270;
+    const ev = dem ? 538 - repEV24() : repEV24();
+    return { name: dem ? metaV.dem : metaV.rep, ev, act: dem ? metaV.wholeEV.dem : metaV.wholeEV.rep, p: dem ? NATv.pDemWin : 1 - NATv.pDemWin, called: ev >= 270 };
+  };
 
   function insp24(a) {
     const el = document.getElementById('insp-2024');
     if (!a) {
-      const e = NAT.fc - natActual;
+      const e = NATv.fc - natV, w = won24();
       el.innerHTML = `<span class="tag">United States · 538 electoral votes</span><h2>National vote</h2>
         <dl class="kv">
-          <div><dt>Forecast D share</dt><dd class="d-ink">${fmt(NAT.fc, 2)}</dd></div>
-          <div><dt>Actual D share</dt><dd class="d-ink">${fmt(natActual, 2)}</dd></div>
-          <div><dt>Forecast R share</dt><dd class="r-ink">${fmt(100 - NAT.fc, 2)}</dd></div>
+          <div><dt>Forecast D share</dt><dd class="d-ink">${fmt(NATv.fc, 2)}</dd></div>
+          <div><dt>Actual D share</dt><dd class="d-ink">${fmt(natV, 2)}</dd></div>
+          <div><dt>Forecast R share</dt><dd class="r-ink">${fmt(100 - NATv.fc, 2)}</dd></div>
           <div><dt>Signed error (pred − actual)</dt><dd class="a-ink">${sgn(e)} pts</dd></div>
-          <div><dt>Electoral votes</dt><dd>Trump ${repEV24()} · actual 312</dd></div>
-          <div><dt>Trump win chance</dt><dd>${Math.round(100 * (1 - NAT.pDemWin))}%</dd></div>
+          <div><dt>Electoral votes</dt><dd>${w.name} ${w.ev} · actual ${w.act}</dd></div>
+          <div><dt>${w.name} win chance</dt><dd>${Math.round(100 * w.p)}%</dd></div>
+          <div><dt>Winner</dt><dd style="color:${w.called ? 'var(--ok)' : 'var(--rep-ink)'}">${w.called ? 'Called' : 'Missed'}</dd></div>
         </dl>
-        <div class="stack" style="gap:6px"><div class="strip-scale num"><span>30%</span><span>50%</span><span>70%</span></div><div class="strip">${strip({ f: NAT.fc, a: natActual })}</div></div>
+        <div class="stack" style="gap:6px"><div class="strip-scale num"><span>30%</span><span>50%</span><span>70%</span></div><div class="strip">${strip({ f: NATv.fc, a: natV })}</div></div>
         <div class="strip-legend"><span><i class="f"></i>Forecast</span><span><i class="a"></i>Actual</span></div>
-        ${src24 === 'ds' ? `<p class="hint">The odds are reproduced from DeSart's own simulation script, which draws every state independently around its forecast. His national vote adds the states by his own turnout weights.</p>` : ''}
-        ${src24 === 'bt' ? `<p class="hint">A back-test, not a forecast anyone published. State by state it averages two forecasts that were published: the state-level approval and fundamentals model (July 2024) and DeSart's long-range model (November 2023). Their national votes were ${fmt(NAT.bt.enns)} and ${fmt(NAT.bt.desart)}.</p>` : ''}
+        ${old24() ? `<p class="hint">A back-test, not a forecast anyone published${src24 === 'bt' ? `: the average of the two models' back-tests, whose national votes were ${fmt(NATv.all.enns.fc)} and ${fmt(NATv.all.desart.fc)}` : ''}. The national vote adds up the 50 states by turnout. Electoral votes count each state as a whole.${metaV.evNote ? ' ' + esc(metaV.evNote) : ''}</p>` : ''}
+        ${!old24() && src24 === 'ds' ? `<p class="hint">The odds are reproduced from DeSart's own simulation script, which draws every state independently around its forecast. His national vote adds the states by his own turnout weights.</p>` : ''}
+        ${!old24() && src24 === 'bt' ? `<p class="hint">A back-test, not a forecast anyone published. State by state it averages two forecasts that were published: the state-level approval and fundamentals model (July 2024) and DeSart's long-range model (November 2023). Their national votes were ${fmt(NATv.bt.enns)} and ${fmt(NATv.bt.desart)}.</p>` : ''}
         <p class="hint">Hover or click a state for its numbers.</p>`;
       return;
     }
-    const r = byAbbr[a], e = err(r), ok = (r.fc > 50) === (r.share > 50);
+    const r = byV[a];
+    if (!r) return insp24(null);
+    const e = err(r), ok = (r.fc > 50) === (r.share > 50);
     el.innerHTML = `<span class="tag">${dname(a)} · ${r.ev} electoral vote${r.ev > 1 ? 's' : ''}</span><h2>${r.name}</h2>
       <dl class="kv">
         <div><dt>Forecast D share</dt><dd class="d-ink">${fmt(r.fc, 2)}</dd></div>
         <div><dt>Actual D share</dt><dd class="d-ink">${fmt(r.share, 2)}</dd></div>
-        ${src24 === 'bt' ? `<div><dt>State-level approval and fundamentals, published</dt><dd>${fmt(r.pub.fc, 2)}</dd></div>${r.bt.desart != null ? `<div><dt>DeSart long-range model, published</dt><dd>${fmt(r.bt.desart, 2)}</dd></div>` : ''}` : `<div><dt>Forecast R share</dt><dd class="r-ink">${fmt(100 - r.fc, 2)}</dd></div>`}
+        ${old24() ? (src24 === 'bt' && !r.old.only ? `<div><dt>Approval and fundamentals, back-test</dt><dd>${fmt(r.old.enns.fc, 2)}</dd></div><div><dt>Long-range model, back-test</dt><dd>${fmt(r.old.desart.fc, 2)}</dd></div>` : `<div><dt>Forecast R share</dt><dd class="r-ink">${fmt(100 - r.fc, 2)}</dd></div>`)
+          : src24 === 'bt' ? `<div><dt>State-level approval and fundamentals, published</dt><dd>${fmt(r.pub.fc, 2)}</dd></div>${r.bt.desart != null ? `<div><dt>DeSart long-range model, published</dt><dd>${fmt(r.bt.desart, 2)}</dd></div>` : ''}` : `<div><dt>Forecast R share</dt><dd class="r-ink">${fmt(100 - r.fc, 2)}</dd></div>`}
         <div><dt>Signed error (pred − actual)</dt><dd class="a-ink">${sgn(e)} pts</dd></div>
         <div><dt>Rating</dt><dd>${RATING[r.rating]}</dd></div>
-        <div><dt>Harris win chance</dt><dd>${Math.round(100 * r.pDem)}%</dd></div>
+        <div><dt>${metaV.dem} win chance</dt><dd>${Math.round(100 * r.pDem)}%</dd></div>
         <div><dt>90% range</dt><dd>${r.lo.toFixed(1)}–${r.hi.toFixed(1)}%</dd></div>
         <div><dt>Call</dt><dd style="color:${ok ? 'var(--ok)' : 'var(--rep-ink)'}">${ok ? 'Correct' : 'Missed'}</dd></div>
-        ${src24 === 'ds' && r.ds && r.ds.district ? `<p class="hint" style="grid-column:1/-1">DeSart forecasts states only. This district is his ${byAbbr[a.slice(0, 2)].name} forecast moved by the district's gap from the state in the state-level approval and fundamentals forecast.</p>` : ''}
+        ${old24() && r.old.only ? `<p class="hint" style="grid-column:1/-1">The District of Columbia is not in the long-range model's data, so this is the approval and fundamentals back-test in every view.</p>` : ''}
+        ${!old24() && src24 === 'ds' && r.ds && r.ds.district ? `<p class="hint" style="grid-column:1/-1">DeSart forecasts states only. This district is his ${byAbbr[a.slice(0, 2)].name} forecast moved by the district's gap from the state in the state-level approval and fundamentals forecast.</p>` : ''}
       </dl>
       <div class="stack" style="gap:6px"><div class="strip-scale num"><span>30%</span><span>50%</span><span>70%</span></div><div class="strip">${strip({ f: r.fc, a: r.share, lo: r.lo, hi: r.hi })}</div></div>
       <div class="strip-legend"><span><i class="f"></i>Forecast</span><span><i class="a"></i>Actual</span><span><i class="b"></i>90% range</span></div>
@@ -619,7 +649,7 @@
     const u = document.getElementById('unpin24');
     if (u) u.onclick = () => pick24(null);
   }
-  const fill24 = a => { const r = byAbbr[a]; return layer24 === 'forecast' ? shareColor(r.fc) : layer24 === 'actual' ? shareColor(r.share) : errColor(err(r)); };
+  const fill24 = a => { const r = byV[a]; if (!r) return '#1f2b3e'; return layer24 === 'forecast' ? shareColor(r.fc) : layer24 === 'actual' ? shareColor(r.share) : errColor(err(r)); };
   function pick24(a) {
     pinned24 = a === pinned24 ? null : a;
     map24.mark(pinned24); insp24(pinned24);
@@ -628,19 +658,19 @@
   function snake24() {
     const actual = layer24 === 'actual';
     snake(document.getElementById('snake-2024'), document.getElementById('snake-2024-read'),
-      R.map(r => ({ abbr: r.abbr, ev: r.ev, share: actual ? r.share : r.fc })), actual ? '2024 result' : '2024 forecast');
+      Rv.map(r => ({ abbr: r.abbr, ev: r.ev, share: actual ? r.share : r.fc })), actual ? `${year24} result` : old24() || src24 === 'bt' ? `${year24} back-test` : '2024 forecast');
   }
 
   let filter24 = 'all', sort24 = { k: 'fc', dir: -1 };
   function rows24() {
-    let rows = R.slice();
+    let rows = Rv.slice();
     if (filter24 === 'comp') rows = rows.filter(r => !r.rating.startsWith('S'));
     const key = r => sort24.k === 'name' ? r.name : sort24.k === 'err' ? Math.abs(err(r)) : r[sort24.k];
     rows.sort((x, y) => (key(x) > key(y) ? 1 : key(x) < key(y) ? -1 : 0) * sort24.dir);
     const line = (a, name, ev, o, f, s, e, cls = '') =>
       `<div class="st-row ${cls}" data-a="${a}" tabindex="0" role="button" aria-label="${name}"><div class="nm">${name}${a && a.length === 2 ? `<small>${a}</small>` : ''}</div><div class="n">${ev}</div>` +
       `<div class="strip">${strip(o)}</div><div class="n a-ink">${f.toFixed(1)}</div><div class="n">${s.toFixed(1)}</div><div class="n">${sgn(e, 1)}</div></div>`;
-    let h = line('', 'National vote', 538, { f: NAT.fc, a: natActual }, NAT.fc, natActual, NAT.fc - natActual, 'nat');
+    let h = line('', 'National vote', 538, { f: NATv.fc, a: natV }, NATv.fc, natV, NATv.fc - natV, 'nat');
     h += rows.map(r => line(r.abbr, r.name.replace(' District', ''), r.ev, { f: r.fc, a: r.share, lo: r.lo, hi: r.hi }, r.fc, r.share, err(r), r.abbr === pinned24 ? 'on' : '')).join('');
     const box = document.getElementById('rows-2024');
     box.innerHTML = h;
@@ -651,30 +681,54 @@
     });
   }
 
-  const draw24 = () => drawUS(document.getElementById('map-2024'), { fill: fill24, selected: pinned24, onPick: pick24, onHover: a => { insp24(a || pinned24); map24.mark(a || pinned24); } });
+  const draw24 = () => drawUS(document.getElementById('map-2024'), { fill: fill24, selected: pinned24, onPick: pick24, onHover: a => { insp24(a || pinned24); map24.mark(a || pinned24); }, districts: !old24() });
 
   const LEDE24 = {
     bt: 'What the Nowcast\'s method would have said in 2024. State by state it averages two forecasts published before the election: the state-level approval and fundamentals forecast from July 2024 and Jay DeSart\'s long-range model forecast from November 2023. Nobody published this average at the time, so it is a back-test.',
     pub: 'The state-level approval and fundamentals forecast as Enns, Colner, Kumar and Lagodny published it in July 2024, with data from 100 days before the election.',
     ds: 'The long-range model\'s forecast as Jay DeSart published it in November 2023, a year before the election, from head-to-head polls taken the month before. It forecasts the 50 states and DC; the five districts in Maine and Nebraska are filled in from the state-level approval and fundamentals forecast.',
   };
+  const LEDE_OLD = {
+    bt: y => `What the Nowcast's method would have said in ${y}: the average of the two models, each refitted only on the elections before ${y} and given that year's inputs. Nobody published this at the time, so it is a back-test.`,
+    pub: y => `The state-level approval and fundamentals model, refitted only on the elections before ${y} and given that year's approval and state economies. This is today's version of the model run on the past, not a forecast the authors published.`,
+    ds: y => `The long-range model, refitted only on the elections before ${y} and given the head-to-head polls from October ${y - 1}. This is today's version of the model run on the past.`,
+  };
+  const TAB24 = {
+    now: { bt: 'Nowcast method, <span class="nw">back-tested</span>', pub: 'State-level approval and fundamentals, as published', ds: 'Long-range model, as published' },
+    old: { bt: 'Nowcast method, <span class="nw">back-tested</span>', pub: 'State-level approval and fundamentals, <span class="nw">back-tested</span>', ds: 'Long-range model, <span class="nw">back-tested</span>' },
+  };
   function figs24() {
-    const st = R.filter(r => r.abbr.length === 2);
+    const old = old24();
+    // 2008 to 2020 are scored on the 50 states, as on the Method page; 2024 on all 56 contests.
+    const scored = old ? Rv.filter(r => r.abbr !== 'DC') : Rv, st = old ? scored : Rv.filter(r => r.abbr.length === 2);
     const mae = st.reduce((s, r) => s + Math.abs(err(r)), 0) / st.length;
-    const inside = R.filter(r => r.share >= r.lo && r.share <= r.hi).length;
-    const correct = R.filter(r => (r.fc > 50) === (r.share > 50)).length, ev = repEV24();
+    const inside = scored.filter(r => r.share >= r.lo && r.share <= r.hi).length;
+    const correct = scored.filter(r => (r.fc > 50) === (r.share > 50)).length;
+    const { name: who, ev, act, called } = won24();
     document.getElementById('figs-2024').innerHTML = [
-      [`${correct}/${R.length}`, 'States and districts called'],
-      [ev === 312 ? '312 = 312' : `${ev} vs 312`, 'Trump electoral votes, forecast and actual'],
+      [`${correct}/${scored.length}`, old ? 'States called' : 'States and districts called'],
+      [ev === act ? `${ev} = ${act}` : `${ev} vs ${act}`, `${who} electoral votes, ${old || src24 === 'bt' ? 'back-test' : 'forecast'} and actual. <b>Winner ${called ? 'called' : 'missed'}.</b>`],
       [`${mae.toFixed(1)} pts`, 'Average state miss'],
-      [`${inside}/${R.length}`, 'Results inside the 90% range'],
+      [`${inside}/${scored.length}`, 'Results inside the 90% range'],
     ].map(([v, l]) => `<div><span class="v">${v}</span><span class="l">${l}</span></div>`).join('');
-    document.getElementById('lede-2024').textContent = LEDE24[src24] + ' Pick a state on the map or in the list to compare its forecast and result.';
-    document.querySelector('[data-layer="forecast"]').textContent = src24 === 'bt' ? 'Back-test forecast' : 'Published forecast';
+    document.getElementById('h-2024').innerHTML = `${year24}: the ${old || src24 === 'bt' ? '<span class="nw">back-test</span>' : 'forecast'} against the result`;
+    document.getElementById('lede-2024').textContent = (old ? LEDE_OLD[src24](+year24) : LEDE24[src24]) + ' Pick a state on the map or in the list to compare its forecast and result.';
+    const pub = document.getElementById('pub-2024');
+    pub.innerHTML = old ? `<b>Published at the time.</b> ${esc(metaV.pub)}` : ''; pub.hidden = !old;
+    document.querySelector('[data-layer="forecast"]').textContent = old || src24 === 'bt' ? 'Back-test' : 'Published forecast';
     document.getElementById('lede-2024').dataset.src = src24;
-    document.querySelectorAll('[data-src24]').forEach(x => x.setAttribute('aria-selected', x.dataset.src24 === src24));
+    document.querySelectorAll('[data-src24]').forEach(x => { x.setAttribute('aria-selected', x.dataset.src24 === src24); x.innerHTML = TAB24[old ? 'old' : 'now'][x.dataset.src24]; });
+    document.querySelectorAll('[data-year24]').forEach(x => x.setAttribute('aria-selected', x.dataset.year24 === year24));
+    document.getElementById('flt-all').textContent = `All ${Rv.length}`;
+    document.getElementById('map-2024').setAttribute('aria-label', `Map of the ${year24} forecast and results by state`);
   }
-
+  // Another election: its own rows, map (2008 to 2020 have no district forecasts) and figures.
+  function setYear24(y) {
+    year24 = y === '2024' || !ARCH[y] ? '2024' : y;
+    pinned24 = null;
+    useSrc24('bt'); figs24();
+    map24 = draw24(); insp24(null); snake24(); rows24();
+  }
   function render2024() {
     useSrc24('bt');
     figs24();
@@ -685,6 +739,10 @@
       useSrc24(b.dataset.src24); figs24();
       map24.recolor(fill24); insp24(pinned24); snake24(); rows24();
     }));
+    document.querySelectorAll('[data-year24]').forEach(b => {
+      if (b.dataset.year24 !== '2024' && !ARCH[b.dataset.year24]) { b.hidden = true; b.disabled = true; return; }
+      b.addEventListener('click', () => setYear24(b.dataset.year24));
+    });
 
     map24 = draw24();
     ramp(document.getElementById('ramp-2024'), 'share');
@@ -1299,11 +1357,12 @@
   })();
 
   // ================= routing =================
-  const VIEWS = ['home', 'nowcast', 'models', 'data', 'results-2024', 'method'];
+  const VIEWS = ['home', 'nowcast', 'models', 'data', 'archive', 'method'];
   const done = {};
   function route() {
     let h = location.hash.replace('#', '');
     if (h === 'forecast-2028') h = 'nowcast';   // old address
+    if (h === 'results-2024') h = 'archive';    // old address: the 2024 scorecard is the Archive's first page
     const v = VIEWS.includes(h) ? h : 'home';
     VIEWS.forEach(n => document.getElementById('view-' + n).hidden = n !== v);
     document.querySelectorAll('nav a').forEach(a => a.dataset.view === v ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'));
@@ -1311,7 +1370,7 @@
     document.title = name ? `${name} | Tipping Point` : 'Tipping Point';
     if (!done[v]) {
       if (v === 'home') renderHome();
-      if (v === 'results-2024') render2024();
+      if (v === 'archive') render2024();
       if (v === 'data') renderData();
       // The models page reads the same simulation as the Nowcast, so it starts that run too.
       if ((v === 'nowcast' || v === 'models') && !done.nowcast) { render2028(); done.nowcast = true; }
