@@ -48,12 +48,20 @@ says so on the Method page.
 | Input | Source | Updates |
 |---|---|---|
 | State economies | Philadelphia Fed State Coincident Indexes via FRED (`{ST}PHCI`) | Daily |
-| National Trump approval | VoteHub and PollResults.org (both CC BY 4.0), merged and averaged | Daily |
+| National Trump approval | VoteHub and PollResults.org (both CC BY 4.0), merged and averaged; polls of all adults only | Daily |
 | State-by-state approval | A copy of Civiqs's state tracker in `pipeline/state_approval.csv`; only the gaps between states are used, re-centred on the national average | By hand, from a saved copy of the page (see below) |
 | Head-to-head polls, primary polls | PollResults.org 2028 feed | Daily |
 | Nominees, running mates, home states, sitting VP | Wikipedia infoboxes, with `pipeline/candidates.json` as the curated list | Daily |
 | Vice-president adjustment | VoteHub job approval of the sitting VP and the president (favorability as fallback) | Daily |
 | 2024 results, district offsets | Certified 2024 results (`pipeline/results_2024.json`) | Fixed |
+
+**National approval.** The paper estimates approval among all adults: its model covers ages 18 and
+up, is weighted to census population counts, and is built from surveys of the general public. So
+only polls of all adults count toward the national average (`config.json →
+approval.national_populations`, `["a"]`); polls of registered or likely voters only are left out.
+This took effect on November 20, 2026. Until then every poll counted, which read about 3 points
+higher for Trump. The daily history restarts that day (`pipeline/history.json`); the earlier days
+are kept in `pipeline/history_v4.json`.
 
 **State approval.** The paper estimates approval in each state with MRP on survey microdata. No
 free feed publishes that, so `config.json → approval.state_source` is set to `csv`: a dated copy of
