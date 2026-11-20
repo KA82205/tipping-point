@@ -538,6 +538,10 @@
   const daysTo = d => Math.max(0, Math.floor((d - new Date()) / 86400000));
   const monthName = ym => new Date(ym + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const niceDate = iso => new Date(iso.length === 10 ? iso + 'T12:00:00' : iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  // How much of a state's gap in the state approval source counts: '' in full, 'half' at 0.5, otherwise a percentage.
+  // What the state approval figure in a state's panel is made of.
+  const approvalNote = () => { const g = gapSize(N.approval.state_data); return `The national average, moved by ${g === 'half' ? 'half ' : g ? g + ' of ' : ''}this state's gap in ${(N.approval.state_data && N.approval.state_data.name) || 'the state source'}${N.approval.state_data && N.approval.state_data.name ? "'s tracker" : ''}${cur && cur.vpShift ? ' and by the vice-president adjustment' : ''}.`; };
+  const gapSize = sd => { const k = sd && sd.gap_scale; return k == null || k === 1 ? '' : k === 0.5 ? 'half' : `${Math.round(100 * k)}%`; };
 
   // ================= HOME =================
   function renderHome() {
@@ -1023,7 +1027,7 @@
       ${trend.length > 2 ? `<p class="dc-read" id="appr-read" aria-live="polite"></p><div class="dc-chart" id="appr-chart"></div>` : ''}
       <h3>Newest approval polls</h3>
       <ul class="dc-list">${ap.map(p => `<li><span>${linkOr(p.url, pollsterCell(p.pollster))}<small>Conducted to ${shortDay(p.date)}${p.added ? `, added ${shortDay(p.added)}` : ''}</small></span><b class="num">${Math.round(p.approve)}–${Math.round(p.disapprove)}</b></li>`).join('')}</ul>
-      <p class="foot">This is the national figure.${A.all_polls ? ` Polls of registered or likely voters only are left out, because the paper measures approval among all adults; with them the average would be ${fmt(A.all_polls.approve)} approve.` : ''} Each state sits above or below it by a gap taken from ${A.state_data && A.state_data.name ? esc(A.state_data.name) + "'s" : 'a'} state-by-state tracker${A.state_data && A.state_data.as_of ? ' on ' + niceDate(A.state_data.as_of) : ''}; the gaps are refreshed by hand, not daily. ${A.official_wait ? `The model moves to polls finished June 1 to July 30, 2028, the paper's window, once ${A.official_wait.needed} pollsters have one in it (${A.official_wait.pollsters} so far).` : N.mode === 'official' ? 'The model now uses polls finished June 1 to July 30, 2028, as the paper does.' : 'From June 2028 the model uses polls finished June 1 to July 30, 2028, as the paper does, once ten pollsters have one in that window.'}</p>`;
+      <p class="foot">This is the national figure.${A.all_polls ? ` Polls of registered or likely voters only are left out, because the paper measures approval among all adults; with them the average would be ${fmt(A.all_polls.approve)} approve.` : ''} Each state sits above or below it by ${gapSize(A.state_data) === 'half' ? 'half ' : gapSize(A.state_data) ? gapSize(A.state_data) + ' of ' : ''}its gap in ${A.state_data && A.state_data.name ? esc(A.state_data.name) + "'s" : 'a'} state-by-state tracker${A.state_data && A.state_data.as_of ? ' on ' + niceDate(A.state_data.as_of) : ''}${gapSize(A.state_data) ? ' (the model was built on state figures that sit closer together)' : ''}; the gaps are refreshed by hand, not daily. ${A.official_wait ? `The model moves to polls finished June 1 to July 30, 2028, the paper's window, once ${A.official_wait.needed} pollsters have one in it (${A.official_wait.pollsters} so far).` : N.mode === 'official' ? 'The model now uses polls finished June 1 to July 30, 2028, as the paper does.' : 'From June 2028 the model uses polls finished June 1 to July 30, 2028, as the paper does, once ten pollsters have one in that window.'}</p>`;
     if (trend.length > 2) lineChart(box('appr-chart'), box('appr-read'), trend,
       [{ key: 'dis', color: '#94a1b5', label: 'Disapprove' }, { key: 'a', color: '#f2a65e', label: 'Approve' }],
       { label: `Trump's approval, a 30-day average each week since ${trend[0].d}: now ${fmt(A.approve)} approve, ${fmt(A.disapprove)} disapprove`,
@@ -1127,7 +1131,7 @@
         <div><dt>2024 D share</dt><dd>${fmt(r.share, 2)}</dd></div>
         <div><dt>Democrat wins</dt><dd>${pct(s.pDem)} of simulations</dd></div>
         <div><dt>Rating</dt><dd>${RATING[s.rating] || s.rating}</dd></div>
-        ${base ? `<div><dt>Trump approval in state</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
+        ${base ? `<div title="${esc(approvalNote())}"><dt>Trump approval the model uses</dt><dd>${fmt(base.approve + cur.vpShift)}</dd></div>` : ''}
       </dl>
       <div class="strip">${strip({ f: s.demShare, a: r.share })}</div>
       <div class="strip-legend"><span><i class="f"></i>Nowcast</span><span><i class="a"></i>2024 result</span></div>
@@ -1262,7 +1266,7 @@
     }
     document.getElementById('live-pill').textContent = window.FORECAST ? `Final · published ${niceDate(window.FORECAST.published)}` : `Live · updated ${niceDate(N.generated_at)}`;
     finalLabels();
-    document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> National approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters' polls of all adults through ${niceDate(N.approval.window[1])} · state-by-state differences from ${N.approval.state_data && N.approval.state_data.as_of ? `<a href="${N.approval.state_data.url}">Civiqs</a> through ${niceDate(N.approval.state_data.as_of)}` : 'Civiqs'} · state economies through ${monthName(N.economy.through)}.`;
+    document.getElementById('live-inputs').innerHTML = `<b>Live data (automatic):</b> National approval ${fmt(N.approval.approve)} from ${N.approval.pollsters} pollsters' polls of all adults through ${niceDate(N.approval.window[1])} · state-by-state differences from ${N.approval.state_data && N.approval.state_data.as_of ? `<a href="${N.approval.state_data.url}">Civiqs</a> through ${niceDate(N.approval.state_data.as_of)}` : 'Civiqs'}${gapSize(N.approval.state_data) ? `, counted at ${gapSize(N.approval.state_data)}` : ''} · state economies through ${monthName(N.economy.through)}.`;
     // Jump links, with the section on screen marked.
     const jump = [...document.querySelectorAll('#jump-28 button')];
     jump.forEach(b => b.addEventListener('click', () => document.getElementById(b.dataset.to).scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' })));
