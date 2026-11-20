@@ -113,7 +113,9 @@ Build `docs/data.js` and `docs/us-states.js` first (see the workflow), then open
   `pipeline/extract_fig_a2.py` reads the chart's vector paths, and the recovered values match every
   call and rating in the paper and Trump's 312 electoral votes.
 - Back-tests of 2008 to 2024, each election forecast from earlier elections only, are on the
-  Method page next to the forecasts the authors actually published. `pipeline/backtest_2008_2024.py`
+  Method page next to the forecasts the authors actually published. The approval model's back-tests
+  keep the Southern-states term its authors used through 2020, as their own code does; the script
+  first checks that this reproduces the accuracy the paper reports. `pipeline/backtest_2008_2024.py`
   reproduces them, with a last-election baseline, the tests of other weights and of states moving
   together, and a check of the simulated ranges, from the replication files on Harvard Dataverse
   (doi:10.7910/DVN/PBGFOF and doi:10.7910/DVN/HZGLY9; the data are not stored here).
