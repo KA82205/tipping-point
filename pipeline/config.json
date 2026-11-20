@@ -29,7 +29,7 @@
     "rep_president_home_lag": "FL",
     "dem_president_home_lag_weight": 1,
     "rep_president_home_lag_weight": 1,
-    "_home_lag_weight_note": "Share of the previous nominees' home-state fade that is applied. 1 = the model as fitted. The site used 0.5 until the replication files arrived; the refit on 1980-2024 (docs/engine.js) now learns the fade from the 2024 results (-3.07, down from -3.49), so halving it as well would count that evidence twice.",
+    "_home_lag_weight_note": "Share of the previous nominees' home-state fade that is applied. 1 = the model as fitted. The site used 0.5 until the replication files arrived; the refit on 1980-2024 (docs/engine.js) now learns the fade from the 2024 results (-3.06, down from -3.49), so halving it as well would count that evidence twice.",
     "primary_window_days": 120,
     "primary_min_pct": 3,
     "_primary_note": "Possible candidates in the ticket picker are ordered by their average in national 2028 primary polls (PollResults.org) over the last primary_window_days. Anyone at primary_min_pct or more who is not in candidates.json is added automatically."
@@ -64,8 +64,8 @@
     ]
   },
   "approval": {
-    "constant": 44,
-    "_constant_note": "FROM REPLICATION (inferred): the authors' data stores approval already centered, and the center is 44. Their approval surveys average 44.2% approve (ReadMe), the centered variable moves by whole points between forecast years, and comparing it with national approval in each election from 1980 to 2024 gives 43.6 +/- 0.6.",
+    "constant": 43,
+    "_constant_note": "FROM THE AUTHORS' RULE: the model reads approval minus a baseline, and the authors re-choose the baseline before each forecast as the whole number that best fits the elections before it. Their replication file stores approval with that baseline already taken off: 48 for the 1992 forecast, 47 for 1996, 45 for 2000 through 2020 and 44 for 2024, and the same rule applied to their data reproduces each of those. With the 2024 results added the rule gives 43 (on six of the seven economic weightings; 44 on the seventh). docs/engine.js is fitted with 43. The site used 44, the 2024 value, until November 20, 2026",
     "national_source": "votehub",
     "votehub_url": "https://api.votehub.com/polls?poll_type=approval&subject=donald-trump",
     "votehub_fav_url": "https://api.votehub.com/polls?poll_type=favorability&subject={slug}",

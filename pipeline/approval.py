@@ -135,10 +135,12 @@ def window_for(cfg, today):
     return today - dt.timedelta(days=cfg["approval"]["nowcast_window_days"]), today, "nowcast"
 
 
-def national_average(polls, start, end, half_life_days=14.0, populations=None):
+def national_average(polls, start, end, half_life_days=14.0, populations=None, pooled=False):
     """The latest poll from each pollster in the window, weighted by sample size and by age.
     populations: when given, only polls of those groups count, e.g. ["a"] for polls of all adults,
-    the group the paper's approval figures describe ("rv" registered voters, "lv" likely voters)."""
+    the group the paper's approval figures describe ("rv" registered voters, "lv" likely voters).
+    pooled: every poll in the window counts, each by its sample size and nothing else, the way the paper
+    pools every survey answer from June and July. Used once the model is on the paper's window."""
     want = {str(x).lower() for x in populations} if populations else None
     latest = {}
     for p in polls:
@@ -155,24 +157,28 @@ def national_average(polls, start, end, half_life_days=14.0, populations=None):
         ap, dis = _pct(p.get("answers", []), "approve"), _pct(p.get("answers", []), "disapprove")
         if ap is None or dis is None:
             continue
-        key = p.get("pollster", "?")
-        if key not in latest or d > latest[key]["date"]:
+        name = p.get("pollster", "?")
+        key = (name, d) if pooled else name
+        if key not in latest or (not pooled and d > latest[key]["date"]):
             n = float(p.get("sample_size") or 600)
             latest[key] = {"date": d, "approve": ap, "disapprove": dis, "n": n,
-                           "pollster": key, "url": p.get("url"), "population": p.get("population"),
+                           "pollster": name, "url": p.get("url"), "population": p.get("population"),
                            "added": _iso(p.get("created_at") or p.get("createdAt")) or None}
     if not latest:
         raise RuntimeError(f"No usable approval polls between {start} and {end}")
     num_a = num_d = den = 0.0
     for e in latest.values():
-        age = (end - e["date"]).days
-        w = math.sqrt(min(e["n"], 3000)) * 0.5 ** (age / half_life_days)
+        if pooled:
+            w = e["n"]
+        else:
+            age = (end - e["date"]).days
+            w = math.sqrt(min(e["n"], 3000)) * 0.5 ** (age / half_life_days)
         num_a += w * e["approve"]; num_d += w * e["disapprove"]; den += w
     rows = sorted(latest.values(), key=lambda e: e["date"], reverse=True)
     for r in rows:
         r["date"] = r["date"].isoformat()
     return {"approve": num_a / den, "disapprove": num_d / den,
-            "pollsters": len(rows), "polls": rows}
+            "pollsters": len({r["pollster"] for r in rows}), "polls": rows}
 
 
 def state_approval(cfg, national, results2024, csv_path=None, state_polls=None, window=None):

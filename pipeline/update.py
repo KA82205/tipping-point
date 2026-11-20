@@ -255,12 +255,16 @@ def main():
         if have < need:
             official_wait = {"pollsters": have, "needed": need}
             w_lo, w_hi, mode = today - dt.timedelta(days=trailing), today, "nowcast"
-    nat = approval.national_average(national_polls, w_lo, w_hi, populations=pops)
+    # On the paper's window (June 1 - July 30, 2028) every poll in it counts, by its sample size alone: the paper
+    # pools every survey answer from June and July. Before that, the daily Nowcast takes each pollster's latest
+    # poll from the last 30 days and lets newer polls count more.
+    pooled = mode == "official"
+    nat = approval.national_average(national_polls, w_lo, w_hi, populations=pops, pooled=pooled)
     # For the site's "latest data" page only: the same average with every poll counted, voters included.
     nat_all = None
     if pops:
         try:
-            nat_all = approval.national_average(national_polls, w_lo, w_hi)
+            nat_all = approval.national_average(national_polls, w_lo, w_hi, pooled=pooled)
         except RuntimeError:
             pass
     # For the site's "latest data" page only: the approval average as it stood each week of the term, as a
@@ -397,7 +401,7 @@ def main():
         "approval": {"approve": round(nat["approve"], 1), "disapprove": round(nat["disapprove"], 1),
                      "window": [w_lo.isoformat(), w_hi.isoformat()], "pollsters": nat["pollsters"],
                      "polls": nat["polls"][:25], "trend": appr_trend, "official_wait": official_wait, "state_source": cfg["approval"]["state_source"],
-                     "populations": pops,
+                     "populations": pops, "pooled": pooled,
                      "all_polls": nat_all and {"approve": round(nat_all["approve"], 1), "disapprove": round(nat_all["disapprove"], 1),
                                                "pollsters": nat_all["pollsters"]},
                      "state_data": state_info, "state_polls_used": state_used},
