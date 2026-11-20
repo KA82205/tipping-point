@@ -25,4 +25,20 @@ for (const a of ['PA', 'MI', 'WI', 'NC']) {
   const got = res.states.find(s => s.abbr === a).pDem;
   if (Math.abs(got - by[a].pDem) > 0.04) { console.error(`FAIL: ${a} ${got.toFixed(2)} vs paper ${by[a].pDem}`); process.exit(1); }
 }
+
+// The Archive's back-tests (docs/archive.js) must agree with the Method page's track record:
+// states called of 50 and the Democrat's chance in 100, for the Nowcast in 2008, 2012, 2016 and 2020.
+require(path.join(__dirname, '..', '..', 'docs', 'archive.js'));
+const TRACK = { 2008: [47, 90], 2012: [49, 70], 2016: [46, 60], 2020: [48, 83] };
+for (const [y, [called, chance]] of Object.entries(TRACK)) {
+  const Y = window.ARCHIVE.years[y], all = Object.entries(Y.states), st = all.filter(([a]) => a !== 'DC');
+  const got = st.filter(([, s]) => (s.bt.fc > 50) === (s.share > 50)).length, p = Math.round(100 * Y.nat.bt.pDemWin);
+  const ev = all.reduce((t, [, s]) => t + s.ev, 0);
+  const avg = st.every(([, s]) => Math.abs(s.bt.fc - (s.enns.fc + s.desart.fc) / 2) < 0.011);
+  if (all.length !== 51 || ev !== 538 || got !== called || p !== chance || !avg) {
+    console.error(`FAIL: archive ${y}: ${all.length} contests, ${ev} electoral votes, ${got} of 50 called (track record ${called}), chance ${p} (track record ${chance}), average of the two models ${avg}`);
+    process.exit(1);
+  }
+}
+console.log('archive agrees with the track record');
 console.log('ok');
