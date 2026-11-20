@@ -61,7 +61,15 @@ only polls of all adults count toward the national average (`config.json →
 approval.national_populations`, `["a"]`); polls of registered or likely voters only are left out.
 This took effect on November 20, 2026. Until then every poll counted, which read about 3 points
 higher for Trump. The daily history restarts that day (`pipeline/history.json`); the earlier days
-are kept in `pipeline/history_v4.json`.
+are kept in `pipeline/history_v4.json`. Until June 2028 the average takes each pollster's latest
+poll from the last 30 days, newer polls counting more. On the paper's window (June 1 to July 30,
+2028) every poll in the window counts by its sample size alone, as the paper pools every survey
+answer from June and July.
+
+**Approval baseline.** The model reads approval minus a baseline that the authors re-choose before
+each forecast: the value that best fits the earlier elections. Their file uses 44 for 2024; with
+2024 added the same rule gives 43 (`config.json → approval.constant`, and the fits in
+`docs/engine.js`). The site used 44 until November 20, 2026.
 
 **State approval.** The paper estimates approval in each state with MRP on survey microdata. No
 free feed publishes that, so `config.json → approval.state_source` is set to `csv`: a dated copy of
