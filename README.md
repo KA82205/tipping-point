@@ -47,6 +47,27 @@ as stand-ins. Both models are refitted with the 2024 results, as their authors r
 forecast. If an author revises the model itself, the site's run switches to the revised version and
 says so on the Method page.
 
+### When the authors publish
+
+1. **DeSart publishes his 2028 forecast (expected November 2027).** His state forecasts replace the
+   site's own run of his model as the long-range half and stay fixed. From then on the Nowcast is the
+   average of his published forecasts and the site's daily run of the approval model, so it moves
+   only with approval and the economy.
+2. **Enns and colleagues publish theirs (expected late July 2028).** Their state forecasts replace the
+   site's own run of their model. The forecast is then final: the average of the two published
+   forecasts, state by state, fixed until the election. The chance of winning comes from the site's
+   simulation around those averaged state forecasts, as on the Archive's 2020 page.
+3. **August 6, 2028, whatever has been published.** The site's own runs are frozen and the daily
+   update stops. A forecast that is not out yet is stood in for by the site's own run, marked as a
+   stand-in, and replaced if it comes out later.
+4. **After the election.** The final forecast is scored against the official results and added to
+   the Archive and the track record. The daily record (below) also allows a comparison of the
+   authors' forecasts with the site's own runs.
+
+Putting a published forecast in is done by hand, because the numbers have to be read from the
+authors' table, data file or chart. The code for that step is not written yet (November 2026). When
+it is written, it must keep the site's own runs in the daily record.
+
 ## The daily record
 
 For later research, every daily run also writes to `pipeline/log/` (`pipeline/daily_log.py`). Nothing
