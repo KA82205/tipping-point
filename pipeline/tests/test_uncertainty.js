@@ -31,7 +31,7 @@ for (const a of ['PA', 'MI', 'WI', 'NC']) {
 // the forecasts as published: Enns and Lagodny missed only Georgia with 290 electoral votes, DeSart missed Florida
 // and North Carolina with 350.
 require(path.join(__dirname, '..', '..', 'docs', 'archive.js'));
-const TRACK = { 2008: [47, 90], 2012: [49, 70], 2016: [46, 60] };
+const TRACK = { 2008: [47, 91], 2012: [49, 72], 2016: [46, 61] };
 const fail = m => { console.error('FAIL: archive ' + m); process.exit(1); };
 for (const y of [2008, 2012, 2016, 2020]) {
   const Y = window.ARCHIVE.years[y], all = Object.entries(Y.states), st = all.filter(([a]) => a !== 'DC');
