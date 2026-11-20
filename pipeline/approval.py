@@ -10,13 +10,15 @@ state MRP approval exists, so the source is pluggable:
   - "vote_swing": state = national + k * (Trump 2024 two-party share in state - national)
   - "csv":        pipeline/state_approval.csv (state,approve), e.g. Civiqs or Morning
                   Consult estimates you are licensed to use, or your own MRP output.
-                  Its state differences are kept and re-centred on the national average.
+                  Its state differences are kept and re-centred on the national average
+                  (the states weighted by adult population, pipeline/adult_population.json).
 """
 import csv
 import datetime as dt
 import json
 import math
 import os
+import re
 import urllib.parse
 import urllib.request
 
@@ -50,12 +52,15 @@ def _first(d, *keys):
 
 def _normalize_pollresults(res):
     """PollResults.org (NYT poll data): camelCase fields, dates like '11/9/26', and each poll
-    holds questions -> answers [{politician, yes, no}]. Prefer the all-adults question, as the
-    paper's surveys were of adults, then registered, then likely voters. Returns a
-    VoteHub-shaped dict or None."""
-    best = None
+    holds questions -> answers [{politician, yes, no}]. A poll often reports the same question for more
+    than one group of people. Returns one VoteHub-shaped dict per group, all adults first (the group the
+    paper's surveys describe), then registered, then likely voters; [] if there is nothing to read.
+    A question put to part of the sample only (one party's voters, say) is not a national figure and is skipped."""
     rank = {"a": 0, "rv": 1, "lv": 2, "v": 3}
+    by_pop = {}
     for q in _first(res, "questions") or []:
+        if str(_first(q, "subpopulation") or "").strip():
+            continue
         for a in _first(q, "answers") or []:
             who = str(_first(a, "politician", "subject") or "")
             if who and "trump" not in who.lower():
@@ -64,26 +69,25 @@ def _normalize_pollresults(res):
             if yes is None or no is None:
                 continue
             pop = str(_first(q, "population") or "").lower()
-            cand = (rank.get(pop, 9), {"choice_yes": float(yes), "choice_no": float(no), "q": q, "pop": pop})
-            if best is None or cand[0] < best[0]:
-                best = cand
-    if not best:
-        return None
-    b = best[1]
+            by_pop.setdefault(pop, {"choice_yes": float(yes), "choice_no": float(no), "q": q})
     state = str(_first(res, "state") or "").upper()
-    return {
-        "pollster": _first(res, "pollster", "displayName") or "?",
-        "end_date": _iso(_first(res, "endDate", "end_date")),
-        "sample_size": _first(b["q"], "sampleSize", "sample_size"),
-        "population": b["pop"],
-        "internal": bool(_first(res, "internal")),
-        "partisan": _first(res, "partisan"),
-        "url": _first(res, "url"),
-        "created_at": _iso(_first(res, "createdAt", "created_at")),
-        "state": state if state and state not in ("US", "USA", "NATIONAL") else None,
-        "answers": [{"choice": "Approve", "pct": b["choice_yes"]}, {"choice": "Disapprove", "pct": b["choice_no"]}],
-        "source": "pollresults",
-    }
+    out = []
+    for pop in sorted(by_pop, key=lambda p: rank.get(p, 9)):
+        b = by_pop[pop]
+        out.append({
+            "pollster": _first(res, "pollster", "displayName") or "?",
+            "end_date": _iso(_first(res, "endDate", "end_date")),
+            "sample_size": _first(b["q"], "sampleSize", "sample_size"),
+            "population": pop,
+            "internal": bool(_first(res, "internal")),
+            "partisan": _first(res, "partisan"),
+            "url": _first(res, "url"),
+            "created_at": _iso(_first(res, "createdAt", "created_at")),
+            "state": state if state and state not in ("US", "USA", "NATIONAL") else None,
+            "answers": [{"choice": "Approve", "pct": b["choice_yes"]}, {"choice": "Disapprove", "pct": b["choice_no"]}],
+            "source": "pollresults",
+        })
+    return out
 
 
 def fetch_pollresults(url, max_pages=10):
@@ -101,22 +105,60 @@ def fetch_pollresults(url, max_pages=10):
     return out
 
 
+# Words that do not tell one pollster from another: the two feeds write "Marist College" and "Marist University",
+# "HarrisX/Harris" and "HarrisX/Harris Poll" for the same pollster.
+_NAME_FILLER = {"the", "of", "and", "for", "at", "college", "university", "poll", "polls", "polling", "research",
+                "center", "centre", "survey", "surveys", "institute", "strategies", "strategy", "group", "news", "inc",
+                "co", "company", "llc", "insights", "opinion", "public", "department", "school", "law"}
+
+
+def pollster_key(name):
+    """A pollster's name with the spelling differences between feeds taken out, for counting each pollster once."""
+    words = sorted({w for w in re.findall(r"[a-z0-9]+", str(name or "").lower()) if w not in _NAME_FILLER})
+    return " ".join(words) or str(name or "").strip().lower()
+
+
+def _same_poll(p, q):
+    """True when two entries are one poll's figures for one group of people.
+    Same end date is required. Under one pollster's name: the same group and either the same sample size or the
+    same result; or the same sample size AND result under two group labels (the feeds sometimes label one
+    sample differently; the entry already kept stands). Under two different names (one feed names the sponsor,
+    the other the firm): the same group, result and sample size together."""
+    if _iso(p.get("end_date")) != _iso(q.get("end_date")):
+        return False
+    pa, pd, qa, qd = (_pct(x.get("answers", []), c) for x in (p, q) for c in ("approve", "disapprove"))
+    if None in (pa, pd, qa, qd):
+        return False
+    same_result = abs(pa - qa) <= 0.6 and abs(pd - qd) <= 0.6
+    n1, n2 = float(p.get("sample_size") or 0), float(q.get("sample_size") or 0)
+    same_size = n1 > 0 and n1 == n2
+    same_group = str(p.get("population") or "").lower() == str(q.get("population") or "").lower()
+    if pollster_key(p.get("pollster")) == pollster_key(q.get("pollster")):
+        return (same_size or same_result) if same_group else (same_size and same_result)
+    return same_group and same_result and same_size
+
+
 def merge_polls(votehub, pollresults_raw):
-    """National polls from both sources, de-duplicated on (pollster, end date); plus state polls."""
-    seen, national, state = set(), [], []
-    for p in votehub:
-        seen.add((str(p.get("pollster", "")).lower(), _iso(p.get("end_date"))))
+    """National polls from both sources, plus state polls. A poll is kept once for each group of people it
+    reports (all adults, registered voters, likely voters), so its all-adults figures are never lost because
+    one feed lists only its voters. A PollResults entry is left out when VoteHub already has that poll for
+    that group, whichever way the two feeds spell the pollster's name (see _same_poll)."""
+    national, state, kept = [], [], {}
+
+    def add(p):
         national.append(p)
+        kept.setdefault(_iso(p.get("end_date")), []).append(p)
+
+    for p in votehub:
+        add(p)
     for raw in pollresults_raw:
-        p = _normalize_pollresults(raw)
-        if not p:
+        rows = _normalize_pollresults(raw)
+        if rows and rows[0]["state"]:
+            state.append(rows[0])
             continue
-        if p["state"]:
-            state.append(p)
-            continue
-        key = (p["pollster"].lower(), p["end_date"])
-        if key not in seen:
-            seen.add(key); national.append(p)
+        for p in rows:
+            if not any(_same_poll(p, q) for q in kept.get(p["end_date"], [])):
+                add(p)
     return national, state
 
 
@@ -137,6 +179,7 @@ def window_for(cfg, today):
 
 def national_average(polls, start, end, half_life_days=14.0, populations=None, pooled=False):
     """The latest poll from each pollster in the window, weighted by sample size and by age.
+    A pollster is counted once however the feeds spell its name (pollster_key).
     populations: when given, only polls of those groups count, e.g. ["a"] for polls of all adults,
     the group the paper's approval figures describe ("rv" registered voters, "lv" likely voters).
     pooled: every poll in the window counts, each by its sample size and nothing else, the way the paper
@@ -158,9 +201,13 @@ def national_average(polls, start, end, half_life_days=14.0, populations=None, p
         if ap is None or dis is None:
             continue
         name = p.get("pollster", "?")
-        key = (name, d) if pooled else name
+        who = pollster_key(name)      # one pollster, however the feeds spell its name
+        n = float(p.get("sample_size") or 600)
+        # Pooled: every poll counts once. Two polls by one pollster that end on the same day are two polls when
+        # they differ in size or result; the same entry listed twice is one. With no group chosen a poll's
+        # figures for adults and for voters would each count, so there it is one entry per pollster and day.
+        key = ((who, d, round(n), ap, dis) if want is not None else (who, d)) if pooled else who
         if key not in latest or (not pooled and d > latest[key]["date"]):
-            n = float(p.get("sample_size") or 600)
             latest[key] = {"date": d, "approve": ap, "disapprove": dis, "n": n,
                            "pollster": name, "url": p.get("url"), "population": p.get("population"),
                            "added": _iso(p.get("created_at") or p.get("createdAt")) or None}
@@ -178,7 +225,13 @@ def national_average(polls, start, end, half_life_days=14.0, populations=None, p
     for r in rows:
         r["date"] = r["date"].isoformat()
     return {"approve": num_a / den, "disapprove": num_d / den,
-            "pollsters": len({r["pollster"] for r in rows}), "polls": rows}
+            "pollsters": len({pollster_key(r["pollster"]) for r in rows}), "polls": rows}
+
+
+def adult_population(path=None):
+    """{state: people aged 18 and over}, from pipeline/adult_population.json."""
+    with open(path or os.path.join(os.path.dirname(__file__), "adult_population.json")) as f:
+        return {k: float(v) for k, v in json.load(f)["states"].items()}
 
 
 def state_approval(cfg, national, results2024, csv_path=None, state_polls=None, window=None):
@@ -198,7 +251,11 @@ def state_approval(cfg, national, results2024, csv_path=None, state_polls=None, 
             raw = {r["state"].strip().upper(): float(r["approve"]) for r in csv.DictReader(f)}
         if "DC" not in raw:
             raise ValueError("state_approval.csv needs all 50 states and DC")
-        mean = sum(raw[s] * states[s]["votes"] for s in states) / tot
+        # The national figure is an average of polls of all adults, and a national poll of adults is the average
+        # of the states weighted by their adult populations. So that is the average the state figures are centred
+        # on, not the one weighted by votes cast (which sat 0.14 points higher in November 2026).
+        pop = adult_population()
+        mean = sum(raw[s] * pop[s] for s in states) / sum(pop[s] for s in states)
         out = {s: national + (raw[s] - mean) for s in states}
     else:
         k = a["vote_swing_k"]

@@ -296,7 +296,8 @@ def main():
     registry = candidates.merge_registry(registry, standing, fetch=wiki, min_pct=cc.get("primary_min_pct", 3),
                                          exclude=[cfg["election"]["incumbent_president"]])
 
-    # VP gap: (sitting VP net approval) - (president net approval); favorability if no approval polls
+    # VP gap: (sitting VP net approval) - (president net approval), from surveys that asked about both among the
+    # same group of people; favorability if no approval polls
     vpc = cfg["vp_adjustment"]
     sitting_vp = detected.get("sitting_vp") or "JD Vance"
     if mode == "official":
@@ -318,7 +319,7 @@ def main():
         for kind, days, need in tries:
             usual = days == spans[0]
             lo = g_lo if usual else g_hi - dt.timedelta(days=days)   # counted back from the window's end, not from today
-            g, basis = candidates.vp_gap(*sources[kind], lo, g_hi, approval._iso, kind, min_vp=need)
+            g, basis = candidates.vp_gap(*sources[kind], lo, g_hi, approval._iso, kind, min_vp=need, who=approval.pollster_key)
             if g is not None:
                 gap, gap_kind, g_lo = g, kind, lo
                 gap_basis = basis if usual else f"{basis} from the last {days} days"

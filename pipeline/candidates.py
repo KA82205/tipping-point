@@ -9,7 +9,8 @@ is read from their own article's infobox, then from pipeline/candidates.json.
 The sitting vice president comes from the "Vice President of the United States" infobox.
 
 VP adjustment (paper, Appendix 6): when the sitting VP is a nominee, state approval of the
-president is shifted by (VP net rating - president net rating). VoteHub carries job-approval
+president is shifted by (VP net rating - president net rating), measured in surveys that asked about
+both among the same group of people. VoteHub carries job-approval
 polls of the vice president, which is what the paper used for 2000 and 2024; if none fall in
 the window, favorability is used instead, as the paper did for 1988.
 
@@ -163,11 +164,16 @@ def resolve(cfg, detected):
     return codes, tickets, vp_is_nominee
 
 
-def vp_gap(vp_polls, pres_polls, start, end, iso, kind="favorability", min_vp=1):
-    """Average (VP net - president net) rating, from approval or favorability polls. Pairs polls
-    from the same pollster and end date when possible; otherwise compares the two averages,
-    as long as at least min_vp polls of the vice president are in the window."""
+def vp_gap(vp_polls, pres_polls, start, end, iso, kind="favorability", min_vp=1, who=None):
+    """Average (VP net - president net) rating, from approval or favorability polls.
+    A pair is one survey that asked about both among the same group of people (all adults, registered voters
+    or likely voters): the paper compares the two "asked in the same way in the same surveys". A survey that
+    reports more than one group counts once, by its all-adults figures when it has them for both.
+    With fewer than three such surveys the two averages are compared instead, each group with itself, as long
+    as at least min_vp polls of the vice president are in the window.
+    who: turns a pollster's name into the key it is matched on (approval.pollster_key); default lower case."""
     pos, neg = ("approve", "disapprove") if kind == "approval" else ("fav", "unfav")
+    name = who or (lambda n: str(n or "").lower())
 
     def nets(polls):
         rows = {}
@@ -187,14 +193,27 @@ def vp_gap(vp_polls, pres_polls, start, end, iso, kind="favorability", min_vp=1)
                 elif ch.startswith(neg) and a.get("pct") is not None:
                     down = float(a["pct"])
             if up is not None and down is not None:
-                rows[(str(p.get("pollster", "")).lower(), d)] = up - down
+                rows.setdefault((name(p.get("pollster", "")), d), {}).setdefault(str(p.get("population") or "").lower(), up - down)
         return rows
+    order = {"a": 0, "rv": 1, "lv": 2}
     a, b = nets(vp_polls), nets(pres_polls)
-    paired = [a[k] - b[k] for k in a if k in b]
+    paired = []
+    for k, groups in a.items():
+        both = sorted(set(groups) & set(b.get(k, {})), key=lambda g: order.get(g, 9))
+        if both:
+            paired.append(groups[both[0]] - b[k][both[0]])
     if len(paired) >= 3:
         return sum(paired) / len(paired), f"{len(paired)} polls that asked about both"
     if a and b and len(a) >= min_vp:
-        return sum(a.values()) / len(a) - sum(b.values()) / len(b), f"averages of {len(a)} and {len(b)} polls"
+        num = cnt = 0.0
+        for g in sorted({x for groups in a.values() for x in groups}):
+            va = [groups[g] for groups in a.values() if g in groups]
+            vb = [groups[g] for groups in b.values() if g in groups]
+            if va and vb:
+                num += len(va) * (sum(va) / len(va) - sum(vb) / len(vb))
+                cnt += len(va)
+        if cnt:
+            return num / cnt, f"averages of {len(a)} and {len(b)} polls"
     return None, f"no {kind} polls in the window"
 
 
