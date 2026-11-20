@@ -10,8 +10,9 @@ state MRP approval exists, so the source is pluggable:
   - "vote_swing": state = national + k * (Trump 2024 two-party share in state - national)
   - "csv":        pipeline/state_approval.csv (state,approve), e.g. Civiqs or Morning
                   Consult estimates you are licensed to use, or your own MRP output.
-                  Its state differences are kept and re-centred on the national average
-                  (the states weighted by adult population, pipeline/adult_population.json).
+                  Its state differences are kept, counted at approval.state_gap_scale (one half, the
+                  size of the gaps in the authors' own state estimates) and re-centred on the national
+                  average (the states weighted by adult population, pipeline/adult_population.json).
 """
 import csv
 import datetime as dt
@@ -255,8 +256,16 @@ def state_approval(cfg, national, results2024, csv_path=None, state_polls=None, 
         # of the states weighted by their adult populations. So that is the average the state figures are centred
         # on, not the one weighted by votes cast (which sat 0.14 points higher in November 2026).
         pop = adult_population()
-        mean = sum(raw[s] * pop[s] for s in states) / sum(pop[s] for s in states)
-        out = {s: national + (raw[s] - mean) for s in states}
+        ptot = sum(pop[s] for s in states)
+        mean = sum(raw[s] * pop[s] for s in states) / ptot
+        # The source's gaps are wider than the gaps in the authors' own state estimates, which the model was fitted
+        # on: in the two elections where both exist (Trump 2020, Biden 2024) the authors' gap was about half the
+        # source's (0.48 times; pipeline/state_gap_scale.py). So each state's gap counts at state_gap_scale.
+        # The District of Columbia is not in the source: its gap is an assumption already on the authors' scale.
+        k = float(a.get("state_gap_scale", 1.0))
+        out = {s: national + (1.0 if s == "DC" else k) * (raw[s] - mean) for s in states}
+        shift = national - sum(out[s] * pop[s] for s in states) / ptot      # keep the adult-population mean on the national figure
+        out = {s: v + shift for s, v in out.items()}
     else:
         k = a["vote_swing_k"]
         out = {s: national + k * ((100 - v["share"]) - (100 - nat_dem)) for s, v in states.items()}

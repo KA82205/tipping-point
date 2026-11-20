@@ -231,6 +231,7 @@ def main():
             state_info = {"name": "Civiqs", "url": civiqs.URL, "as_of": None, "live": False}
         if not state_info["as_of"]:
             state_info["as_of"] = cfg["approval"].get("state_csv_as_of")
+        state_info["gap_scale"] = float(cfg["approval"].get("state_gap_scale", 1.0))   # the size each state's gap counts at
 
     # Economy and approval
     econ, econ_last, econ_raw = economy.build_economy(cfg, None if fx else key, cache, fetch=fred)

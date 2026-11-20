@@ -14,7 +14,9 @@ Save the page's source (Ctrl+U in the browser, then save): it still carries the 
 two decimals. A copy of the page as shown has no data block, only whole percentages; that is read too.
 
 How the Nowcast uses it (pipeline/approval.py, state_source "csv"): only the differences between states are
-kept. They are re-centered on the national poll average, so the national level never comes from Civiqs.
+kept, and each counts at approval.state_gap_scale (one half: the model was fitted on state estimates that sit
+about half as far apart, see pipeline/state_gap_scale.py). They are re-centered on the national poll average,
+so the national level never comes from Civiqs.
 The District of Columbia is not in the tracker and is assumed to sit 24 points below the average of the
 50 states (pipeline/update.py).
 
