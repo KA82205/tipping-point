@@ -68,7 +68,7 @@ def texts_backtest(y, nat):
                "lede": f"What the Nowcast's method would have said in {y}: the average of the two models, each refitted only on the elections before {y} and given that year's inputs. No state forecasts were published for {y}, so this is a back-test.",
                "note": f"{BACKTEST_NOTE}: the average of the two models' back-tests, whose national votes were {nat['enns']['fc']:.1f}% and {nat['desart']['fc']:.1f}%."},
         "enns": {"kind": "backtest", "tab": "State-level approval and fundamentals, back-tested",
-                 "lede": f"The state-level approval and fundamentals model, refitted only on the elections before {y} and given that year's approval and state economies. The authors' first forecast was for 2020, so this is today's version of the model run on the past.",
+                 "lede": f"The state-level approval and fundamentals model, refitted only on the elections before {y} and given that year's approval and state economies, with the Southern-states term its authors used through 2020. Their first forecast was for 2020, so this is a back-test, not a forecast they published.",
                  "note": f"{BACKTEST_NOTE}."},
         "desart": {"kind": "backtest", "tab": "Long-range model, back-tested",
                    "lede": f"The long-range model, refitted only on the elections before {y} and given the head-to-head polls from October {y - 1}. This is today's version of the model run on the past.",

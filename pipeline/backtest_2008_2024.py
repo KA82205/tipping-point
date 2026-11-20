@@ -7,8 +7,14 @@ Download the replication data (not stored in this repository) into one folder:
 Then:  python pipeline/backtest_2008_2024.py /path/to/that/folder      (needs numpy, pandas, pyreadstat)
 
 What it does
+  0. Check against the paper: the approval model's one-step-ahead forecasts of 1984-2020, run exactly as the
+     authors' code runs them (NumericalResults2024.do), must reproduce the accuracy the paper reports.
   1. One-step-ahead back-test, 2008-2024: each election is forecast by each model refitted on the elections
      before it only, with that year's inputs; the Nowcast is the plain average of the two, state by state.
+     For the approval model these are the authors' own before-the-fact forecasts: their code keeps a term for
+     the eleven Southern states in the forecasts of every election through 2020, and their 2024 forecast
+     drops it (paper, "third update", and online appendix 3). The site follows that since November 20, 2026;
+     until then it left the term out of every year, which called 236 of the 250 state results, not 239.
   2. Leave-one-out test, 1996-2024: each election forecast from all the other elections.
   3. Baselines: every state votes as it did last time; the national vote repeats.
   4. How the simulated uncertainty did: the site simulates the average with the approval model's error
@@ -66,12 +72,15 @@ def load(folder):
 # ---- the approval and fundamentals model (Enns et al.) ----
 VP_ADJ = {1988: 5, 2000: -8.5, 2024: 8.2}     # the authors' vice-president adjustments to approval
 ENNS = ["lag_PerDem2Party_dev", "APP", "ECON", "Anderson", "Perot2", "democrat_p_state", "lag_democrat_p_state", "democrat_vp_state"]
+SOUTH_UNTIL = 2020                              # the authors' before-the-fact forecasts keep south_conf through this election
 
 
-def enns(d, year, train, final=False):
+def enns(d, year, train, final=False, south=None):
     """Forecast `year` from the elections in `train`. One-step-ahead uses the approval and economy variables
-    the authors built for that forecast year; `final` uses the 2024 versions (economic weighting 0.55, with
-    2020 rescaled as in their code), for the leave-one-out test."""
+    the authors built for that forecast year, and their Southern-states term for forecast years through 2020,
+    as their code does; `final` uses the 2024 versions (economic weighting 0.55, with 2020 rescaled as in
+    their code, no Southern-states term), for the leave-one-out test. `south` overrides the term's use."""
+    cols = ENNS + (["south_conf"] if (south if south is not None else (not final and year <= SOUTH_UNTIL)) else [])
     t = d.copy()
     if final:
         c = "Cwt_55_d_"
@@ -83,15 +92,38 @@ def enns(d, year, train, final=False):
         t["APP"], t["ECON"] = t["pres_approval_2024"].astype(float), t[c].astype(float)
     else:
         t["APP"], t["ECON"] = t[f"pres_approval_{year}"].astype(float), t[f"econ_conditions_{year}"].astype(float)
-    a = t[t.year.isin(train)].dropna(subset=ENNS + ["PerDem2Party"])
-    X = np.column_stack([a[ENNS].astype(float).values, np.ones(len(a))])
+    a = t[t.year.isin(train)].dropna(subset=cols + ["PerDem2Party"])
+    X = np.column_stack([a[cols].astype(float).values, np.ones(len(a))])
     b, *_ = np.linalg.lstsq(X, a.PerDem2Party.values, rcond=None)
     resid = a.PerDem2Party.values - X @ b
     rmse = float(np.sqrt(resid @ resid / (len(a) - X.shape[1])))
     te = t[t.year == year].copy()
     te["APP"] += VP_ADJ.get(year, 0)
-    te["enns"] = np.column_stack([te[ENNS].astype(float).values, np.ones(len(te))]) @ b
+    te["enns"] = np.column_stack([te[cols].astype(float).values, np.ones(len(te))]) @ b
     return te[["State", "enns"]], rmse
+
+
+def paper_check(d):
+    """The paper (Historical Accuracy): the model 'correctly predicts the winner in 91% of all states from 1984
+    to 2020', with a one-step-ahead mean absolute error of 3.4 points and its largest miss in Arkansas in 1992
+    (16 points); 'since 2000' 95% and 2.8 points, which the authors' code computes over 2004-2020. All contests
+    count here, the District of Columbia included, as in their code."""
+    rows = []
+    for y in range(1984, 2021, 4):
+        e, _ = enns(d, y, range(1980, y, 4))
+        m = e.merge(d.loc[d.year == y, ["State", "PerDem2Party"]], on="State")
+        m["year"] = y
+        rows.append(m)
+    A = pd.concat(rows, ignore_index=True)
+    A["ok"], A["miss"] = (A.enns > 50) == (A.PerDem2Party > 50), A.enns - A.PerDem2Party
+    late, worst = A[A.year >= 2004], A.loc[A.miss.abs().idxmax()]
+    print("== Check against the paper: the approval model's own before-the-fact forecasts, 1984-2020 ==")
+    print(f"  1984-2020: called {100 * A.ok.mean():.1f}% of {len(A)} (paper: 91%), average miss {A.miss.abs().mean():.2f} (paper: 3.4)")
+    print(f"  2004-2020: called {100 * late.ok.mean():.1f}% of {len(late)} (paper: 95%), average miss {late.miss.abs().mean():.2f} (paper: 2.8)")
+    print(f"  Largest miss: {worst.State} {int(worst.year)}, {worst.miss:+.1f} (paper: Arkansas 1992, 16 points too low)")
+    print("  2020 misses: " + ", ".join(A.loc[(A.year == 2020) & ~A.ok, "State"]) + " (paper: every state except Georgia)")
+    if round(100 * A.ok.mean()) != 91 or round(100 * late.ok.mean()) != 95 or worst.State != "Arkansas" or int(worst.year) != 1992:
+        sys.exit("FAIL: the approval model's back-test no longer reproduces the paper's reported accuracy")
 
 
 # ---- the long-range model (DeSart) ----
@@ -325,6 +357,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         sys.exit(__doc__)
     d, D = load(sys.argv[1])
+    paper_check(d)
     one, loo = frame(d, D, "onestep"), frame(d, D, "loo")
     summary(one, "One-step-ahead back-test, 2008-2024")
     summary(loo, "Leave-one-out test, 1996-2024")
