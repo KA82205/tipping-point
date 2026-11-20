@@ -196,3 +196,20 @@ assert len(_pop) == 51 and 2.4e8 < sum(_pop.values()) < 2.7e8
 _by, _ = approval.state_approval(CFG, 34.0, _res)
 assert abs(sum(_by[s] * _pop[s] for s in _by) / sum(_pop.values()) - 34.0) < 1e-9
 print("ok (state approval centred by adult population)")
+
+# The gaps between states count at approval.state_gap_scale: the model was fitted on state estimates whose gaps are
+# about half as wide as the source's. The District of Columbia's gap is an assumption of its own and is not scaled.
+import copy  # noqa: E402
+_k = CFG["approval"]["state_gap_scale"]
+assert 0 < _k <= 1, _k
+_full_cfg = copy.deepcopy(CFG)
+_full_cfg["approval"]["state_gap_scale"] = 1.0
+_full, _ = approval.state_approval(_full_cfg, 34.0, _res)
+assert abs(sum(_full[s] * _pop[s] for s in _full) / sum(_pop.values()) - 34.0) < 1e-9
+for _a, _b in (("WY", "HI"), ("PA", "TX"), ("OK", "MA")):
+    assert abs((_by[_a] - _by[_b]) - _k * (_full[_a] - _full[_b])) < 1e-9, (_a, _b)
+assert abs(_by["DC"] - _full["DC"]) < 0.05, (_by["DC"], _full["DC"])
+_none_cfg = copy.deepcopy(CFG)
+del _none_cfg["approval"]["state_gap_scale"]                 # a config without the setting reads the gaps in full
+assert approval.state_approval(_none_cfg, 34.0, _res)[0] == _full
+print("ok (state gaps counted at %g of the source's)" % _k)
