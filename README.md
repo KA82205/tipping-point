@@ -20,6 +20,7 @@ would use today. The site's Method page documents every equation, test and depar
   the two. The same code runs in the daily update and in the browser.
 - `pipeline/` fetches the data every day, builds the model inputs, runs both models and writes
   `docs/nowcast.js` and `docs/history.js`. It also keeps a daily record in `pipeline/log/` (see below).
+  `pipeline/published/` holds the authors' own 2028 forecasts once they are out and have been put in.
 - `.github/workflows/update.yml` runs the pipeline every morning and on every push, commits the new
   data and deploys `docs/` to GitHub Pages.
 
@@ -64,9 +65,32 @@ says so on the Method page.
    the Archive and the track record. The daily record (below) also allows a comparison of the
    authors' forecasts with the site's own runs.
 
-Putting a published forecast in is done by hand, because the numbers have to be read from the
-authors' table, data file or chart. The code for that step is not written yet (November 2026). When
-it is written, it must keep the site's own runs in the daily record.
+**Putting a published forecast in.** The numbers have to be read from the authors' table, data file
+or chart by hand. The rest is one command and one commit:
+
+```
+python pipeline/put_in.py desart his_table.csv --published 2027-11-14 --url https://...
+python pipeline/put_in.py enns their_table.csv --published 2028-07-29 --url https://...
+```
+
+The table has one row per state: the state, by name or two letters, and the Democratic share of the
+two-party vote (`--values rep` or `--values margin` if it gives the Republican share or the
+Democratic lead; `--dem-column` and `--rep-column` if it gives each party's share of all votes). The
+command checks that all 50 states are there and that the numbers follow the 2024 results as a state
+forecast must, shows how they sit against the site's own run, and writes
+`pipeline/published/desart_2028.json` or `enns_2028.json`. Commit that file. From the next run:
+
+- that half of every state's number is the published forecast, held at its published value
+  (`docs/combine.js`), and the site says so wherever it names the models;
+- the site's own run of the model is still computed and goes on into the daily record, in the
+  `site_run` columns;
+- the District of Columbia and any state the authors leave out keep the site's own number, and
+  Maine's and Nebraska's districts follow their state.
+
+Deleting the file takes the forecast out again. A forecast put in after August 6, 2028 still replaces
+the stand-in for it: the next run redoes the posted forecast from the inputs frozen that day
+(`pipeline/frozen/nowcast_2028.json`). Tried on the two forecasts the authors published for 2024, this
+gives the Archive's 2024 figures (`pipeline/tests/test_uncertainty.js`).
 
 ## The daily record
 
@@ -81,11 +105,13 @@ on the site reads it.
 
 The record starts on November 20, 2026. Earlier runs are in the repository's history only.
 
-**The site's own runs stay in the record.** When an author's 2028 forecast is put on the site, the
-site's own run of that model keeps being computed and recorded here, marked `site run`. After the
-election that allows a three-way comparison with the result: the authors' forecasts, the site's own
-runs on the day before each was published, and the site's own runs on the last day. The step that
-puts the authors' forecasts in must keep this (decided November 20, 2026).
+**The site's own runs stay in the record.** The plain columns are what the site shows; the columns
+that start with `site_run` are the site's own runs of the two models. Until an author's 2028 forecast
+is put on the site the two are the same. From then on the plain columns hold the authors' forecast
+for that model (`approval_model_from` and `long_range_from` say so) and the `site_run` columns keep
+the site's own run. After the election that allows a three-way comparison with the result: the
+authors' forecasts, the site's own runs on the day before each was published, and the site's own
+runs on the last day (decided November 20, 2026).
 
 ## Data sources
 
@@ -146,6 +172,7 @@ node pipeline/tests/test_uncertainty.js         # reproduces the paper's 2024 od
 python pipeline/tests/make_fixtures.py          # fake data for an offline run...
 python pipeline/update.py --fixtures pipeline/tests/fixtures   # ...shown with a TEST DATA flag
 python pipeline/update.py                       # live data (needs FRED_API_KEY)
+python pipeline/put_in.py desart TABLE.csv --published DATE   # put an author's published forecast on the site
 python pipeline/backtest_2008_2024.py FOLDER    # the Method page's track record and checks, from the papers' replication files
 python pipeline/make_archive.py FOLDER          # the Archive page's 2008 to 2020, state by state (docs/archive.js)
 ```
