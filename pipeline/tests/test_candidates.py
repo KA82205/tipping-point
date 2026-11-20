@@ -269,3 +269,55 @@ with tempfile.TemporaryDirectory() as _d:
     assert [r["dem_win"] for r in _days] == ["0.5606", "0.58", "0.58", "0.581"]           # the second run of December 4 replaced the first
     assert len(list(_csv.DictReader(open(os.path.join(_d, "states.csv"))))) == 8
 print("ok (daily record)")
+
+# Putting an author's published forecast in (pipeline/put_in.py writes the file, pipeline/update.py reads it).
+# The table can name states in full or by two letters, and give the Democratic share, the Republican share, the
+# Democratic lead, or each party's share of all votes. Numbers that cannot be Democratic shares are refused.
+import put_in  # noqa: E402
+import update  # noqa: E402
+_dem = {k: v["share"] + 1.5 for k, v in _res.items() if len(k) == 2}          # a made-up forecast: 2024 plus 1.5 points
+with tempfile.TemporaryDirectory() as _d:
+    def _table(name, rows, delim=","):
+        path = os.path.join(_d, name)
+        with open(path, "w", newline="") as f:
+            _csv.writer(f, delimiter=delim).writerows(rows)
+        return path
+    _t1 = _table("names.csv", [["State", "Democratic two-party share"]] + [[_res[k]["name"], f"{v:.2f}"] for k, v in _dem.items() if k != "DC"] + [["National", "50.7"]])
+    _s1, _n1 = put_in.read_table(_t1, _res)
+    assert len(_s1) == 50 and abs(_s1["PA"] - round(_dem["PA"], 2)) < 1e-9 and "National" in _n1[0], (_s1.get("PA"), _n1)
+    assert any("District of Columbia" in x for x in put_in.check(_s1, _res))
+    _t2 = _table("rep.tsv", [[k, f"{100 - v:.2f}%", "1", "2"] for k, v in _dem.items()], delim="\t")
+    _s2, _ = put_in.read_table(_t2, _res, values="rep", column="2")
+    assert len(_s2) == 51 and abs(_s2["PA"] - round(_dem["PA"], 2)) < 0.011
+    _t3 = _table("lead.csv", [[k, f"{(2 * v - 100) / 100:.4f}"] for k, v in _dem.items()])
+    assert abs(put_in.read_table(_t3, _res, values="margin")[0]["PA"] - _dem["PA"]) < 0.011
+    _t4 = _table("both.csv", [["state", "dem", "rep", "other"]] + [[k, f"{0.96 * v:.3f}", f"{0.96 * (100 - v):.3f}", "4"] for k, v in _dem.items()])
+    assert abs(put_in.read_table(_t4, _res, dem_column="dem", rep_column="rep")[0]["PA"] - _dem["PA"]) < 0.011
+    for _bad, _kw in ((_t2, {"column": "2"}),                                    # Republican shares given as Democratic
+                      (_table("few.csv", [[k, f"{v:.2f}"] for k, v in list(_dem.items())[:40]]), {})):
+        try:
+            put_in.check(put_in.read_table(_bad, _res, **_kw)[0], _res)
+            raise AssertionError("a table that cannot be a Democratic forecast was accepted")
+        except SystemExit:
+            pass
+    # The file as the daily run reads it. A file with a state missing is not used, and the run carries on.
+    _doc = put_in.build("desart", _s1, "2027-11-14", url="https://example.org/forecast", national=51.2, chance=0.61)
+    assert _doc["short"] == "DeSart" and _doc["read_from"] == "table" and "electoral_votes" not in _doc
+    os.makedirs(os.path.join(_d, "published"))
+    json.dump(_doc, open(os.path.join(_d, "published", "desart_2028.json"), "w"))
+    json.dump({**_doc, "states": {k: v for k, v in _s1.items() if k != "OH"}}, open(os.path.join(_d, "published", "enns_2028.json"), "w"))
+    _pub = update.load_published(CFG, _res, os.path.join(_d, "published"))
+    assert list(_pub) == ["desart"] and len(_pub["desart"]["states"]) == 50 and "_comment" not in _pub["desart"], list(_pub)
+    assert update.sources_of(_pub) == {"enns": "site run", "desart": "authors' forecast"}
+    assert update.published_id(_pub) and update.published_id({}) == "" and update.load_published(CFG, _res, _d) == {}
+    # The daily record keeps the site's own runs next to what the site shows.
+    _shown = copy.deepcopy(_N1)
+    _shown["published"], _shown["model_sources"] = _pub, update.sources_of(_pub)
+    _shown["summary"]["pDemWin"] = 0.5167
+    _own = {"summary": _N1["summary"], "models": _N1["models"], "states": _N1["states"]}
+    assert daily_log.record(_N1, CFG, dt.date(2027, 11, 13), log_dir=_d) == ["Record starts."]
+    _said = " ".join(daily_log.record(_shown, CFG, dt.date(2027, 11, 16), own=_own, log_dir=_d))
+    assert "long-range half is now the forecast DeSart published on November 14, 2027" in _said, _said
+    _row = list(_csv.DictReader(open(os.path.join(_d, "daily.csv"))))[-1]
+    assert (_row["dem_win"], _row["site_run_dem_win"], _row["long_range_from"], _row["approval_model_from"]) == ("0.5167", "0.5606", "authors' forecast", "site run"), _row
+print("ok (published forecasts put in)")

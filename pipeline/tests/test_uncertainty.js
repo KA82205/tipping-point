@@ -49,4 +49,39 @@ for (const y of [2008, 2012, 2016, 2020]) {
   if (Y.nat.enns.pDemWin !== 0.5916 || Y.nat.desart.pDemWin !== 0.9985) fail(`2020 as published: chances of ${Y.nat.enns.pDemWin} and ${Y.nat.desart.pDemWin}`);
 }
 console.log('archive agrees with the track record and the published 2020 forecasts');
+
+// Putting an author's published forecast in (docs/combine.js; pipeline/put_in.py writes the file). Tried on the
+// two forecasts the authors published for 2024. With DeSart's in, his numbers are the long-range half and the
+// site's approval run is still the other. With both in, every state is their plain average and the odds are
+// the Archive's 2024 figure, 31 in 100 (27 in 100 for Enns and colleagues' alone, as they published). The site's
+// own runs, which go to the daily record, must not move at all.
+{
+  const fs = require('fs'), file = path.join(__dirname, '..', '..', 'docs', 'nowcast.js');
+  if (!fs.existsSync(file)) console.log('put-in test skipped: no docs/nowcast.js yet');
+  else {
+    const w = {};
+    new Function('window', fs.readFileSync(file, 'utf8'))(w);
+    const N = w.NOWCAST, TP = require(path.join(__dirname, '..', '..', 'docs', 'combine.js'));
+    const fail = m => { console.error('FAIL: put-in: ' + m); process.exit(1); };
+    delete N.published;
+    const states = o => Object.fromEntries(Object.entries(o).filter(([k]) => k.length === 2 && k !== 'DC'));
+    const dPub = states(JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'backtest_2024.json'), 'utf8')).desart);
+    const ePub = states(Object.fromEntries(R.map(r => [r.abbr, r.fc])));
+    const row = r => Object.fromEntries(r.states.map(x => [x.abbr, x])), near = (a, b) => Math.abs(a - b) < 1e-9;
+    const base = TP.run(N, {}, { n: 10000 });
+    if (base.info.sources.enns !== 'site run' || base.own) fail('with nothing put in, the run is the site\'s own');
+    const one = TP.run({ ...N, published: { desart: { states: dPub } } }, {}, { n: 10000, own: true });
+    const o = row(one.combined), e = row(base.enns);
+    for (const k of Object.keys(dPub)) if (!near(o[k].desart, dPub[k]) || !near(o[k].demShare, (e[k].demShare + dPub[k]) / 2)) fail(`DeSart's forecast in: ${k} is not the average of his number and the site's approval run`);
+    if (one.own.combined.pDemWin !== base.combined.pDemWin || one.own.desart.pDemWin !== base.desart.pDemWin || one.enns.pDemWin !== base.enns.pDemWin) fail('putting a forecast in moved the site\'s own runs');
+    if (!near(o.DC.desart, row(base.desart).DC.demShare)) fail('a state the authors leave out must keep the site\'s own number');
+    const both = TP.run({ ...N, published: { desart: { states: dPub }, enns: { states: ePub } } }, {}, { n: 10000, own: true });
+    const b = row(both.combined);
+    for (const k of Object.keys(dPub)) if (!near(b[k].demShare, (ePub[k] + dPub[k]) / 2)) fail(`both forecasts in: ${k} is not their average`);
+    const p = both.combined.pDemWin, pe = both.enns.pDemWin;
+    if (p < 0.29 || p > 0.33 || pe < 0.24 || pe > 0.30) fail(`the two 2024 forecasts put in: ${p.toFixed(3)} (the Archive has 0.308) and ${pe.toFixed(3)} for Enns and colleagues' alone (they published about 0.27)`);
+    if (both.own.combined.pDemWin !== base.combined.pDemWin) fail('putting both forecasts in moved the site\'s own runs');
+    console.log(`published forecasts put in: the 2024 pair gives ${Math.round(100 * p)} in 100 (Archive: 31), ${Math.round(100 * pe)} in 100 for Enns and colleagues' alone (published: 27)`);
+  }
+}
 console.log('ok');
