@@ -53,10 +53,10 @@ says so on the Method page.
 |---|---|---|
 | State economies | Philadelphia Fed State Coincident Indexes via FRED (`{ST}PHCI`) | Daily |
 | National Trump approval | VoteHub and PollResults.org (both CC BY 4.0), merged and averaged; polls of all adults only | Daily |
-| State-by-state approval | A copy of Civiqs's state tracker in `pipeline/state_approval.csv`; only the gaps between states are used, re-centred on the national average | By hand, from a saved copy of the page (see below) |
+| State-by-state approval | A copy of Civiqs's state tracker in `pipeline/state_approval.csv`; only the gaps between states are used, re-centred on the national average with each state weighted by its adult population (`pipeline/adult_population.json`) | By hand, from a saved copy of the page (see below) |
 | Head-to-head polls, primary polls | PollResults.org 2028 feed | Daily |
 | Nominees, running mates, home states, sitting VP | Wikipedia infoboxes, with `pipeline/candidates.json` as the curated list | Daily |
-| Vice-president adjustment | VoteHub job approval of the sitting VP and the president (favorability as fallback) | Daily |
+| Vice-president adjustment | VoteHub job approval of the sitting VP and the president (favorability as fallback), compared in surveys that asked about both among the same group of people | Daily |
 | 2024 results, district offsets | Certified 2024 results (`pipeline/results_2024.json`) | Fixed |
 
 **National approval.** The paper estimates approval among all adults: its model covers ages 18 and
