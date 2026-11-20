@@ -150,3 +150,49 @@ _la = approval.national_average(_pp, dt.date(2026, 6, 1), dt.date(2026, 7, 30), 
 assert _la["pollsters"] == 2 and len(_la["polls"]) == 2 and _la["approve"] < _po["approve"], _la
 assert CFG["approval"]["constant"] == 43
 print("ok (approval of all adults)")
+
+
+# Reading the two approval feeds together (approval.merge_polls):
+#  - a poll's all-adults figures are kept even when the first feed lists that poll only for voters
+#  - a poll both feeds list counts once, however they spell the pollster's name
+#  - a question put to one party's voters only is not a national figure
+def _pr(name, day, groups, sub=""):   # one PollResults record; groups = [(who was asked, sample size, approve, disapprove)]
+    return {"pollster": name, "state": "US", "endDate": day, "internal": "", "partisan": "", "questions": [
+        {"population": g, "subpopulation": sub, "sampleSize": n, "answers": [{"politician": "Donald Trump", "yes": y, "no": no}]}
+        for g, n, y, no in groups]}
+_vh = [_ap("YouGov", "2026-06-29", "rv", 40, 58, 1428), _ap("Marist College", "2026-07-10", "a", 38, 56, 1408),
+       _ap("YouGov", "2026-07-06", "a", 39, 57, 1602), _ap("YouGov", "2026-07-06", "a", 40, 60, 1709)]
+_prr = [_pr("YouGov", "6/29/26", [("rv", 1428, 40, 58), ("a", 1606, 38, 58)]),   # its adults figures are new
+        _pr("Marist University", "7/10/26", [("a", 1408, 38, 56)]),                # the same poll under the pollster's new name
+        _pr("YouGov", "7/6/26", [("a", 1602, 39, 57)]),                            # already listed
+        _pr("AtlasIntel", "7/1/26", [("a", 3000, 40, 55), ("rv", 2500, 42, 55)]),
+        _pr("Tufts", "7/2/26", [("a", 300, 80, 15)], sub="r")]                     # Republicans only
+_nat, _states = approval.merge_polls(_vh, _prr)
+assert len(_nat) == 7 and not _states, [(p["pollster"], p["end_date"], p["population"]) for p in _nat]
+assert [p["sample_size"] for p in _nat if p["pollster"] == "YouGov" and p["end_date"] == "2026-06-29" and p["population"] == "a"] == [1606]
+assert approval.pollster_key("Marist College") == approval.pollster_key("Marist University") != approval.pollster_key("YouGov")
+_now = approval.national_average(_nat, dt.date(2026, 6, 15), dt.date(2026, 7, 14), populations=["a"])
+assert _now["pollsters"] == 3 and len(_now["polls"]) == 3, _now          # YouGov, Marist once, AtlasIntel
+# In the paper's window every poll counts once: two YouGov polls that end on the same day are two polls.
+_win = approval.national_average(_nat, dt.date(2026, 6, 1), dt.date(2026, 7, 30), populations=["a"], pooled=True)
+assert len(_win["polls"]) == 5 and _win["pollsters"] == 3, _win
+assert abs(_win["approve"] - (38 * 1606 + 38 * 1408 + 39 * 1602 + 40 * 1709 + 40 * 3000) / (1606 + 1408 + 1602 + 1709 + 3000)) < 1e-9, _win
+print("ok (two feeds, one count per poll)")
+
+# The vice-president gap compares like with like: the same survey and the same group of people.
+_vpp = [_ap("Ipsos", "2026-04-28", "rv", 39, 49), _ap("Ipsos", "2026-04-28", "a", 35, 48),
+        _ap("Quinnipiac University", "2026-05-18", "rv", 39, 54), _ap("CNN/SSRS", "2026-03-30", "a", 37, 62)]
+_prs = [_ap("Ipsos", "2026-04-28", "rv", 38, 59), _ap("Ipsos", "2026-04-28", "a", 36, 61),
+        _ap("Quinnipiac University", "2026-05-18", "rv", 37, 61), _ap("CNN/SSRS", "2026-03-30", "rv", 40, 58),
+        _ap("CNN/SSRS", "2026-03-30", "a", 34, 63)]
+_g, _basis = candidates.vp_gap(_vpp, _prs, dt.date(2026, 3, 1), dt.date(2026, 6, 1), lambda d: d, "approval", who=approval.pollster_key)
+assert abs(_g - (12 + 9 + 4) / 3) < 1e-9 and _basis.startswith("3 polls"), (_g, _basis)   # adults with adults, voters with voters
+print("ok (vice-president gap, like with like)")
+
+# State approval is centred on the national figure by adult population: a national poll of adults is that average.
+_res = json.load(open(os.path.join(os.path.dirname(__file__), "..", "results_2024.json")))
+_pop = approval.adult_population()
+assert len(_pop) == 51 and 2.4e8 < sum(_pop.values()) < 2.7e8
+_by, _ = approval.state_approval(CFG, 34.0, _res)
+assert abs(sum(_by[s] * _pop[s] for s in _by) / sum(_pop.values()) - 34.0) < 1e-9
+print("ok (state approval centred by adult population)")
