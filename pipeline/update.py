@@ -15,6 +15,7 @@ Writes:
     docs/history.js      window.NOWCAST_HISTORY, one row per day
     pipeline/history.json
     pipeline/cache/      raw responses from the last run
+    pipeline/log/        a fuller record of every day, kept for later research (pipeline/daily_log.py)
 """
 import argparse
 import datetime as dt
@@ -35,6 +36,7 @@ import urllib.request
 import approval  # noqa: E402
 import civiqs  # noqa: E402
 import candidates  # noqa: E402
+import daily_log  # noqa: E402
 import economy  # noqa: E402
 
 
@@ -133,6 +135,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--fixtures", help="read every source from this folder instead of the network")
     ap.add_argument("--today", help="YYYY-MM-DD, defaults to today in US Eastern time")
+    ap.add_argument("--log-dir", help="write the daily record here (a test run writes none unless this is given)")
     args = ap.parse_args()
 
     cfg = json.load(open(os.path.join(HERE, "config.json")))
@@ -512,6 +515,18 @@ def main():
         json.dump(hist, open(hist_path, "w"), indent=1)
     with open(os.path.join(ROOT, "docs", "history.js"), "w") as f:
         f.write("window.NOWCAST_HISTORY = " + json.dumps(hist) + ";\n")
+
+    # A fuller record of the day, kept for later research: the whole Nowcast, a row of headline numbers, a row for
+    # every state, and what changed since the last run in plain words (pipeline/daily_log.py). Nothing on the site
+    # reads it, and a problem writing it never stops the run.
+    # These are the site's own runs of the two models. When the authors' published 2028 forecasts are put in, the
+    # site's own runs must still be computed and recorded here, so the two can be compared after the election.
+    if not fx or args.log_dir:
+        try:
+            noted = daily_log.record(payload, cfg, today, approval_polls=nat["polls"], log_dir=args.log_dir or daily_log.LOG_DIR)
+            print("Daily record: " + (" ".join(noted) if noted else "nothing changed since the last run"))
+        except Exception as e:  # noqa: BLE001
+            print(f"WARNING: the daily record was not written ({e})")
 
     s = payload["summary"]
     n_pr = sum(1 for p in national_polls if p.get("source") == "pollresults")
