@@ -92,6 +92,7 @@ python pipeline/tests/make_fixtures.py          # fake data for an offline run..
 python pipeline/update.py --fixtures pipeline/tests/fixtures   # ...shown with a TEST DATA flag
 python pipeline/update.py                       # live data (needs FRED_API_KEY)
 python pipeline/backtest_2008_2024.py FOLDER    # the Method page's track record and checks, from the papers' replication files
+python pipeline/make_archive.py FOLDER          # the Archive page's back-tests of 2008 to 2020, state by state (docs/archive.js)
 ```
 
 Build `docs/data.js` and `docs/us-states.js` first (see the workflow), then open
@@ -112,3 +113,7 @@ Build `docs/data.js` and `docs/us-states.js` first (see the workflow), then open
   reproduces them, with a last-election baseline, the tests of other weights and of states moving
   together, and a check of the simulated ranges, from the replication files on Harvard Dataverse
   (doi:10.7910/DVN/PBGFOF and doi:10.7910/DVN/HZGLY9; the data are not stored here).
+- The Archive page shows every one of those elections state by state. 2008 to 2020 are the same
+  back-tests (`pipeline/make_archive.py` writes them to `docs/archive.js`), labeled as back-tests,
+  with what the authors published at the time noted beside them. 2024 shows the two forecasts the
+  authors published and their average. The Nowcast began in November 2026 and forecast none of them.
