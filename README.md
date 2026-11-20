@@ -19,7 +19,7 @@ would use today. The site's Method page documents every equation, test and depar
   fundamentals model and the simulation; `docs/combine.js` adds the long-range model and averages
   the two. The same code runs in the daily update and in the browser.
 - `pipeline/` fetches the data every day, builds the model inputs, runs both models and writes
-  `docs/nowcast.js` and `docs/history.js`.
+  `docs/nowcast.js` and `docs/history.js`. It also keeps a daily record in `pipeline/log/` (see below).
 - `.github/workflows/update.yml` runs the pipeline every morning and on every push, commits the new
   data and deploys `docs/` to GitHub Pages.
 
@@ -46,6 +46,25 @@ Nowcast. They stand in for a published forecast until it is out, or if it never 
 as stand-ins. Both models are refitted with the 2024 results, as their authors refit before each
 forecast. If an author revises the model itself, the site's run switches to the revised version and
 says so on the Method page.
+
+## The daily record
+
+For later research, every daily run also writes to `pipeline/log/` (`pipeline/daily_log.py`). Nothing
+on the site reads it.
+
+- `daily.csv`: one row a day, the headline numbers and the inputs behind them
+- `states.csv`: one row a day for every state and district
+- `changes.csv`: one row each time something changed, saying what in plain words: polls in or out, a
+  new month of state economies, a new copy of the state approval figures, a setting, the code
+- `days/YYYY-MM-DD.json`: the whole Nowcast as it stood at the end of that day
+
+The record starts on November 20, 2026. Earlier runs are in the repository's history only.
+
+**The site's own runs stay in the record.** When an author's 2028 forecast is put on the site, the
+site's own run of that model keeps being computed and recorded here, marked `site run`. After the
+election that allows a three-way comparison with the result: the authors' forecasts, the site's own
+runs on the day before each was published, and the site's own runs on the last day. The step that
+puts the authors' forecasts in must keep this (decided November 20, 2026).
 
 ## Data sources
 
