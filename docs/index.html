@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=20261120a">
+<link rel="stylesheet" href="styles.css?v=20261120b">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -71,7 +71,7 @@
       <div><span class="v">4 of 5</span><span class="small">Winners called, missing only 2016</span></div>
       <div><span class="v">50 of 50</span><span class="small">States called right in 2024</span></div>
     </div>
-    <p class="small">Each election from 2008 to 2024 was forecast as each model would have at the time, from earlier elections only, then averaged half and half. Nothing in the average was tuned to these results. For comparison, assuming every state votes as it did last time gets 89% of states and misses the national vote by 2.3 points. Five elections is a small sample: in 2020 both models were too high, and the average missed by 3.2 points. <a href="#method">Track record in full</a> · <a href="#archive">Each election, state by state</a></p>
+    <p class="small">Each election from 2008 to 2024 was forecast as each model would have at the time, from earlier elections only, then averaged half and half. Nothing in the average was tuned to these results. For comparison, assuming every state votes as it did last time gets 89% of states and misses the national vote by 2.3 points. Five elections is a small sample: in 2020 both models were too high, and the average missed by 3.3 points. <a href="#method">Track record in full</a> · <a href="#archive">Each election, state by state</a></p>
   </section>
 
   <section class="stack-lg">
@@ -345,9 +345,9 @@
     <p><b>Equal weights</b>, because the back-tests found no mix that does reliably better: the best one moved around depending on how the test was run. Research on election forecasting has long found that a plain average of forecasts from different methods beats relying on one, and is hard to improve on by fitting weights (Graefe and colleagues 2014, 2015). Nothing in the combination is fitted to past results: both models run with their authors' equations, and each gets half.</p>
     <p><b>Other mixes were tested</b>, from all long-range to all approval and fundamentals in steps of five points, on both back-tests described under Track record. None is worth switching to. Mixes are written with the approval and fundamentals share first.</p>
     <ul class="small rules">
-      <li><b>The gain is tiny.</b> On state results the best mix in hindsight, 35/65, beats equal weights by 0.05 points over 2008 to 2024; over 1996 to 2024, equal weights are themselves the best mix. On the national vote the two tests point in opposite directions, 45/55 in the first and 70/30 in the second, where 70/30 also calls the 2000 winner wrong.</li>
+      <li><b>The gain is tiny.</b> On state results the best mix in hindsight, 30/70, beats equal weights by 0.07 points over 2008 to 2024; over 1996 to 2024, equal weights are themselves the best mix. On the national vote the two tests point in opposite directions, 45/55 in the first and 70/30 in the second, where 70/30 also calls the 2000 winner wrong.</li>
       <li><b>The best mix does not stay put.</b> In the 1996 to 2024 test it runs from all approval and fundamentals in 1996 to all long-range in 2020. A lean toward approval and fundamentals did better in every election up to 2008, and a lean toward the long-range model in every one since. Weights fitted on the first four elections, 65/35, would have made the last four worse than equal weights: a state miss of 2.05 points against 1.96.</li>
-      <li><b>Fitted weights fail a fair test.</b> Chosen from other elections and scored on one left out, a fitted mix did worse than equal weights in six of eight comparisons, the same in one and better in one. The eight: both back-tests, chosen from all the other elections or only the earlier ones, judged on state results and on the national vote.</li>
+      <li><b>Fitted weights fail a fair test.</b> Chosen from other elections and scored on one left out, a fitted mix did worse than equal weights in six of eight comparisons and better in two. The eight: both back-tests, chosen from all the other elections or only the earlier ones, judged on state results and on the national vote.</li>
     </ul>
     <p><b>The method was fixed on November 12, 2026</b>, and will not be changed on the strength of these same back-tests again, so that 2028 is a fair test of it.</p>
     <p><b>The final forecast is the authors' own.</b> The site's runs of the two models are for the Nowcast. The final forecast will be the average of the two forecasts the authors themselves publish for 2028, state by state. DeSart's comes first, about a year before the election: when it is out, his state forecasts replace the site's run of his model and stay fixed. Enns and colleagues publish about 100 days before the election: when theirs is out, it replaces the site's run of their model, and the forecast is final. Until each is out, the site's own run of that model stands in, fixed at its paper's cutoff (November 7, 2027 for the long-range model, August 6, 2028 for the approval model). If an author publishes no state forecasts before Election Day, that stand-in is used and marked as one. The reason is accuracy: the authors work from data the site can only approximate, above all approval measured state by state, and the forecasts they published did as well as the back-tests or better. This was set on November 20, 2026, before either 2028 forecast existed. Until then the plan was to freeze the site's own runs on August 6, 2028 and call that the forecast. If an author also revises the model itself, the site's stand-in run switches to the revised version and says so here.</p>
@@ -358,23 +358,24 @@
       <li><b>The paper's own window.</b> For polls conducted June 1 to July 30, 2028 the paper pools every survey answer. The site would have taken each pollster's latest poll and favored recent ones. It will now count every poll in that window by its sample size. This changes nothing before June 2028.</li>
     </ul>
     <p>On the data of November 19, the first lowered Trump's approval from 37.2% to 33.8% and raised the Democrat's chance from 50.6% to 56.8%; the second brought it to 55.1%. No state changed hands. The day-by-day history on this site starts again on November 20, so that it is one consistent series. See National approval and Approval baseline, under Everything that differs from the Enns model.</p>
+    <p><b>The track record was corrected the same day.</b> Its back-tests of the approval model had left out the Southern-states term that the authors' own back-tests keep through 2020. It was put back, which reproduces the accuracy the paper reports. The approval model's count for 2008 to 2024 went from 236 to 239 of 250 state results; the Nowcast's stayed at 240. This changes how past elections are scored, not how 2028 is forecast.</p>
   </section>
 
   <section class="stack m-sec">
     <h2>Track record</h2>
     <p><b>Each election below was forecast the way each model would have forecast it at the time:</b> refitted on the earlier elections only, with that year's inputs. Every number is computed from the two papers' replication files and the 2024 results.</p>
-    <p><b>These are back-tests:</b> today's versions of the two models, run on past elections. The forecasts the authors actually published before each election are compared with them below the tables.</p>
+    <p><b>These are back-tests</b>, run the way the authors' own code runs theirs. For the approval model that means keeping the Southern-states term its authors used in every forecast through 2020 and dropped in 2024; the next section explains it. The forecasts the authors actually published before each election are compared with the back-tests further down.</p>
     <div class="cols2">
       <table class="mt">
         <caption>National vote, Democratic share</caption>
         <thead><tr><th scope="col"></th><th scope="col">Result</th><th scope="col">Approval and fundamentals</th><th scope="col">Long-range</th><th scope="col">Nowcast</th></tr></thead>
         <tbody>
-          <tr><th scope="row">2008</th><td>53.7</td><td>55.7</td><td>52.7</td><td>54.2</td></tr>
-          <tr><th scope="row">2012</th><td>51.9</td><td>49.9</td><td>53.6</td><td>51.8</td></tr>
-          <tr><th scope="row">2016</th><td>51.0</td><td>51.3</td><td>50.1</td><td>50.7</td></tr>
-          <tr><th scope="row">2020</th><td>52.2</td><td>56.0</td><td>54.8</td><td>55.4</td></tr>
+          <tr><th scope="row">2008</th><td>53.7</td><td>55.5</td><td>52.7</td><td>54.1</td></tr>
+          <tr><th scope="row">2012</th><td>51.9</td><td>50.0</td><td>53.6</td><td>51.8</td></tr>
+          <tr><th scope="row">2016</th><td>51.0</td><td>51.2</td><td>50.1</td><td>50.7</td></tr>
+          <tr><th scope="row">2020</th><td>52.2</td><td>56.1</td><td>54.8</td><td>55.5</td></tr>
           <tr><th scope="row">2024</th><td>49.2</td><td>49.4</td><td>50.6</td><td>50.0</td></tr>
-          <tr class="avg"><th scope="row">Average miss</th><td></td><td>1.7</td><td>1.5</td><td>1.0</td></tr>
+          <tr class="avg"><th scope="row">Average miss</th><td></td><td>1.6</td><td>1.5</td><td>1.0</td></tr>
         </tbody>
       </table>
       <table class="mt">
@@ -382,33 +383,53 @@
         <thead><tr><th scope="col"></th><th scope="col">Approval and fundamentals</th><th scope="col">Long-range</th><th scope="col">Nowcast</th></tr></thead>
         <tbody>
           <tr><th scope="row">2008</th><td>47</td><td>46</td><td>47</td></tr>
-          <tr><th scope="row">2012</th><td>46</td><td>48</td><td>49</td></tr>
+          <tr><th scope="row">2012</th><td>47</td><td>48</td><td>49</td></tr>
           <tr><th scope="row">2016</th><td>46</td><td>46</td><td>46</td></tr>
-          <tr><th scope="row">2020</th><td>47</td><td>48</td><td>48</td></tr>
+          <tr><th scope="row">2020</th><td>49</td><td>48</td><td>48</td></tr>
           <tr><th scope="row">2024</th><td>50</td><td>50</td><td>50</td></tr>
-          <tr class="avg"><th scope="row">All five</th><td>94%</td><td>95%</td><td>96%</td></tr>
+          <tr class="avg"><th scope="row">All five</th><td>96%</td><td>95%</td><td>96%</td></tr>
         </tbody>
       </table>
     </div>
     <p class="small">2008 to 2024 are the elections both models can be tested on fairly: the long-range model's data starts in 1996, and with fewer than three past elections its equation cannot be estimated properly. The national figures add up the 50 states by turnout, leaving out the District of Columbia, so they differ slightly from the papers' own. Each election is shown state by state in the <a href="#archive">Archive</a>, which counts the District and uses the official national vote, so its national figures sit about a tenth of a point from these. For 2020 and 2024 the Archive shows the forecasts the authors published, not these back-tests.</p>
-    <p class="small">The Nowcast called four of the five winners; like both models on their own, it called 2016 wrong, giving Clinton 285 electoral votes. Its average miss in a state was 2.1 points, against 2.6 and 2.2 for the two models alone, and it called 240 of the 250 state results, against 236 and 238.</p>
+    <p class="small">The Nowcast called four of the five winners; like both models on their own, it called 2016 wrong, giving Clinton 285 electoral votes. Its average miss in a state was 2.17 points, against 2.69 and 2.21 for the two models alone, and it called 240 of the 250 state results, against 239 and 238.</p>
     <p class="small"><b>Against a simple baseline.</b> Safe states make any method look good, so the fair comparison is with assuming every state votes as it did four years earlier. That gets 222 of the 250 results (89%), against the Nowcast's 240 (96%). In the 73 results decided by under 10 points it gets 49 (67%), against 64 (88%). Of the 28 results where a state changed party, the Nowcast called 21. On the national vote, assuming a repeat of the last election misses by 2.3 points on average, against 1.0.</p>
-    <p class="small">Its national miss is smaller than either model's because their misses often point in opposite directions and partly cancel: in 2012 the state-level approval and fundamentals model was 2.0 points too low and the long-range model 1.7 too high, so the average was off by 0.2. When both miss the same way, as in 2020, the average does too.</p>
+    <p class="small">Its national miss is smaller than either model's because their misses often point in opposite directions and partly cancel: in 2012 the state-level approval and fundamentals model was 1.9 points too low and the long-range model 1.7 too high, so the average was off by 0.1. When both miss the same way, as in 2020, the average does too.</p>
     <p class="small">A second test, which forecasts each election from 1996 to 2024 using all the other elections, gives the Nowcast a state miss of 2.2 points and a national miss of 1.0, with seven of eight winners called.</p>
-    <p class="small"><b>States moving together.</b> The long-range model shifts every state by nearly the same amount from its last result. Three other ways of placing states were tried in both tests, scored on how far each state's position relative to the national vote was off, and none did better. The approval and fundamentals model's own map was worse in the first test (2.28 points against 2.00) and level in the second (2.10 against 2.15). Adding each state's result from two elections back to the long-range equation changed almost nothing. Starting from the average of each state's last two results was much worse. States have moved together more closely in 2020 and 2024 than in any election from 1996 to 2016, a trend Jackman (2014) found after 2012. In 2020 about two-thirds of the long-range model's error in the states was a miss shared by all of them: its national forecast was 54.8 against a result of 52.2, mostly because the October 2019 polls had the Democrat at 54.9.</p>
+    <p class="small"><b>States moving together.</b> The long-range model shifts every state by nearly the same amount from its last result. Three other ways of placing states were tried in both tests, scored on how far each state's position relative to the national vote was off, and none did better. The approval and fundamentals model's own map was worse in the first test (2.40 points against 2.00) and level in the second (2.10 against 2.15). Adding each state's result from two elections back to the long-range equation changed almost nothing. Starting from the average of each state's last two results was much worse. States have moved together more closely in 2020 and 2024 than in any election from 1996 to 2016, a trend Jackman (2014) found after 2012. In 2020 about two-thirds of the long-range model's error in the states was a miss shared by all of them: its national forecast was 54.8 against a result of 52.2, mostly because the October 2019 polls had the Democrat at 54.9.</p>
     <p class="small">The long-range model is tested here on polls from October of the year before the election, as DeSart designed it. The Nowcast feeds it polls from even earlier, so today it is probably less accurate than this record shows.</p>
   </section>
 
   <section class="stack m-sec">
+    <h2>The Southern-states term</h2>
+    <p><b>What it is.</b> Through 2020 the approval model had one more input: a marker for the eleven states of the old Confederacy. For decades those states voted more Republican than their last result, the president's approval and the economy would suggest, and the marker let the model allow for that.</p>
+    <p><b>Why the authors dropped it.</b> The pattern faded. It was clear in the 1980s and faint in the 1990s and early 2000s. In recent elections the authors find no sign of it once a state's past vote is taken into account, which they put down to population change in the South. A marker that no longer adds anything only makes a model more complicated, so their 2024 forecast leaves it out (Enns and colleagues 2024, and their online appendix 3). The Nowcast runs that 2024 version, so it has no Southern-states term either.</p>
+    <p><b>What the back-tests do with it.</b> The authors' own code keeps the term in every before-the-fact forecast through 2020, because that is how the model was run at the time. The track record above does the same. Run that way, the approval model's back-tests reproduce the accuracy the paper reports: 91% of states called from 1984 to 2020, 95% from 2004, and only Georgia missed in 2020.</p>
+    <table class="mt mt-wrap">
+      <caption>The approval model's back-test, with and without the term: states called of 50, and the states missed</caption>
+      <thead><tr><th scope="col"></th><th scope="col">With the term</th><th scope="col">Without it</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">2008</th><td>47<span>IN, MO, NC</span></td><td>47<span>AR, IN, MO</span></td></tr>
+        <tr><th scope="row">2012</th><td>47<span>FL, IA, VA</span></td><td>46<span>CO, FL, IA, OH</span></td></tr>
+        <tr><th scope="row">2016</th><td>46<span>IA, MI, PA, WI</span></td><td>46<span>IA, MI, PA, WI</span></td></tr>
+        <tr><th scope="row">2020</th><td>49<span>GA</span></td><td>47<span>AZ, FL, GA</span></td></tr>
+        <tr class="avg"><th scope="row">All four, of 200</th><td>189</td><td>186</td></tr>
+      </tbody>
+    </table>
+    <p class="small">2024 is not in the table because the authors' 2024 forecast has no such term. With the term the model calls three more states over these elections, most of them in 2020, where it misses only Georgia, as the authors' published forecast did. Its forecast of the national vote moves by a tenth or two (55.5, 50.0, 51.2 and 56.1 with the term; 55.7, 49.9, 51.3 and 56.0 without). Its average miss in a state is slightly larger with the term, 2.69 points against 2.60 over 2008 to 2024, because the term shifts all eleven Southern states at once.</p>
+    <p class="small">The Nowcast's own record is the same either way: 47, 49, 46 and 48 states called, and a national miss of 1.0 points. Until November 20, 2026 this site left the term out of every back-test, so its approval-model record read 236 of 250 state results, not 239, and its 2020 back-test missed three states where the authors' missed one.</p>
+  </section>
+
+  <section class="stack m-sec">
     <h2>Published forecasts and these back-tests</h2>
-    <p><b>The back-tests apply today's version of each model to every year.</b> Before each election the authors refit their models and sometimes revise them, so the forecasts they actually published came from the version they used at the time. Where both exist, they compare like this.</p>
+    <p><b>The back-tests rerun each model on the data in its authors' latest files.</b> Before each election the authors refit their models and sometimes revise them or their data, so a forecast they actually published can differ from its back-test. Where both exist, they compare like this.</p>
     <div class="cols2">
       <table class="mt">
         <caption>Approval and fundamentals model (Enns and colleagues)</caption>
         <thead><tr><th scope="col"></th><th scope="col">Published</th><th scope="col">Back-test</th><th scope="col">Result</th></tr></thead>
         <tbody>
-          <tr><th scope="row">2020 states called, of 50</th><td>49</td><td>47</td><td>—</td></tr>
-          <tr><th scope="row">2020 Democratic vote</th><td>54.5</td><td>56.0</td><td>52.2</td></tr>
+          <tr><th scope="row">2020 states called, of 50</th><td>49</td><td>49</td><td>—</td></tr>
+          <tr><th scope="row">2020 Democratic vote</th><td>54.5</td><td>56.1</td><td>52.2</td></tr>
           <tr><th scope="row">2024 states called, of 50</th><td>50</td><td>50</td><td>—</td></tr>
           <tr><th scope="row">2024 Democratic vote</th><td>49.7</td><td>49.4</td><td>49.2</td></tr>
         </tbody>
@@ -426,9 +447,9 @@
       </table>
     </div>
     <p class="small">Democratic share of the two-party vote, in percent. Rows of states called have no result of their own: the count already compares each forecast with the results. Enns and colleagues' 2020 forecast missed only Georgia (Enns and Lagodny 2021); their 2024 forecast had Trump at exactly 312 electoral votes. DeSart's 2020 forecast, made from October 2019 polls, missed Florida and North Carolina; the back-test reproduces its state forecasts exactly, because his model had the same design then (his replication files for 2020). His 2016 figure is his national forecast as reported in his 2024 paper (table 1), which gives no count of states for that year; his 2024 forecast was published a year before the election. Published figures are the authors' own national numbers; back-tests and results are for the 50 states, as in the tables above, which moves a figure by a tenth of a point at most.</p>
-    <p class="small">The authors' own versions did as well as the back-tests or better: two more states and 1.5 points closer in 2020 for Enns and colleagues, and no difference to speak of for DeSart. The 2020 gap comes from changes Enns and colleagues made for 2024, which the back-test applies to 2020 as well. They dropped an indicator for Southern states that their 2020 model had: put it back and the back-test also misses only Georgia. Putting it back does not close the gap in the national vote; that part comes from the data they revised for 2024, with state approval re-estimated from more surveys and the 2020 economy measured differently.</p>
+    <p class="small">The back-tests call the same states as the forecasts the authors published: 49 of 50 in 2020 for Enns and colleagues, missing only Georgia, and no difference to speak of for DeSart. On the national vote their published 2020 forecast was 1.6 points closer than the back-test, 54.5 against 56.1. That gap comes from the data, which the authors revised for 2024: state approval was re-estimated from more surveys, and the 2020 economy is measured differently.</p>
     <p><b>What this means for 2028.</b> The published records belong to the forecasts the authors made themselves, so the final 2028 forecast uses those: DeSart's and Enns and colleagues' own state forecasts, averaged half and half. The site's own runs of the two models stand in only until each author publishes, or if one does not. The site never chooses between versions itself.</p>
-    <p><b>What this means for the track record.</b> The 96% of states and 1-point national miss quoted on this site come from the back-tests, the harder of the two tests. They are a cautious figure: the forecasts the authors actually published did as well or better.</p>
+    <p><b>What this means for the track record.</b> The 96% of states and 1-point national miss quoted on this site come from the back-tests. They are a cautious figure: the forecasts the authors actually published did as well or better.</p>
   </section>
 
   <section class="stack m-sec">
@@ -439,24 +460,24 @@
         <caption>Back-tests of 2008 to 2024 (250 state results)</caption>
         <thead><tr><th scope="col">Third model</th><th scope="col">State miss</th><th scope="col">States called</th><th scope="col">National miss</th></tr></thead>
         <tbody>
-          <tr><th scope="row">Lichtman's 6 objective keys, counted</th><td>1.92</td><td>239</td><td>0.78</td></tr>
-          <tr><th scope="row">All 13 of Lichtman's keys, counted</th><td>2.04</td><td>238</td><td>1.31</td></tr>
-          <tr><th scope="row">Primary Model</th><td>2.00</td><td>238</td><td>0.90</td></tr>
-          <tr><th scope="row">Time for Change</th><td>1.89</td><td>240</td><td>0.91</td></tr>
-          <tr><th scope="row">5 of them, without the third-party key</th><td>1.90</td><td>239</td><td>0.90</td></tr>
-          <tr class="avg"><th scope="row">None: the first two alone (used)</th><td>2.10</td><td>240</td><td>0.99</td></tr>
+          <tr><th scope="row">Lichtman's 6 objective keys, counted</th><td>1.98</td><td>239</td><td>0.78</td></tr>
+          <tr><th scope="row">All 13 of Lichtman's keys, counted</th><td>2.11</td><td>238</td><td>1.32</td></tr>
+          <tr><th scope="row">Primary Model</th><td>2.05</td><td>237</td><td>0.92</td></tr>
+          <tr><th scope="row">Time for Change</th><td>1.96</td><td>240</td><td>0.91</td></tr>
+          <tr><th scope="row">5 of them, without the third-party key</th><td>1.97</td><td>239</td><td>0.89</td></tr>
+          <tr class="avg"><th scope="row">None: the first two alone (used)</th><td>2.17</td><td>240</td><td>0.98</td></tr>
         </tbody>
       </table>
       <table class="mt">
         <caption>The same, leaving out 2020 (200 state results)</caption>
         <thead><tr><th scope="col">Third model</th><th scope="col">State miss</th><th scope="col">States called</th><th scope="col">National miss</th></tr></thead>
         <tbody>
-          <tr><th scope="row">Lichtman's 6 objective keys, counted</th><td>1.98</td><td>192</td><td>0.60</td></tr>
-          <tr><th scope="row">All 13 of Lichtman's keys, counted</th><td>2.10</td><td>191</td><td>1.11</td></tr>
-          <tr><th scope="row">Primary Model</th><td>1.99</td><td>191</td><td>1.07</td></tr>
-          <tr><th scope="row">Time for Change</th><td>1.95</td><td>192</td><td>0.81</td></tr>
-          <tr><th scope="row">5 of them, without the third-party key</th><td>1.96</td><td>192</td><td>0.69</td></tr>
-          <tr class="avg"><th scope="row">None: the first two alone (used)</th><td>1.99</td><td>192</td><td>0.43</td></tr>
+          <tr><th scope="row">Lichtman's 6 objective keys, counted</th><td>2.03</td><td>191</td><td>0.59</td></tr>
+          <tr><th scope="row">All 13 of Lichtman's keys, counted</th><td>2.15</td><td>191</td><td>1.11</td></tr>
+          <tr><th scope="row">Primary Model</th><td>2.05</td><td>190</td><td>1.10</td></tr>
+          <tr><th scope="row">Time for Change</th><td>2.01</td><td>192</td><td>0.80</td></tr>
+          <tr><th scope="row">5 of them, without the third-party key</th><td>2.01</td><td>192</td><td>0.68</td></tr>
+          <tr class="avg"><th scope="row">None: the first two alone (used)</th><td>2.03</td><td>192</td><td>0.40</td></tr>
         </tbody>
       </table>
     </div>
@@ -464,7 +485,7 @@
     <p>Some third models look a little better than none in the first table: the objective keys and Time for Change all lower the state miss by about 0.2 points and the national miss by 0.1 to 0.2. <b>That is not enough to act on, for three reasons.</b></p>
     <ul class="small rules">
       <li><b>The whole gain is one election.</b> In 2020 both models overshot the Democrat by about 3 points, and anything that pulled the other way helped. Leave 2020 out (second table) and no third model beats none on the national vote.</li>
-      <li><b>Choosing by the back-test does not survive a fair test.</b> For each of the five elections, the third model with the best national record in the other four was picked and then scored on the one left out. The pick changed almost every time (Time for Change, six keys, the Primary Model, none, six keys) and the result was a national miss of 1.46 points, worse than the 0.99 from using no third model at all.</li>
+      <li><b>Choosing by the back-test does not survive a fair test.</b> For each of the five elections, the third model with the best national record in the other four was picked and then scored on the one left out. The pick changed almost every time (Time for Change, six keys, the Primary Model, none, six keys) and the result was a national miss of 1.46 points, worse than the 0.98 from using no third model at all.</li>
       <li><b>The longer test does not back a third model either.</b> Forecasting each election from 1996 to 2024 from all the others, adding the keys leaves the national miss unchanged at 1.0 and calls one fewer winner.</li>
     </ul>
     <p><b>So the Nowcast uses the two published models and nothing else.</b></p>
@@ -476,7 +497,7 @@
     <p><b>What is left involves no choosing.</b> The two state models are published models run with their authors' equations; nothing in them was tuned here. They are averaged with equal weights, the default when there is no strong reason for anything else. The record quoted on this site is that plain average's record. Each back-test forecast uses only the elections before it. And the method is now fixed: it was frozen on November 12, 2026, before any 2028 result could inform it. Three corrections were made on November 20, 2026, each to follow the approval model's paper more closely; they are listed with their effect under How they are combined.</p>
     <p><b>The evidence is still thinner than it looks.</b> There are 250 state results, but states move together in any one year, so they amount to about five independent tests. A 1.0-point national miss and 96% of states is what the method did on those five; 2020 shows it can miss by 3 points when both models err the same way.</p>
     <p><b>Primary Model.</b> Norpoth's forecasts as he published them: 50.1% for Obama in 2008, 53.2% for Obama in 2012 and 47.5% for Clinton in 2016, then electoral votes only, 362 for Trump in 2020 and 315 for the Democrat in 2024. The last two were turned into the national vote that would produce them on the previous map. On its own the model missed the national vote by 3.8 points on average and the electoral vote by 64, against 1.0 and 22 for the Nowcast's average. It cannot run until the first primaries in early 2028, so it was left out.</p>
-    <p><b>Time for Change.</b> Abramowitz's model predicts the national vote from the president's June net approval, second-quarter economic growth and whether the president's party is seeking a second term. Refitted from public data (Gallup's June approval and the government's growth figures, as compiled for Harvard's Gov 1347 forecasting course), it reproduces his 2024 forecast to within 0.3 points. It needs a judgment call whenever the economy has a shock like the 2020 lockdown quarter, which is handled here as he handled it, without the growth term. As a third model it lowers the state miss from 2.10 points to 1.89 and the national miss from 0.99 to 0.91 over 2008 to 2024, but does worse than no third model without 2020. It reads mostly the same things as the state-level approval and fundamentals model, and it cannot run until late July 2028, so it was left out.</p>
+    <p><b>Time for Change.</b> Abramowitz's model predicts the national vote from the president's June net approval, second-quarter economic growth and whether the president's party is seeking a second term. Refitted from public data (Gallup's June approval and the government's growth figures, as compiled for Harvard's Gov 1347 forecasting course), it reproduces his 2024 forecast to within 0.3 points. It needs a judgment call whenever the economy has a shock like the 2020 lockdown quarter, which is handled here as he handled it, without the growth term. As a third model it lowers the state miss from 2.17 points to 1.96 and the national miss from 0.98 to 0.91 over 2008 to 2024, but on the national vote it does worse than no third model without 2020. It reads mostly the same things as the state-level approval and fundamentals model, and it cannot run until late July 2028, so it was left out.</p>
     <p>The Nowcast page shows each model on its own next to the average, simulated the same way.</p>
   </section>
 
@@ -485,7 +506,7 @@
       <h2 style="margin-bottom:14px">Uncertainty</h2>
       <p>As in the authors' code: each forecast draws the coefficients 10,000 times, together, from their covariance; adds model error with a standard deviation equal to the model's root mean square error; and repeats for seven values of the economic weighting, 0.52 to 0.58. That makes 70,000 simulations. The Nowcast uses the same simulation for the averaged forecast.</p>
       <p><b>What that means for the average.</b> Neither paper simulates an average of two models, so this part is the site's own adaptation of the authors' simulation, not something the authors designed or tested. In each simulation the coefficients drawn are the approval model's; the long-range model's forecast is held at its point value; and the model error added is the approval model's in full. The average has missed by less than that model alone, so the uncertainty shown is on the wide side: it is not fitted to the average's own record.</p>
-      <p><b>How it has held up.</b> Applying the same error to each back-test forecast of 2008 to 2024 (without the coefficient draws, which the live simulation adds and which make its ranges slightly wider still), the stated 50% range held 73% of the 250 state results, the 80% range 90% and the 90% range 95%; the simulation assumed misses of 3.6 points per state where the average's were 2.9. States rated Lean (67 in 100 on average) were won 80% of the time, Likely (90 in 100) 97%, and all 132 Solid states were won. The Democrat's chances would have been 90, 70, 60, 83 and 30 in 100 in 2008 to 2024, and the Democrat won the first, second and fourth. So the ranges have been wider than needed, and the odds more cautious than the results: that shows the simulation has not been overconfident, not that it is well calibrated. Five elections cannot settle that, and narrowing the ranges to fit them would be fitting the past, so the simulation keeps the authors' error model unchanged.</p>
+      <p><b>How it has held up.</b> Applying the same error to each back-test forecast of 2008 to 2024 (without the coefficient draws, which the live simulation adds and which make its ranges slightly wider still), the stated 50% range held 68% of the 250 state results, the 80% range 90% and the 90% range 94%; the simulation assumed misses of 3.5 points per state where the average's were 3.0. States rated Lean (66 in 100 on average) were won 77% of the time, Likely (90 in 100) 96%, and all 137 Solid states were won. The Democrat's chances would have been 91, 72, 61, 84 and 30 in 100 in 2008 to 2024, and the Democrat won the first, second and fourth. So the ranges have been wider than needed, and the odds more cautious than the results: that shows the simulation has not been overconfident, not that it is well calibrated. Five elections cannot settle that, and narrowing the ranges to fit them would be fitting the past, so the simulation keeps the authors' error model unchanged.</p>
       <p>The errors of different states are correlated, so when the model misses, it tends to miss the whole map in the same direction. The authors draw that correlation once for each weighting, between 0.70 and 0.97, and so does this site. Rerunning their code on their replication data gives Harris 27 in 100 in 2024, as published, and this site's engine reproduces it.</p>
       <p>The long-range model's own paper gives each state an independent error and shares none. That makes a national miss nearly impossible: its 95% range for the 2024 national vote was 49.4% to 51.9% Democratic, and the result, 49.3%, fell outside it. Its own record shows national misses of 1 to 2 points, which move every state together. So the Nowcast simulates both models with the correlated error above. This site's version of DeSart's equation, run with his independent errors on his 2024 inputs from his replication files, reproduces his published simulation (256 Democratic electoral votes on average, 95% between 218 and 306), which is how it was checked.</p>
       <p>Maine and Nebraska districts take the statewide forecast plus each district's gap from its state in the previous election, as in the authors' code.</p>
@@ -583,13 +604,13 @@
 
 <script src="us-states.js"></script>
 <script src="backtest2024.js?v=20261113a"></script>
-<script src="archive.js?v=20261120b" onerror="void 0"></script>
+<script src="archive.js?v=20261120c" onerror="void 0"></script>
 <script src="data.js"></script>
 <script src="nowcast.js" onerror="void 0"></script>
 <script src="history.js" onerror="void 0"></script>
 <script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261120a"></script>
 <script src="combine.js?v=20261113k"></script>
-<script src="app.js?v=20261120d"></script>
+<script src="app.js?v=20261120e"></script>
 </body>
 </html>

@@ -296,6 +296,11 @@ svg.usmap text.grp { font: 11px var(--font-body); fill: var(--muted); }
 .mt tbody th { font-weight: 400; color: var(--muted); text-align: left; padding-right: 10px; }
 .mt td { text-align: right; font-family: var(--font-num); font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; padding-left: 16px; }
 .mt tr.avg th, .mt tr.avg td { color: var(--ink); border-bottom: 0; }
+/* A table whose cells carry a figure and, under it, a short list. */
+.mt-wrap td { white-space: normal; vertical-align: top; }
+.mt-wrap td span { display: block; font: 13px/1.4 var(--font-body); color: var(--muted); }
+/* File names and long links in the Method page's notes may break anywhere, so they never widen a phone's page. */
+.method code, .method p a { overflow-wrap: anywhere; }
 
 /* Strip table */
 .st-tools { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }

@@ -971,7 +971,8 @@
     // What moved since the run before.
     const since = prev ? `since ${shortDay(prev.date)}` : '';
     const change = (now, then, unit, digits, partisan) => {
-      if (then === undefined || then === null || !prev) return `<span class="chg">${prev ? 'First day tracked' : 'First update'}</span>`;
+      if (!prev) return '';   // nothing earlier to compare with yet, so the figure stands alone
+      if (then === undefined || then === null) return '<span class="chg">First day tracked</span>';
       const d = now - then, r = +d.toFixed(digits);
       if (r === 0) return `<span class="chg">No change ${since}</span>`;
       const cls = partisan ? (d > 0 ? 'd-ink' : 'r-ink') : '';
@@ -985,7 +986,7 @@
       [fmt(S.demPopular), 'Expected Democratic vote', change(S.demPopular, prev && prev.demPopular, ' pts', 1, true)],
       [fmt(A.approve), 'Trump\'s approval', change(A.approve, prev && prev.approve, ' pts', 1)],
       [pollAvg === null ? '—' : fmt(pollAvg), 'Democrat\'s share in head-to-head polls', change(pollAvg, prev && prev.pollAvg, ' pts', 1, true)],
-      [monthName(E.through).replace(' ', '<br>'), 'Newest month of state economic data', `<span class="chg">${econNew ? 'New month added ' + since : prev ? 'No new month ' + since : 'First update'}</span>`],
+      [monthName(E.through).replace(' ', '<br>'), 'Newest month of state economic data', prev ? `<span class="chg">${econNew ? 'New month added ' : 'No new month '}${since}</span>` : ''],
     ].map(([v, l, c]) => `<div><span class="v">${v}</span><span class="l">${l}</span>${c}</div>`).join('');
 
     // ---- head-to-head polls ----
