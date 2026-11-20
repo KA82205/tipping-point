@@ -23,7 +23,7 @@ for i, name in enumerate(["Pollster A", "Pollster B", "Pollster C", "Pollster D"
     for d in (3, 12, 25):
         ap = 40 + rng.gauss(0, 2)
         polls.append({"pollster": name, "end_date": f"2026-11-{28 - d - i:02d}" if 28 - d - i > 0 else "2026-10-20",
-                      "sample_size": str(800 + 300 * i), "population": "rv", "internal": False, "partisan": None,
+                      "sample_size": str(800 + 300 * i), "population": "a" if i % 2 == 0 else "rv", "internal": False, "partisan": None,
                       "answers": [{"choice": "Approve", "pct": round(ap)}, {"choice": "Disapprove", "pct": round(96 - ap)}]})
 polls.append({"pollster": "Campaign Internal", "end_date": "2026-11-05", "sample_size": "500", "internal": True,
               "partisan": "R", "answers": [{"choice": "Approve", "pct": 70}, {"choice": "Disapprove", "pct": 28}]})

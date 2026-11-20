@@ -124,3 +124,20 @@ _rows, _skipped = candidates.general_matchups(_raw, dt.date(2026, 10, 1), dt.dat
 assert sorted(r["d"] for r in _rows) == ["Gavin Newsom", "Mark Cuban"], _rows
 assert _skipped == 4, _skipped
 print("ok (matchups)")
+
+
+# National approval: with populations=["a"] only polls of all adults count, as in the paper.
+import approval  # noqa: E402
+
+
+def _ap(name, day, pop, yes, no, n=1000):
+    return {"pollster": name, "end_date": day, "population": pop, "sample_size": n,
+            "answers": [{"choice": "Approve", "pct": yes}, {"choice": "Disapprove", "pct": no}]}
+_np = [_ap("A", "2026-11-10", "a", 34, 62), _ap("B", "2026-11-10", "rv", 40, 57), _ap("A", "2026-11-12", "rv", 36, 61, 900)]
+_all = approval.national_average(_np, dt.date(2026, 10, 20), dt.date(2026, 11, 19))
+_ad = approval.national_average(_np, dt.date(2026, 10, 20), dt.date(2026, 11, 19), populations=["a"])
+assert _all["pollsters"] == 2 and _ad["pollsters"] == 1, (_all, _ad)
+assert _ad["approve"] == 34 and _ad["disapprove"] == 62, _ad   # pollster A's sample of adults, not its later sample of voters
+assert _all["approve"] > 36, _all
+assert CFG["approval"]["national_populations"] == ["a"]
+print("ok (approval of all adults)")
