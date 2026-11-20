@@ -534,7 +534,7 @@
       <p>Models tested and left out: Lichtman, <em>The Keys to the White House</em>, his ratings for 1864–2024 as tabulated on <a href="https://en.wikipedia.org/wiki/The_Keys_to_the_White_House">Wikipedia</a>; Norpoth's forecasts from his articles in <em>PS: Political Science &amp; Politics</em> (2008, 2012, 2016, 2020) and, for 2024, Stony Brook University; Abramowitz (2024), <a href="https://centerforpolitics.org/crystalball/">Sabato's Crystal Ball</a>.</p>
       <p>On averaging forecasts and on states moving together: Graefe, Armstrong, Jones &amp; Cuzán (2014), <a href="https://doi.org/10.1016/j.ijforecast.2013.02.005">“Combining Forecasts: An Application to Elections”</a>, <em>International Journal of Forecasting</em>; Graefe, Küchenhoff, Stierle &amp; Riedl (2015), <a href="https://doi.org/10.1016/j.ijforecast.2014.12.001">“Limitations of Ensemble Bayesian Model Averaging for Forecasting Social Science Problems”</a>, <em>International Journal of Forecasting</em>; Jackman (2014), <a href="https://doi.org/10.1017/S1049096514000109">“The Predictive Power of Uniform Swing”</a>, <em>PS: Political Science &amp; Politics</em>.</p>
       <p>To reproduce the track record, the baseline, the tests of other weights and of states moving together, and the check of the simulated ranges: <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/backtest_2008_2024.py">pipeline/backtest_2008_2024.py</a> in the site's repository, run on the two papers' replication files. The Archive's pages for 2008, 2012 and 2016 come from the same back-test, written out state by state by <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/make_archive.py">pipeline/make_archive.py</a>.</p>
-      <p>The Archive's 2020 page shows the two forecasts as published. Enns and Lagodny's article prints its state forecasts only as a chart, in which every simulated outcome is a dot; <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/extract_fig3_2020.py">pipeline/extract_fig3_2020.py</a> reads the dots and averages them state by state. The result reproduces the article's own figures: the 25 contests it colors Democratic, their 290 electoral votes, a national vote of 54.5%, and a Biden win in 59 of 100 simulations. State figures read this way are good to about a tenth of a point. DeSart's 2020 state forecasts and state chances are from his replication file.</p>
+      <p>The Archive's 2020 page shows the two forecasts as published. Enns and Lagodny's article prints its state forecasts only as a chart, in which every simulated outcome is a dot; <a href="https://github.com/KA82205/tipping-point/blob/main/pipeline/extract_fig3_2020.py">pipeline/extract_fig3_2020.py</a> reads the dots and averages them state by state. The result reproduces the article's own figures: the 25 contests it colors Democratic, their 290 electoral votes, a national vote of 54.5%, and a Biden win in 59 of 100 simulations. State figures read this way are good to about a tenth of a point. DeSart's 2020 state forecasts and state chances are from his replication file. His chance of winning, 99.85%, is the one in <a href="https://doi.org/10.1017/S1049096520001468">his article</a> (table 2): the share of 100,000 simulated elections in which Biden won an Electoral College majority. Each state misses on its own in those simulations, and rerunning them from his state forecasts gives the same figure.</p>
       <p>State results in the Archive are official counts for the two nominees (<code>pipeline/results_2008_2020.json</code> and the certified 2024 returns), and the national result is the official two-party vote. Every year is scored on the 50 states, with Maine and Nebraska counted whole.</p>
       <p>2024 results: certified state returns. Map outlines: us-atlas (Census cartographic boundaries).</p>
     </div>
@@ -604,13 +604,13 @@
 
 <script src="us-states.js"></script>
 <script src="backtest2024.js?v=20261113a"></script>
-<script src="archive.js?v=20261120c" onerror="void 0"></script>
+<script src="archive.js?v=20261120d" onerror="void 0"></script>
 <script src="data.js"></script>
 <script src="nowcast.js" onerror="void 0"></script>
 <script src="history.js" onerror="void 0"></script>
 <script src="forecast.js" onerror="void 0"></script>
 <script src="engine.js?v=20261120a"></script>
 <script src="combine.js?v=20261113k"></script>
-<script src="app.js?v=20261120e"></script>
+<script src="app.js?v=20261120f"></script>
 </body>
 </html>

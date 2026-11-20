@@ -617,6 +617,8 @@
     const el = document.getElementById('insp-2024');
     if (!a || !byV[a]) {
       const e = NATv.fc - Y24.natActual, w = won24(), note = Y24.src[SRC[src24]].note;
+      // A chance its authors published keeps their own decimals where the page would otherwise say only ">99%" or "<1%".
+      const exact = word24() === 'forecast' && w.p != null && (w.p > 0.995 || w.p < 0.005);
       el.innerHTML = `<span class="tag">United States · 538 electoral votes</span><h2>National vote</h2>
         <dl class="kv">
           <div><dt>Forecast D share</dt><dd class="d-ink">${fmt(NATv.fc, 2)}</dd></div>
@@ -624,7 +626,7 @@
           <div><dt>Forecast R share</dt><dd class="r-ink">${fmt(100 - NATv.fc, 2)}</dd></div>
           <div><dt>Signed error (pred − actual)</dt><dd class="a-ink">${sgn(e)} pts</dd></div>
           <div><dt>Electoral votes</dt><dd>${w.name} ${w.ev} · actual ${w.act}</dd></div>
-          <div><dt>${w.name} win chance</dt><dd>${w.p == null ? 'Not on record' : pct(w.p)}</dd></div>
+          <div><dt>${w.name} win chance</dt><dd>${w.p == null ? 'Not on record' : exact ? (100 * w.p).toFixed(2) + '%' : pct(w.p)}</dd></div>
           <div><dt>Winner</dt><dd style="color:${w.called ? 'var(--ok)' : 'var(--rep-ink)'}">${w.called ? 'Called' : 'Missed'}</dd></div>
         </dl>
         <div class="stack" style="gap:6px"><div class="strip-scale num"><span>30%</span><span>50%</span><span>70%</span></div><div class="strip">${strip({ f: NATv.fc, a: Y24.natActual })}</div></div>
