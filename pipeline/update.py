@@ -324,14 +324,14 @@ def main():
                 gap, gap_kind, g_lo = g, kind, lo
                 gap_basis = basis if usual else f"{basis} from the last {days} days"
                 break
-    # ASSUMPTION (not in the paper), daily Nowcast only: a gap measured from fewer surveys than the authors had
-    # for 2024 (five) is counted only in part, reaching full weight at full_weight_polls surveys. In the paper's
-    # own window (June 1 - July 30, 2028), and so in the final forecast, the gap is applied in full, as the authors do.
+    # ASSUMPTION (not in the paper), daily Nowcast only: a gap measured from few polls is counted only in
+    # part, reaching full weight at full_weight_polls polls of the vice president. In the paper's own window
+    # (June 1 - July 30, 2028), and so in the final forecast, the gap is applied in full, as the authors do.
     gap_raw, gap_polls, gap_weight = gap, None, 1.0
     if gap is not None and vpc.get("mode") != "manual":
         m = re.search(r"\d+", gap_basis)
         gap_polls = int(m.group()) if m else 0
-        full = vpc.get("full_weight_polls", 5)
+        full = vpc.get("full_weight_polls", 20)
         gap_weight = min(1.0, gap_polls / full) if full and mode != "official" else 1.0
         if gap_weight < 1:
             gap = gap_raw * gap_weight
