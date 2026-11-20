@@ -1,3 +1,4 @@
 time_utc,date,dem_win_before,dem_win_after,what_changed
 2026-11-20T13:58:48Z,2026-11-20,,0.5606,Record starts.
 2026-11-20T14:39:37Z,2026-11-20,0.5606,0.5606,Code changed: docs/combine.js.
+2026-11-20T14:40:49Z,2026-11-20,0.5606,0.5606,"Code changed: pipeline/update.py, pipeline/run_forecast.js."

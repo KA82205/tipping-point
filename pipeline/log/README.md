@@ -12,7 +12,9 @@ Kept for later research. Nothing on the site reads these files. The daily run wr
 
 Days are US Eastern dates. The record starts on November 20, 2026.
 
-The two models recorded here are the site's own runs. When the authors' own 2028 forecasts are put on the site,
-the site's own runs keep being computed and recorded here, marked "site run". After the election that allows a
-three-way comparison with the result: the authors' forecasts, the site's own runs on the day before each was
-published, and the site's own runs on the last day.
+Two sets of numbers sit side by side. The plain columns are what the site shows. The columns that start with
+`site_run` are the site's own runs of the two models. Until an author's own 2028 forecast is put on the site the
+two sets are the same. From then on the plain columns hold the authors' forecast for that model (the columns
+`approval_model_from` and `long_range_from` say so) and the `site_run` columns keep the site's own run. After the
+election that allows a three-way comparison with the result: the authors' forecasts, the site's own runs on the
+day before each was published, and the site's own runs on the last day.
