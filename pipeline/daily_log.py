@@ -146,7 +146,9 @@ def describe_changes(prev, cur):
     came = [name(p) for p in hb if key(p) not in {key(q) for q in ha}]
     went = [name(p) for p in ha if key(p) not in {key(q) for q in hb}]
     ma, mb = (a.get("models") or {}).get("polls") or {}, (b.get("models") or {}).get("polls") or {}
-    if came or went or ma != mb:
+    # Compared to two decimals: records before November 21, 2026 hold the average rounded, later ones in full.
+    shown = lambda m: (None if m.get("avg") is None else round(m["avg"], 2), m.get("n"))  # noqa: E731
+    if came or went or shown(ma) != shown(mb):
         now = f"Democrats average {_pct(mb.get('avg'))} in {mb.get('n', 0)} matchups" if mb else "none in the window"
         was = f"{_pct(ma.get('avg'))} in {ma.get('n', 0)}" if ma else "none"
         out.append(f"Head-to-head polls: {now} (was {was}){_in_out(came, went)}.")
@@ -157,7 +159,10 @@ def describe_changes(prev, cur):
     if ea != eb:
         out.append(f"State economies: now through {_month(eb)} (was {_month(ea)}).")
     elif econ(a) != econ(b):
-        out.append("State economy figures revised by their source, same month.")
+        # Either the source revised a month it had already published, or the site's own sums changed.
+        recoded = (prev.get("files") or {}).get("pipeline/economy.py") != (cur.get("files") or {}).get("pipeline/economy.py")
+        out.append("State economy figures changed with the code that works them out, same month." if recoded
+                   else "State economy figures revised by their source, same month.")
 
     # The copy of the state approval figures, which is refreshed by hand.
     sa, sb = a["approval"].get("state_data") or {}, b["approval"].get("state_data") or {}
@@ -284,38 +289,40 @@ def record(payload, cfg, today, approval_polls=None, own=None, log_dir=LOG_DIR, 
     os_, om = o["summary"], o.get("models") or {}
     omodel = lambda k, f: (om.get(k) or {}).get(f)  # noqa: E731
     own_state = {x["abbr"]: x for x in o.get("states") or []}
+    # The tables keep shares to two decimals and chances to four. The day's file (days/) has every figure in full.
+    r2 = lambda x: None if x is None else round(x, 2)  # noqa: E731
+    r4 = lambda x: None if x is None else round(x, 4)  # noqa: E731
     _upsert(os.path.join(log_dir, "daily.csv"), DAILY_FIELDS, [{
         "date": day, "last_run_utc": N.get("generated_at"), "mode": N.get("mode"),
         "dem_win": round(s["pDemWin"], 4), "tie": round(s["pTie"], 4),
         "dem_popular_vote": round(s["demPopular"], 2), "dem_electoral_votes": s["demEvPoint"],
-        "approval_model_dem_win": model("enns", "pDemWin"), "approval_model_dem_popular_vote": model("enns", "demPopular"),
+        "approval_model_dem_win": r4(model("enns", "pDemWin")), "approval_model_dem_popular_vote": r2(model("enns", "demPopular")),
         "approval_model_from": src.get("enns", "site run"),
-        "long_range_dem_win": model("desart", "pDemWin"), "long_range_dem_popular_vote": model("desart", "demPopular"),
+        "long_range_dem_win": r4(model("desart", "pDemWin")), "long_range_dem_popular_vote": r2(model("desart", "demPopular")),
         "long_range_from": src.get("desart", "site run"),
         "trump_approve": ap.get("approve"), "trump_disapprove": ap.get("disapprove"),
         "approval_pollsters": ap.get("pollsters"), "approval_polls": len(cur.get("approval_polls") or ap.get("polls") or []),
         "approval_window_start": (ap.get("window") or [None, None])[0], "approval_window_end": (ap.get("window") or [None, None])[1],
-        "head_to_head_dem_average": polls_avg.get("avg"), "head_to_head_matchups": polls_avg.get("n"),
+        "head_to_head_dem_average": r2(polls_avg.get("avg")), "head_to_head_matchups": polls_avg.get("n"),
         "economy_through": (N.get("economy") or {}).get("through"),
         "vp_adjustment": vp.get("gap"), "vp_gap_measured": vp.get("raw_gap"), "vp_polls": vp.get("polls"), "vp_weight": vp.get("weight"),
         "state_approval_copy": sd.get("as_of"), "state_gap_scale": sd.get("gap_scale"),
         "dem_nominee": who("dem"), "rep_nominee": who("rep"),
         "site_run_dem_win": round(os_["pDemWin"], 4), "site_run_dem_popular_vote": round(os_["demPopular"], 2),
         "site_run_dem_electoral_votes": os_["demEvPoint"],
-        "site_run_approval_model_dem_win": omodel("enns", "pDemWin"), "site_run_approval_model_dem_popular_vote": omodel("enns", "demPopular"),
-        "site_run_long_range_dem_win": omodel("desart", "pDemWin"), "site_run_long_range_dem_popular_vote": omodel("desart", "demPopular"),
+        "site_run_approval_model_dem_win": r4(omodel("enns", "pDemWin")), "site_run_approval_model_dem_popular_vote": r2(omodel("enns", "demPopular")),
+        "site_run_long_range_dem_win": r4(omodel("desart", "pDemWin")), "site_run_long_range_dem_popular_vote": r2(omodel("desart", "demPopular")),
     }], day)
-    r4 = lambda x: None if x is None else round(x, 4)  # noqa: E731
     _upsert(os.path.join(log_dir, "states.csv"), STATE_FIELDS, [{
-        "date": day, "state": x["abbr"], "electoral_votes": x.get("ev"), "nowcast_dem_share": x.get("demShare"),
+        "date": day, "state": x["abbr"], "electoral_votes": x.get("ev"), "nowcast_dem_share": r2(x.get("demShare")),
         "dem_win": r4(x.get("pDem")), "rating": x.get("rating"),
-        "approval_model_dem_share": x.get("enns"), "approval_model_dem_win": r4(x.get("ennsP")),
-        "long_range_dem_share": x.get("desart"), "long_range_dem_win": r4(x.get("desartP")),
+        "approval_model_dem_share": r2(x.get("enns")), "approval_model_dem_win": r4(x.get("ennsP")),
+        "long_range_dem_share": r2(x.get("desart")), "long_range_dem_win": r4(x.get("desartP")),
         "trump_approval_used": x.get("approve"), "economy": x.get("econ"),
-        "site_run_nowcast_dem_share": (own_state.get(x["abbr"]) or {}).get("demShare"),
+        "site_run_nowcast_dem_share": r2((own_state.get(x["abbr"]) or {}).get("demShare")),
         "site_run_dem_win": r4((own_state.get(x["abbr"]) or {}).get("pDem")),
-        "site_run_approval_model_dem_share": (own_state.get(x["abbr"]) or {}).get("enns"),
-        "site_run_long_range_dem_share": (own_state.get(x["abbr"]) or {}).get("desart"),
+        "site_run_approval_model_dem_share": r2((own_state.get(x["abbr"]) or {}).get("enns")),
+        "site_run_long_range_dem_share": r2((own_state.get(x["abbr"]) or {}).get("desart")),
     } for x in N.get("states") or []], day)
 
     if changes:

@@ -79,7 +79,13 @@ def build_economy(cfg, api_key=None, cache_dir=None, fetch=fetch_fred):
             v, last_m = weighted_change(raw[st], el["term_start_month"], el["economy_end_month"], d)
             vals[st] = sign * v
             last = last_m if last is None or last_m < last else last
+        # The Philadelphia Fed has no index for the District of Columbia. As in the authors' data, the District is
+        # treated as a state whose index is Maryland's and Virginia's averaged month by month. That is not the same
+        # as averaging the two states' finished figures, which gives each state half: averaging the indexes gives
+        # each state its share of the two indexes (Virginia 0.47 to 0.51 in the authors' replication file).
         a, b = e["dc_from"]
-        vals["DC"] = (vals[a] + vals[b]) / 2
+        other = dict(raw[b])
+        dc = [(m, (v + other[m]) / 2) for m, v in raw[a] if m in other]
+        vals["DC"] = sign * weighted_change(dc, el["term_start_month"], el["economy_end_month"], d)[0]
         out[d] = vals
     return out, last, raw

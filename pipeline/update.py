@@ -95,7 +95,9 @@ def econ_summary(raw, last):
     for prev, m in zip(months, months[1:]):
         ch = sorted(100 * (v[m] / v[prev] - 1) for v in series.values() if m in v and prev in v and v[prev])
         if len(ch) >= 40:
-            monthly.append({"m": m, "median": round(ch[len(ch) // 2], 3), "up": sum(1 for c in ch if c > 0), "n": len(ch)})
+            mid = len(ch) // 2
+            median = ch[mid] if len(ch) % 2 else (ch[mid - 1] + ch[mid]) / 2   # 50 states: halfway between the middle two
+            monthly.append({"m": m, "median": round(median, 3), "up": sum(1 for c in ch if c > 0), "n": len(ch)})
     latest = {}
     if len(months) >= 2:
         prev, m = months[-2], months[-1]
@@ -183,13 +185,16 @@ def run_models(sim_in):
 
 
 def brief(m):
-    return m and {"pDemWin": round(m["pDemWin"], 4), "pTie": round(m["pTie"], 4), "demPopular": round(m["demPopular"], 2)}
+    """A model's headline figures, exactly as the run gave them. Nothing the site prints is rounded here: the pages
+    round once, when they print, so a figure reads the same on every page. (Rounded here to two decimals and then
+    again on the page to one, 49.846 came out as 49.9 on one page and 49.8 on another.)"""
+    return m and {"pDemWin": m["pDemWin"], "pTie": m["pTie"], "demPopular": m["demPopular"]}
 
 
 def state_rows(res, extra):
-    """One row per state and district, as the site reads them. extra: {abbr: {"approve", "econ"}} for the states."""
-    return [{**{k: (round(v, 2) if k in ("demShare", "enns", "desart") else v) for k, v in s.items()},
-             "pDem": round(s["pDem"], 4),
+    """One row per state and district, as the site reads them, with the run's figures unrounded (see brief).
+    extra: {abbr: {"approve", "econ"}} for the states."""
+    return [{**s,
              "approve": extra[s["abbr"]]["approve"] if s["abbr"] in extra else None,
              "econ": extra[s["abbr"]]["econ"] if s["abbr"] in extra else None}
             for s in res["states"]]
@@ -203,7 +208,7 @@ def results_into(payload, out, extra):
     payload["summary"] = {"pDemWin": res["pDemWin"], "pTie": res["pTie"], "demPopular": res["demPopular"],
                           "demEvPoint": dem_ev_point, "simulations": res["simulations"]}
     payload["models"] = {"enns": brief(out["enns"]), "desart": brief(out["desart"]),
-                         "polls": out["info"]["polls"] and {"avg": round(out["info"]["polls"]["avg"], 2), "n": out["info"]["polls"]["n"]}}
+                         "polls": out["info"]["polls"] and {"avg": out["info"]["polls"]["avg"], "n": out["info"]["polls"]["n"]}}
     payload["evHistogram"] = [round(x, 5) for x in res["evHistogram"]]
     payload["states"] = state_rows(res, extra)
     return res, dem_ev_point
@@ -229,13 +234,12 @@ def final_forecast(payload, out, tickets, desart_final, day, published, updated=
     final = {"published": day, "tickets": tickets,
              "approval": payload["approval"], "economy": payload["economy"], "vp": payload["vp"],
              "desart_polls": {"window": desart_final["window"], "n": len(desart_final["polls"]),
-                              "avg": out["info"]["polls"] and round(out["info"]["polls"]["avg"], 2)},
+                              "avg": out["info"]["polls"] and out["info"]["polls"]["avg"]},
              "summary": {"pDemWin": res["pDemWin"], "pTie": res["pTie"], "demPopular": res["demPopular"],
                          "demEvPoint": sum(s["ev"] for s in res["states"] if s["demShare"] > 50)},
              "models": {"enns": brief(out["enns"]), "desart": brief(out["desart"])},
              "evHistogram": [round(x, 5) for x in res["evHistogram"]],
-             "states": [{**{k: (round(v, 2) if k in ("demShare", "enns", "desart") else v) for k, v in s.items()},
-                         "pDem": round(s["pDem"], 4)} for s in res["states"]],
+             "states": [dict(s) for s in res["states"]],
              "sources": sources_of(published),
              "authors": {m: {k: v for k, v in p.items() if k != "states"} for m, p in published.items()},
              "published_id": published_id(published)}
@@ -652,8 +656,9 @@ def main():
         # Today's row is replaced; a row dated after today (written by a run stamped with the wrong day) is dropped.
         hist = [h for h in hist if h.get("v") == 5 and h["date"] < today.isoformat()]
         mp = payload["models"]
-        hist.append({"v": 5, "date": today.isoformat(), "pDemWin": round(res["pDemWin"], 4),
-                     "demPopular": round(res["demPopular"], 2), "approve": round(nat["approve"], 1),
+        # The run's figures go in unrounded, like the day's own page, so the log prints what the page printed.
+        hist.append({"v": 5, "date": today.isoformat(), "pDemWin": res["pDemWin"],
+                     "demPopular": res["demPopular"], "approve": round(nat["approve"], 1),
                      "econThrough": econ_last,
                      # Added Nov 2026 for the "latest data" page; earlier days lack them.
                      "enns": mp["enns"] and mp["enns"]["pDemWin"], "desart": mp["desart"] and mp["desart"]["pDemWin"],
