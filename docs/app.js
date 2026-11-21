@@ -41,7 +41,8 @@
   const STATE_LIST = R.filter(r => r.abbr.length === 2).map(r => [r.abbr, r.name]).sort((a, b) => a[1].localeCompare(b[1]));
   const dname = a => a.length === 3 ? `${a.slice(0, 2)}-${a[2]}` : a;
   const fmt = (x, d = 1) => x.toFixed(d) + '%';
-  const sgn = (x, d = 2) => (x > 0 ? '+' : x < 0 ? '−' : '') + Math.abs(x).toFixed(d);
+  // A value that prints as zero carries no sign: "0.0", not "+0.0" or "−0.0".
+  const sgn = (x, d = 2) => { const s = Math.abs(x).toFixed(d); return (+s === 0 ? '' : x > 0 ? '+' : '−') + s; };
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // An author's own published 2028 forecast, once it is out and has been put in (pipeline/published/, by hand). It
   // replaces the site's own run of that model, so the page says whose numbers each half is.
@@ -545,7 +546,10 @@
 
   // ---------- dates ----------
   const ELECTION_DATE = new Date('2028-11-07T00:00:00-05:00');
-  const daysTo = d => Math.max(0, Math.floor((d - new Date()) / 86400000));
+  // Whole calendar days from today to that day, both in US Eastern time, which is how the Latest data page counts.
+  // (Counted as whole 24-hour periods up to the hour of publication, it read a day short for most of every day.)
+  const isoET = d => d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  const daysTo = d => Math.max(0, dayDiff(isoET(d), isoET(new Date())));
   const monthName = ym => new Date(ym + '-15').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const niceDate = iso => new Date(iso.length === 10 ? iso + 'T12:00:00' : iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   // How much of a state's gap in the state approval source counts: '' in full, 'half' at 0.5, otherwise a percentage.
@@ -1240,7 +1244,7 @@
     const body = document.getElementById('fc-body');
     const due = !F && new Date() >= FORECAST_DATE;   // the hour has come but this morning's run has not saved it yet
     document.getElementById('fc-head').innerHTML = F ? 'The 2028 forecast' : due ? 'The official prediction is being published. Check back in a little while.'
-      : `The official prediction will be made in <span id="cd-days">${daysTo(FORECAST_DATE)}</span> days`;
+      : 'The official prediction will be made on August 6, 2028';   // the clock under it counts the time left
     document.getElementById('cd-28').hidden = !!F || due;
     if (!R) { body.hidden = true; return; }
     body.hidden = false;
@@ -1299,8 +1303,7 @@
         : `What two published models say, averaged: ${pubName('enns', true)}, and the long-range model on head-to-head polls. <strong class="warn">This is not the forecast.</strong> The final forecast will average the two forecasts the authors publish for 2028. ${due}`;
     }
     const dEl = document.getElementById('d-forecast');
-    if (dEl && days < 1) { const p = dEl.parentNode; p.innerHTML = p.innerHTML.replace(/, in <span id="d-forecast"><\/span> days\./, ' today.'); } else if (dEl) dEl.textContent = days;
-    document.getElementById('cd-days').textContent = days;
+    if (dEl) { const p = dEl.parentNode; p.innerHTML = p.innerHTML.replace(/, in <span id="d-forecast"><\/span> days\./, days < 1 ? ' today.' : `, in <span id="d-forecast">${days}</span> ${days === 1 ? 'day' : 'days'}.`); }
     tickCountdown(); setInterval(tickCountdown, 1000);
     map28 = draw28();
     ramp(document.getElementById('ramp-2028'), 'nowcast');
