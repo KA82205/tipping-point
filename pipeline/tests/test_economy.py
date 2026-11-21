@@ -32,7 +32,28 @@ def test_nowcast_shift_full_data_is_identity():
     assert a == b
 
 
+def test_dc_is_the_two_indexes_averaged():
+    """The District of Columbia has no index of its own. As in the authors' data it is a state whose index is
+    Maryland's and Virginia's averaged month by month, which is not the average of their two finished figures."""
+    from economy import STATES, build_economy
+    fake = {st: CA for st in STATES}
+    fake["MD"] = [(m, 0.9 * v) for m, v in CA]                               # California's growth at a lower level
+    fake["VA"] = [(m, 150.0 + 0.9 * i) for i, (m, _) in enumerate(CA)]       # another path and another level
+    cfg = {"economy": {"fred_series_template": "{state}PHCI", "delta_grid": [0.55], "dc_from": ["MD", "VA"],
+                       "signed_by_incumbent_party": True},
+           "election": {"term_start_month": "2021-01", "economy_end_month": "2024-06", "incumbent_party": "R"}}
+    out, last, _ = build_economy(cfg, fetch=lambda sid, key, start: fake[sid[:2]])
+    v = out[0.55]
+    both = [(m, (a + b) / 2) for (m, a), (_, b) in zip(fake["MD"], fake["VA"])]
+    want = -weighted_change(both, "2021-01", "2024-06", 0.55)[0]             # signed: a Republican is president
+    assert last == "2024-06"
+    assert abs(v["DC"] - want) < 1e-12, (v["DC"], want)
+    assert abs(v["DC"] - (v["MD"] + v["VA"]) / 2) > 1e-4, "the two ways should differ when the indexes do"
+    assert min(v["MD"], v["VA"]) < v["DC"] < max(v["MD"], v["VA"])
+    assert abs(v["CA"] + weighted_change(CA, "2021-01", "2024-06", 0.55)[0]) < 1e-12   # the states are untouched
+
+
 if __name__ == "__main__":
     v, _ = weighted_change(CA, "2021-01", "2024-06", 0.55, nowcast=False)
     print(f"California 2024: {v:.9f} (paper 0.224461996)")
-    test_table_a2(); test_nowcast_shift_full_data_is_identity(); print("ok")
+    test_table_a2(); test_nowcast_shift_full_data_is_identity(); test_dc_is_the_two_indexes_averaged(); print("ok")
