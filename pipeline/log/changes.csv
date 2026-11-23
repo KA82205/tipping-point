@@ -4,3 +4,4 @@ time_utc,date,dem_win_before,dem_win_after,what_changed
 2026-11-20T14:40:49Z,2026-11-20,0.5606,0.5606,"Code changed: pipeline/update.py, pipeline/run_forecast.js."
 2026-11-21T14:04:03Z,2026-11-21,0.5606,0.5606,"State economy figures changed with the code that works them out, same month. Code changed: pipeline/update.py, pipeline/economy.py."
 2026-11-22T18:35:14Z,2026-11-22,0.5606,0.5596,"State approval figures refreshed: Civiqs copy of November 21, 2026 (was November 19, 2026). Settings changed: approval.state_csv_as_of ""2026-11-19"" to ""2026-11-21""."
+2026-11-23T18:12:01Z,2026-11-23,0.5596,0.5768,Approval average: 33.1% approve (was 34.0%); in: American Research Group to Nov 21.
