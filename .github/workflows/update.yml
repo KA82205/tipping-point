@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url || steps.deploy3.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -67,6 +67,23 @@ jobs:
         with:
           path: docs
       - id: deploy
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+
+      # GitHub Pages now and then refuses a deployment ("try again later") or cannot see the upload yet.
+      # Neither is a fault in the data, so wait and try again, twice, before calling the run failed.
+      - name: Wait before a second try
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 120
+      - id: deploy2
+        if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Wait before a third try
+        if: steps.deploy.outcome == 'failure' && steps.deploy2.outcome == 'failure'
+        run: sleep 300
+      - id: deploy3
+        if: steps.deploy.outcome == 'failure' && steps.deploy2.outcome == 'failure'
         uses: actions/deploy-pages@v4
 
       - name: Flag a failed data update
