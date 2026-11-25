@@ -53,7 +53,71 @@ def test_dc_is_the_two_indexes_averaged():
     assert abs(v["CA"] + weighted_change(CA, "2021-01", "2024-06", 0.55)[0]) < 1e-12   # the states are untouched
 
 
+def test_a_failed_read_uses_the_last_good_one():
+    """FRED answers some requests with HTTP 500. A state whose series cannot be read today keeps its last good read,
+    is reported as stale, and its saved copy is left alone; with no saved copy the error stands."""
+    import json
+    import tempfile
+    from economy import STATES, build_economy
+    cfg = {"economy": {"fred_series_template": "{state}PHCI", "delta_grid": [0.55], "dc_from": ["MD", "VA"]},
+           "election": {"term_start_month": "2021-01", "economy_end_month": "2024-06", "incumbent_party": "D"}}
+    good = lambda sid, key, start: CA                                                 # noqa: E731
+
+    def down_for_ohio(sid, key, start):
+        if sid.startswith("OH"):
+            raise OSError("HTTP Error 500: Internal Server Error")
+        return CA
+    with tempfile.TemporaryDirectory() as d:
+        want, _, _ = build_economy(cfg, cache_dir=d, fetch=good)                      # a good day fills the saved copies
+        before = open(os.path.join(d, "OHPHCI.json")).read()
+        stale = []
+        got, last, raw = build_economy(cfg, cache_dir=d, fetch=down_for_ohio, stale=stale)
+        assert stale == ["OH"] and got == want and last == "2024-06"
+        assert [tuple(x) for x in raw["OH"]] == CA and open(os.path.join(d, "OHPHCI.json")).read() == before
+        assert json.load(open(os.path.join(d, "CAPHCI.json")))[-1] == list(CA[-1])
+    with tempfile.TemporaryDirectory() as d:                                          # nothing saved: no state is guessed
+        try:
+            build_economy(cfg, cache_dir=d, fetch=down_for_ohio)
+        except OSError:
+            pass
+        else:
+            raise AssertionError("a state with no data must stop the run")
+
+
+def test_fred_is_asked_again_after_a_server_error():
+    """A 500 or a timeout is tried again; a rejected request (HTTP 400) is not."""
+    import io
+    import json
+    import urllib.error
+    import economy
+    calls, real = [], economy.urllib.request.urlopen
+    body = json.dumps({"observations": [{"date": "2026-09-01", "value": "101.5"}, {"date": "2026-10-01", "value": "."}]}).encode()
+
+    def flaky(url, timeout=None):
+        calls.append(url)
+        if len(calls) < 3:
+            raise urllib.error.HTTPError(url, 500, "Internal Server Error", None, None)
+        return io.BytesIO(body)
+
+    def rejected(url, timeout=None):
+        calls.append(url)
+        raise urllib.error.HTTPError(url, 400, "Bad Request", None, None)
+    try:
+        economy.urllib.request.urlopen = flaky
+        assert economy.fetch_fred("OHPHCI", "key", wait=0) == [("2026-09", 101.5)] and len(calls) == 3
+        calls.clear(); economy.urllib.request.urlopen = rejected
+        try:
+            economy.fetch_fred("OHPHCI", "key", wait=0)
+        except urllib.error.HTTPError:
+            assert len(calls) == 1
+        else:
+            raise AssertionError("a rejected request must raise")
+    finally:
+        economy.urllib.request.urlopen = real
+
+
 if __name__ == "__main__":
     v, _ = weighted_change(CA, "2021-01", "2024-06", 0.55, nowcast=False)
     print(f"California 2024: {v:.9f} (paper 0.224461996)")
-    test_table_a2(); test_nowcast_shift_full_data_is_identity(); test_dc_is_the_two_indexes_averaged(); print("ok")
+    test_table_a2(); test_nowcast_shift_full_data_is_identity(); test_dc_is_the_two_indexes_averaged()
+    test_a_failed_read_uses_the_last_good_one(); test_fred_is_asked_again_after_a_server_error(); print("ok")

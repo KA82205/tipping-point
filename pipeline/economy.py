@@ -7,6 +7,8 @@ the weighted average of the monthly changes.
 """
 import json
 import os
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -22,12 +24,27 @@ def month_index(ym):
     return y * 12 + (m - 1)
 
 
-def fetch_fred(series_id, api_key, start="2024-12-01"):
-    """Return [(YYYY-MM, value)] for a FRED series. Missing values ('.') are skipped."""
+def fetch_fred(series_id, api_key, start="2024-12-01", tries=4, wait=3.0):
+    """Return [(YYYY-MM, value)] for a FRED series. Missing values ('.') are skipped.
+
+    FRED now and then answers one request in fifty with HTTP 500, or not at all. Those faults pass, so a failed
+    read is tried again (after 3, 6 and 12 seconds) before it counts as failed. A request FRED rejects outright
+    (a bad key or series name, HTTP 4xx) is not tried again.
+    """
     qs = urllib.parse.urlencode({"series_id": series_id, "api_key": api_key,
                                  "file_type": "json", "observation_start": start})
-    with urllib.request.urlopen(f"{FRED_URL}?{qs}", timeout=30) as r:
-        obs = json.load(r)["observations"]
+    for attempt in range(tries):
+        try:
+            with urllib.request.urlopen(f"{FRED_URL}?{qs}", timeout=30) as r:
+                obs = json.load(r)["observations"]
+            break
+        except urllib.error.HTTPError as err:
+            if (err.code < 500 and err.code != 429) or attempt == tries - 1:
+                raise
+        except (urllib.error.URLError, TimeoutError, ValueError, KeyError):
+            if attempt == tries - 1:
+                raise
+        time.sleep(wait * 2 ** attempt)
     return [(o["date"][:7], float(o["value"])) for o in obs if o["value"] not in (".", "")]
 
 
@@ -59,17 +76,31 @@ def weighted_change(series, term_start, end_month, delta, nowcast=True):
     return num / den, months[-1]
 
 
-def build_economy(cfg, api_key=None, cache_dir=None, fetch=fetch_fred):
-    """Return {delta: {state: value}}, last_month, raw series. Signed toward the Democrat if configured."""
+def build_economy(cfg, api_key=None, cache_dir=None, fetch=fetch_fred, stale=None):
+    """Return {delta: {state: value}}, last_month, raw series. Signed toward the Democrat if configured.
+
+    If a state's series cannot be read today, the last good read of it (cache_dir) is used, and the state is added
+    to the list passed as `stale`. Without a last good read the error stands: no state is ever left out or guessed.
+    """
     e, el = cfg["economy"], cfg["election"]
     start = f"{int(el['term_start_month'][:4]) - 1}-12-01"
     raw = {}
     for st in STATES:
         sid = e["fred_series_template"].format(state=st)
-        raw[st] = fetch(sid, api_key, start)
-        if cache_dir:
+        saved = os.path.join(cache_dir, f"{sid}.json") if cache_dir else None
+        try:
+            raw[st] = fetch(sid, api_key, start)
+        except Exception as err:      # noqa: BLE001  (network faults come in many classes)
+            if not (saved and os.path.exists(saved)):
+                raise
+            raw[st] = [(m, v) for m, v in json.load(open(saved))]
+            if stale is not None:
+                stale.append(st)
+            print(f"WARNING: could not read {sid} from FRED ({err}); using the last good read, through {raw[st][-1][0]}")
+            continue
+        if saved:
             os.makedirs(cache_dir, exist_ok=True)
-            with open(os.path.join(cache_dir, f"{sid}.json"), "w") as f:
+            with open(saved, "w") as f:
                 json.dump(raw[st], f)
     sign = -1.0 if (e.get("signed_by_incumbent_party") and el["incumbent_party"] == "R") else 1.0
     out, last = {}, None

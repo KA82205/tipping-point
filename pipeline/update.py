@@ -403,7 +403,10 @@ def main():
         state_info["gap_scale"] = float(cfg["approval"].get("state_gap_scale", 1.0))   # the size each state's gap counts at
 
     # Economy and approval
-    econ, econ_last, econ_raw = economy.build_economy(cfg, None if fx else key, cache, fetch=fred)
+    econ_stale = []
+    econ, econ_last, econ_raw = economy.build_economy(cfg, None if fx else key, cache, fetch=fred, stale=econ_stale)
+    if econ_stale:
+        degraded.append("FRED state indexes")
     w_lo, w_hi, mode = approval.window_for(cfg, today)
     national_polls, state_polls = approval.merge_polls(polls, pr_raw)
     if pr_raw and not any(p.get("source") == "pollresults" for p in national_polls) and not state_polls:
