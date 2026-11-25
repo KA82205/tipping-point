@@ -8,3 +8,4 @@ time_utc,date,dem_win_before,dem_win_after,what_changed
 2026-11-24T17:47:46Z,2026-11-24,0.5768,0.5827,Approval average: 32.8% approve (was 33.1%); in: YouGov to Nov 23; out: YouGov to Nov 16.
 2026-11-25T11:31:09Z,2026-11-25,0.5827,0.583,"Approval average: still 32.8% approve; out: Leger to Oct 25. Code changed: pipeline/update.py, pipeline/economy.py."
 2026-11-25T17:52:04Z,2026-11-25,0.583,0.583,Code changed: pipeline/update.py.
+2026-11-25T18:06:58Z,2026-11-25,0.583,0.583,Code changed: pipeline/update.py.
