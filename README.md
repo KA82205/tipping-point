@@ -1,6 +1,6 @@
 # Tipping Point
 
-**Live site: https://ka82205.github.io/tipping-point/** (updated every morning)
+**Live site: https://ka82205.github.io/tipping-point/** (checked every hour, updated when a poll or a figure is new)
 
 A personal, non-commercial forecast of the 2028 US presidential election. It runs two published
 models state by state and averages them half and half:
@@ -17,12 +17,14 @@ would use today. The site's Method page documents every equation, test and depar
 
 - `docs/` is the website (plain HTML/CSS/JS, no build step). `docs/engine.js` is the approval and
   fundamentals model and the simulation; `docs/combine.js` adds the long-range model and averages
-  the two. The same code runs in the daily update and in the browser.
-- `pipeline/` fetches the data every day, builds the model inputs, runs both models and writes
-  `docs/nowcast.js` and `docs/history.js`. It also keeps a daily record in `pipeline/log/` (see below).
+  the two. The same code runs in the update and in the browser.
+- `pipeline/` fetches the data, builds the model inputs, runs both models and writes
+  `docs/nowcast.js` and `docs/history.js`. It also keeps a daily record in `pipeline/log/` and every
+  Nowcast that differed from the one before it in `docs/record/` (see below).
   `pipeline/published/` holds the authors' own 2028 forecasts once they are out and have been put in.
-- `.github/workflows/update.yml` runs the pipeline every morning and on every push, commits the new
-  data and deploys `docs/` to GitHub Pages.
+- `.github/workflows/update.yml` runs the pipeline every hour and on every push. When an input has
+  changed it commits the new data and deploys `docs/` to GitHub Pages; when nothing has, it stops
+  before the models are run (see "When it runs").
 
 The FRED key lives in a repository secret named `FRED_API_KEY`
 (Settings → Secrets and variables → Actions), so it never appears in the public code.
@@ -38,7 +40,7 @@ conducted.
 | November 7, 2027 | Long-range model fixed on polls conducted in October 2027, as DeSart does (`pipeline/frozen/desart_2028.json`). When DeSart publishes his own 2028 forecast, his state forecasts replace this run |
 | Until June 1, 2028 | Approval model: approval polls from the last 30 days, latest economic month |
 | June 2028 | Approval model switches to polls conducted June 1 to July 30, 2028, once ten pollsters have a poll in that window; economy through June |
-| August 6, 2028 | The site's own runs are frozen (`pipeline/frozen/forecast_2028.json`, `docs/forecast.js`) and the daily update stops. The forecast is posted with whatever the authors have published by then |
+| August 6, 2028 | The site's own runs are frozen (`pipeline/frozen/forecast_2028.json`, `docs/forecast.js`) and the updates stop. The forecast is posted with whatever the authors have published by then |
 
 **The final forecast is the authors' own** (set November 20, 2026). It will be the average of the two
 forecasts the authors themselves publish for 2028: DeSart's, about a year before the election, and
@@ -52,7 +54,7 @@ says so on the Method page.
 
 1. **DeSart publishes his 2028 forecast (expected November 2027).** His state forecasts replace the
    site's own run of his model as the long-range half and stay fixed. From then on the Nowcast is the
-   average of his published forecasts and the site's daily run of the approval model, so it moves
+   average of his published forecasts and the site's run of the approval model, so it moves
    only with approval and the economy.
 2. **Enns and colleagues publish theirs (expected late July 2028).** Their state forecasts replace the
    site's own run of their model. The forecast is then final: the average of the two published
@@ -92,10 +94,48 @@ the stand-in for it: the next run redoes the posted forecast from the inputs fro
 (`pipeline/frozen/nowcast_2028.json`). Tried on the two forecasts the authors published for 2024, this
 gives the Archive's 2024 figures (`pipeline/tests/test_uncertainty.js`).
 
-## The daily record
+## When it runs
 
-For later research, every daily run also writes to `pipeline/log/` (`pipeline/daily_log.py`). Nothing
-on the site reads it.
+The pipeline is started every hour. Each run reads the poll feeds and builds the models' inputs, then
+compares a fingerprint of those inputs, the settings and the code with the fingerprint of the run
+that made the published Nowcast (`pipeline/cache/fingerprint.json`). The time a run was made is not
+part of the fingerprint.
+
+- **Nothing new:** the run stops there. The models are not run again, nothing is saved and the site
+  is not deployed.
+- **Something new** (a poll in or out, a new month of state economies, a nominee, a setting, the
+  code): both models are run, the data are saved and the site is deployed.
+- **The first run of each day** always goes through, because the poll windows move with the day. So
+  does a run started by hand or by a push, and every run on a day when something is to be fixed for
+  good (the long-range model's polls from November 7, 2027; the final forecast from August 6, 2028).
+- **A feed that cannot be read this hour** is not a change. Outside the day's first run the published
+  Nowcast stands and the feed is tried again next hour, so a passing fault never moves the numbers.
+  The day's first run keeps the rules it always had: the last good copy is used and said to be so.
+- **FRED** is read when a release of the state indexes could be out: on working days at 8, 9, 10 and
+  11 in the morning, Eastern time, at 2 and 8 in the afternoon and evening of every day, and on the
+  day's first run. Between those hours the last good read in `pipeline/cache/` is used.
+- **The cutoffs do not move.** The long-range model still takes only polls conducted in October 2027,
+  fixed on November 7, 2027; the approval model's last run still takes polls conducted June 1 to
+  July 30, 2028; and once the final forecast is posted nothing runs again. Checking more often
+  changes how soon a poll inside a window is seen, not which polls count.
+
+A failed scheduled run is tried again the next hour. It is marked as failed at 7 a.m., 1 p.m. and
+7 p.m. Eastern only, so a fault that lasts is reported three times a day and a passing one not at all.
+
+The Margin reads the Nowcast. If this repository has a secret named `DISPATCH_TOKEN` (a token allowed
+to start workflows in the `the-margin` repository), The Margin is told as soon as a new Nowcast is
+live; without it The Margin finds the change at its own next hourly check.
+
+## The record
+
+**Every Nowcast, kept.** Each Nowcast that differs from the one before it (a tenth of a point in the
+chance, a twentieth of a point in the popular vote, another electoral count, or the same in any one
+state) is written to `docs/record/` in a file of its own, named for the time it was made, and never
+opened for writing again. `docs/record/index.json` lists them. The files are on the site, at
+`record/index.json`.
+
+**The daily record.** For later research, every run that goes through also writes to `pipeline/log/`
+(`pipeline/daily_log.py`). Nothing on the site reads it.
 
 - `daily.csv`: one row a day, the headline numbers and the inputs behind them
 - `states.csv`: one row a day for every state and district
@@ -117,12 +157,12 @@ runs on the last day (decided November 20, 2026).
 
 | Input | Source | Updates |
 |---|---|---|
-| State economies | Philadelphia Fed State Coincident Indexes via FRED (`{ST}PHCI`) | Daily |
-| National Trump approval | VoteHub and PollResults.org (both CC BY 4.0), merged and averaged; polls of all adults only | Daily |
+| State economies | Philadelphia Fed State Coincident Indexes via FRED (`{ST}PHCI`) | When a release could be out (see "When it runs") |
+| National Trump approval | VoteHub and PollResults.org (both CC BY 4.0), merged and averaged; polls of all adults only | Every hour |
 | State-by-state approval | A copy of Civiqs's state tracker in `pipeline/state_approval.csv`; only the gaps between states are used, counted at half (`approval.state_gap_scale`) and re-centred on the national average with each state weighted by its adult population (`pipeline/adult_population.json`) | By hand, from a saved copy of the page (see below) |
-| Head-to-head polls, primary polls | PollResults.org 2028 feed | Daily |
-| Nominees, running mates, home states, sitting VP | Wikipedia infoboxes, with `pipeline/candidates.json` as the curated list | Daily |
-| Vice-president adjustment | VoteHub job approval of the sitting VP and the president (favorability as fallback), compared in surveys that asked about both among the same group of people | Daily |
+| Head-to-head polls, primary polls | PollResults.org 2028 feed | Every hour |
+| Nominees, running mates, home states, sitting VP | Wikipedia infoboxes, with `pipeline/candidates.json` as the curated list | Every hour |
+| Vice-president adjustment | VoteHub job approval of the sitting VP and the president (favorability as fallback), compared in surveys that asked about both among the same group of people | Every hour |
 | 2024 results, district offsets | Certified 2024 results (`pipeline/results_2024.json`) | Fixed |
 
 **National approval.** The paper estimates approval among all adults: its model covers ages 18 and

@@ -344,3 +344,54 @@ def record(payload, cfg, today, approval_polls=None, own=None, log_dir=LOG_DIR, 
         with open(note, "w", encoding="utf-8") as f:
             f.write(FOLDER_NOTE)
     return changes
+
+
+# ---------------------------------------------------------------------------------------------- every Nowcast, kept
+RECORD_DIR = os.path.join(ROOT, "docs", "record")
+
+
+def run_summary(payload):
+    """The numbers of one Nowcast: the headline, each model, the inputs behind them, and every state."""
+    s, m, ap = payload["summary"], payload.get("models") or {}, payload["approval"]
+    model = lambda k: None if not m.get(k) else {"dem_win": round(m[k]["pDemWin"], 4), "dem_popular_vote": round(m[k]["demPopular"], 2)}  # noqa: E731
+    polls = m.get("polls") or {}
+    return {"made": payload["generated_at"], "date": payload["as_of"], "mode": payload.get("mode"),
+            "dem_win": round(s["pDemWin"], 4), "dem_popular_vote": round(s["demPopular"], 2), "dem_electoral_votes": s["demEvPoint"],
+            "approval_model": model("enns"), "long_range": model("desart"),
+            "head_to_head": {"dem_average": None if polls.get("avg") is None else round(polls["avg"], 2), "polls": polls.get("n")},
+            "trump_approve": ap.get("approve"), "trump_disapprove": ap.get("disapprove"), "economy_through": (payload.get("economy") or {}).get("through"),
+            "sources": payload.get("model_sources") or {},
+            "states": {x["abbr"]: [round(x["demShare"], 2), round(x["pDem"], 4)] for x in payload.get("states") or []}}
+
+
+def run_differs(a, b):
+    """Is Nowcast a different from b in anything a reader could see? A tenth of a point in the chance, a twentieth of a
+    point in the popular vote, another electoral count, or the same in any one state."""
+    if abs(a["dem_win"] - b["dem_win"]) >= 0.001 or abs(a["dem_popular_vote"] - b["dem_popular_vote"]) >= 0.05:
+        return True
+    if a["dem_electoral_votes"] != b["dem_electoral_votes"] or set(a["states"]) != set(b["states"]) or a["sources"] != b["sources"]:
+        return True
+    return any(abs(a["states"][k][0] - b["states"][k][0]) >= 0.05 or abs(a["states"][k][1] - b["states"][k][1]) >= 0.005 for k in a["states"])
+
+
+def keep_run(payload, folder=RECORD_DIR):
+    """Keep this Nowcast if it differs from the last one kept. Each is a file of its own, written once and never opened
+    for writing again; index.json lists them. Returns the file's name, or None if the Nowcast is the same."""
+    os.makedirs(folder, exist_ok=True)
+    index_path = os.path.join(folder, "index.json")
+    index = []
+    if os.path.exists(index_path):
+        with open(index_path, encoding="utf-8") as f:
+            index = json.load(f)
+    cur = run_summary(payload)
+    if index:
+        with open(os.path.join(folder, index[-1]["file"]), encoding="utf-8") as f:
+            if not run_differs(cur, json.load(f)):
+                return None
+    name = cur["made"].replace(":", "") + ".json"
+    with open(os.path.join(folder, name), "x", encoding="utf-8") as f:      # "x": fails rather than replace a file already kept
+        json.dump(cur, f, separators=(",", ":"))
+    index.append({k: cur[k] for k in ("made", "date", "dem_win", "dem_popular_vote", "dem_electoral_votes")} | {"file": name})
+    with open(index_path, "w", encoding="utf-8") as f:
+        json.dump(index, f, indent=0)
+    return name

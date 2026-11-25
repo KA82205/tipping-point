@@ -2,10 +2,11 @@ name: Update data and deploy site
 
 on:
   schedule:
-    # GitHub starts scheduled runs late, anywhere from 1 to 7 hours so far. Two starts a day, 5 hours apart
-    # (1:17 and 6:17 AM Eastern standard time), so that one of them lands in the morning, summer or winter.
-    - cron: "17 6 * * *"
-    - cron: "17 11 * * *"
+    # Every hour. Each run reads the poll feeds; FRED is read when a release could be out (pipeline/update.py,
+    # economy_due). If no input has changed since the published Nowcast was made, the run ends there: the models are
+    # not run again, nothing is saved and the site is not deployed. The first run of each day always goes through.
+    # GitHub starts scheduled runs late, sometimes by hours, so the minute is only a rough one.
+    - cron: "17 * * * *"
   workflow_dispatch: {}      # "Run workflow" button in the Actions tab
   push:
     branches: [main]
@@ -20,11 +21,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  update:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url || steps.deploy3.outputs.page_url }}
+    timeout-minutes: 30
+    outputs:
+      deploy: ${{ steps.decide.outputs.deploy }}
+      pushed: ${{ steps.save.outputs.pushed }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -40,32 +42,76 @@ jobs:
           cd pipeline && npm install --no-save us-atlas@3.0.1 topojson-client@3.1.0 && cd ..
           node pipeline/build_map.js
 
-      - name: Run tests (economy formula, nominee detection, 2024 odds)
+      - name: Run tests (economy formula, nominee detection, 2024 odds, when a run is made)
         run: |
           python pipeline/tests/test_economy.py
           python pipeline/tests/test_candidates.py
+          python pipeline/tests/test_runs.py
           node pipeline/tests/test_uncertainty.js
 
-      - name: Fetch latest polls and economic data, run the model
+      # A run started by hand or by a push always runs the models (the code or the site may have changed).
+      - name: Fetch latest polls and economic data, run the model if anything is new
         id: update
         continue-on-error: true
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-        run: python pipeline/update.py
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            python pipeline/update.py
+          else
+            python pipeline/update.py --force
+          fi
 
       - name: Save new data to the repository
+        id: save
+        if: steps.update.outputs.changed == 'true'
         run: |
           git config user.name "forecast-bot"
           git config user.email "forecast-bot@users.noreply.github.com"
-          for p in docs/nowcast.js docs/history.js docs/forecast.js pipeline/history.json pipeline/frozen pipeline/cache pipeline/log docs/data.js docs/us-states.js pipeline/results_2024.json; do
+          for p in docs/nowcast.js docs/history.js docs/forecast.js docs/record pipeline/history.json pipeline/frozen pipeline/cache pipeline/log docs/data.js docs/us-states.js pipeline/results_2024.json; do
             if [ -e "$p" ]; then git add -f "$p"; fi
           done
-          if git diff --cached --quiet; then echo "No changes"; else git commit -m "Data update $(TZ=America/New_York date +%Y-%m-%d)" && git push; fi
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Data update $(TZ=America/New_York date '+%Y-%m-%d %H:%M')"
+            git push || { git pull --rebase && git push; }
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
+          fi
 
+      # The site is deployed when there is something new to show: a new Nowcast, or a run started by hand or by a push.
+      - name: Is there anything to deploy?
+        id: decide
+        run: echo "deploy=${{ steps.update.outputs.changed == 'true' || github.event_name != 'schedule' }}" >> "$GITHUB_OUTPUT"
       - uses: actions/configure-pages@v5
+        if: steps.decide.outputs.deploy == 'true'
       - uses: actions/upload-pages-artifact@v3
+        if: steps.decide.outputs.deploy == 'true'
         with:
           path: docs
+
+      # A source that is down for an hour should not send an e-mail every hour. A failed scheduled run is marked as
+      # failed at 7 a.m., 1 p.m. and 7 p.m. Eastern only, so a fault that lasts is reported three times a day and a
+      # passing one not at all. A run started by hand or by a push is always marked.
+      - name: Flag a failed data update
+        if: steps.update.outcome == 'failure'
+        run: |
+          hour=$(TZ=America/New_York date +%H)
+          if [ "${{ github.event_name }}" != "schedule" ] || [ "$hour" = "07" ] || [ "$hour" = "13" ] || [ "$hour" = "19" ]; then
+            echo "::error::The data update step failed; the site keeps the previous data. Open the 'Fetch latest polls' step above for details."
+            exit 1
+          fi
+          echo "::warning::The data update step failed on this run; the site keeps the previous data. The next hourly run tries again."
+
+  deploy:
+    needs: update
+    if: always() && needs.update.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy2.outputs.page_url || steps.deploy3.outputs.page_url }}
+    steps:
       - id: deploy
         uses: actions/deploy-pages@v4
         continue-on-error: true
@@ -86,8 +132,19 @@ jobs:
         if: steps.deploy.outcome == 'failure' && steps.deploy2.outcome == 'failure'
         uses: actions/deploy-pages@v4
 
-      - name: Flag a failed data update
-        if: steps.update.outcome == 'failure'
+      # The Margin reads this site's Nowcast. With a DISPATCH_TOKEN secret it is told once the new Nowcast is live;
+      # without one it finds the change at its own next hourly check.
+      - name: Tell The Margin
+        if: needs.update.outputs.pushed == 'true'
+        env:
+          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
         run: |
-          echo "::error::The data update step failed; the site was deployed with the previous data. Open the 'Fetch latest polls' step above for details."
-          exit 1
+          if [ -z "$DISPATCH_TOKEN" ]; then
+            echo "No DISPATCH_TOKEN secret: The Margin will see the new Nowcast at its next hourly check."
+            exit 0
+          fi
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $DISPATCH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/KA82205/the-margin/dispatches \
+            -d '{"event_type":"upstream-updated","client_payload":{"from":"tipping-point"}}' \
+            || echo "::warning::The Margin could not be told; its hourly check will pick the change up."

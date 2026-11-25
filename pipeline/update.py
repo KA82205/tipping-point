@@ -1,7 +1,13 @@
 """Fetch the latest data, build model inputs, run the engine, write site data.
 
     FRED_API_KEY=... python pipeline/update.py
+    FRED_API_KEY=... python pipeline/update.py --force             # run the models whether or not anything is new
     python pipeline/update.py --fixtures pipeline/tests/fixtures   # offline test run
+
+The script is run every hour. Each run reads the poll feeds and builds the models' inputs. If those inputs are the same
+as the ones the published Nowcast was made from, the run stops there: the models are not run again and nothing is
+saved. The first run of each day always goes through, since the poll windows move with the day. The state economic
+indexes are read from FRED when a release could be out (economy_due) and from the last good read otherwise.
 
 Every input is gathered automatically:
     economy      FRED (Philadelphia Fed state coincident indexes)
@@ -292,9 +298,44 @@ def late_put_in(cfg, results, today, log_dir=None):
     return True
 
 
+# When the state economic indexes are read from FRED. The Philadelphia Fed publishes them in the morning, Eastern time,
+# on a working day, and FRED carries them within the hour. The other hours are there in case a release is late or a
+# morning run did not start. Between these hours the last good read (pipeline/cache) is used.
+RELEASE_HOURS = (8, 9, 10, 11)     # Monday to Friday
+FALLBACK_HOURS = (14, 20)          # every day
+
+
+def economy_due(now, new_day, force=False):
+    """Is FRED read on this run? `now` is the time in the East; new_day: the first run of the day."""
+    return bool(force or new_day or (now.weekday() < 5 and now.hour in RELEASE_HOURS) or now.hour in FALLBACK_HOURS)
+
+
+def fingerprint(payload, cfg):
+    """One hash of everything the models read: the inputs built for them (without the time they were built), the
+    settings, and the code and data files that decide the numbers. Two runs with the same fingerprint give the same
+    Nowcast, so the second need not be made."""
+    body = {k: v for k, v in payload.items() if k != "generated_at"}
+    text = json.dumps({"inputs": body, "settings": daily_log.settings(cfg), "files": daily_log.file_ids()},
+                      sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def fx_given(args):
+    """A test run: every source read from a folder."""
+    return bool(args.fixtures)
+
+
+def note(key, value):
+    """A result for the workflow that started the run."""
+    if os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write(f"{key}={value}\n")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--fixtures", help="read every source from this folder instead of the network")
+    ap.add_argument("--force", action="store_true", help="run the models even if no input has changed since the last run")
     ap.add_argument("--today", help="YYYY-MM-DD, defaults to today in US Eastern time")
     ap.add_argument("--log-dir", help="write the daily record here (a test run writes none unless this is given)")
     ap.add_argument("--freeze-in-test", action="store_true",
@@ -306,13 +347,26 @@ def main():
     results = json.load(open(os.path.join(HERE, "results_2024.json")))
     # The day is the US Eastern date, not UTC's: a run on a US evening belongs to that day, and the cutoff
     # days (the poll windows, the freeze days, the publish day) start at midnight Eastern.
-    today = dt.date.fromisoformat(args.today) if args.today else dt.datetime.now(ZoneInfo("America/New_York")).date()
+    now = dt.datetime.now(ZoneInfo("America/New_York"))
+    today = dt.date.fromisoformat(args.today) if args.today else now.date()
     # Once the final forecast is posted (Aug 6, 2028), nothing updates again: the last Nowcast is the forecast.
     # The one exception is an author's forecast that comes out after that day (late_put_in).
     if live and os.path.exists(os.path.join(HERE, "frozen", "forecast_2028.json")):
-        if not late_put_in(cfg, results, today, args.log_dir):
+        if late_put_in(cfg, results, today, args.log_dir):
+            note("changed", "true")
+        else:
             print("The final 2028 forecast is published; the Nowcast is frozen with it. Nothing to update.")
+            note("changed", "false")
         return
+    # Is this the first run of the day? Is something waiting to be fixed for good (the long-range model's polls on
+    # their freeze day, the final forecast on its publish day)? Either way the run goes through in full.
+    hist_path = os.path.join(HERE, "history.json")
+    last_day = max([h["date"] for h in (json.load(open(hist_path)) if os.path.exists(hist_path) else []) if h.get("v") == 5], default="")
+    new_day = last_day < today.isoformat()
+    waiting = live and (
+        (today >= dt.date.fromisoformat(cfg["election"]["desart_freeze_day"]) and not os.path.exists(os.path.join(HERE, "frozen", "desart_2028.json")))
+        or today >= dt.date.fromisoformat(cfg["election"]["publish_day"]))
+    full = bool(args.force or new_day or waiting or fx_given(args))
     registry = json.load(open(os.path.join(HERE, "candidates.json")))["candidates"]
     cache = os.path.join(HERE, "cache")
     pres_stale = False   # True when the 2028 polls come from the last good copy, not today's read
@@ -345,6 +399,10 @@ def main():
         if not key:
             sys.exit("FRED_API_KEY is not set. On GitHub: Settings -> Secrets and variables -> Actions.")
         fred = economy.fetch_fred
+        have_all = all(os.path.exists(os.path.join(cache, cfg["economy"]["fred_series_template"].format(state=st) + ".json")) for st in economy.STATES)
+        if have_all and not economy_due(now, new_day, args.force or waiting):
+            fred = lambda sid, key, start: [tuple(x) for x in json.load(open(os.path.join(cache, f"{sid}.json")))]  # noqa: E731
+            print(f"The state economic indexes are not read from FRED at this hour ({now:%A %H:%M} Eastern); the last good read is used.")
         polls = approval.fetch_votehub(cfg["approval"]["votehub_url"])
         try:
             pr_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_url"])
@@ -611,6 +669,23 @@ def main():
         print("Published forecasts in use: " + "; ".join(f"{m} ({p.get('short') or p.get('authors')}, published {p['published']})"
                                                            for m, p in published.items()))
 
+    # Has anything the models read changed since the published Nowcast was made? If not, stop here: the models are not
+    # run again and nothing is saved. A feed that could not be read this hour is not a change either: the published
+    # Nowcast stands and the feed is tried again next hour, so a passing fault never moves the numbers. (The first run
+    # of a day, a run asked for, and a day on which something is to be fixed for good all go through regardless.)
+    fp_path = os.path.join(cache, "fingerprint.json") if cache else None
+    fp = fingerprint(payload, cfg)
+    if not fx and not full:
+        unread = sorted({d for d in degraded if d != "Wikipedia"})
+        if unread:
+            print(f"Not read this hour: {', '.join(unread)}. The published Nowcast stands; the next run tries again.")
+            note("changed", "false")
+            return
+        if os.path.exists(fp_path) and json.load(open(fp_path)).get("inputs") == fp:
+            print("Nothing new since the published Nowcast was made: the models are not run again.")
+            note("changed", "false")
+            return
+
     # Run both models on the payload with the same code the site uses, so the numbers agree.
     def pick(role, side, key):
         t = tickets[side].get(key) or {}
@@ -651,7 +726,6 @@ def main():
 
     write_js("nowcast.js", "Generated by pipeline/update.py. Do not edit.", "NOWCAST", payload)
 
-    hist_path = os.path.join(HERE, "history.json")
     hist = json.load(open(hist_path)) if os.path.exists(hist_path) else []
     if not fx:
         # v5, from November 20, 2026: the national approval average counts polls of all adults only. Days before
@@ -684,6 +758,16 @@ def main():
             print("Daily record: " + (" ".join(noted) if noted else "nothing changed since the last run"))
         except Exception as e:  # noqa: BLE001
             print(f"WARNING: the daily record was not written ({e})")
+    # Every Nowcast that differs from the one before it is kept for good, each in a file of its own that is never
+    # written again (docs/record/, pipeline/daily_log.py). The day's file in pipeline/log/days/ holds only the last.
+    if not fx:
+        try:
+            kept = daily_log.keep_run(payload)
+            print("Kept as docs/record/" + kept if kept else "The Nowcast is the same as the last one kept: nothing added to the record.")
+        except Exception as e:  # noqa: BLE001
+            print(f"WARNING: this run was not added to the record of runs ({e})")
+        json.dump({"inputs": fp, "made": payload["generated_at"]}, open(fp_path, "w"))
+        note("changed", "true")
 
     s = payload["summary"]
     n_pr = sum(1 for p in national_polls if p.get("source") == "pollresults")

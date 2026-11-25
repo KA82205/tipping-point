@@ -987,8 +987,8 @@
 
     // Status line: when the data were read, and from where.
     box('data-status').innerHTML = (window.FORECAST ? `The final forecast was published ${niceDate(window.FORECAST.published)}. The data stopped updating then; this page shows them as they stood.`
-      : `Last update <b>${etTime(N.generated_at)}</b>. Updates every morning, Eastern time.`) +
-      (h2h.stale ? ' <span class="warn">PollResults.org could not be read this morning, so the head-to-head polls are the last good copy.</span>' : '');
+      : `Last update <b>${etTime(N.generated_at)}</b>. Checked every hour, and updated when a poll or a figure is new.`) +
+      (h2h.stale ? ' <span class="warn">PollResults.org could not be read at the last update, so the head-to-head polls are the last good copy.</span>' : '');
 
     // What moved since the run before.
     const since = prev ? `since ${shortDay(prev.date)}` : '';
@@ -1113,7 +1113,7 @@
       <td class="num">${h.approve !== undefined ? fmt(h.approve) : '—'}</td><td class="num">${h.pollAvg ? fmt(h.pollAvg) : '—'}${h.h2hN ? ` <small>(${h.h2hN})</small>` : ''}</td><td class="num">${h.econThrough ? new Date(h.econThrough + '-15').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—'}</td></tr>`;
     const L = [...H].reverse(), LS = 10;
     box('dc-log').innerHTML = `<div class="dc-head"><div><h2 id="dc-log-h">Daily log</h2>
-        <p class="small">The Nowcast and its inputs after each morning's run. Chances are in 100 for the Democrat.</p></div></div>
+        <p class="small">The Nowcast and its inputs at the end of each day. Chances are in 100 for the Democrat.</p></div></div>
       <div class="dt-wrap"><table class="dt"><thead><tr><th>Date</th><th class="num">Nowcast</th><th class="num">Vote</th><th class="num">Electoral votes</th><th class="num">Approval model</th><th class="num">Long-range model</th><th class="num">Approval</th><th class="num">Poll average</th><th class="num">Economy through</th></tr></thead>
       <tbody>${L.slice(0, LS).map(logRow).join('')}</tbody><tbody class="more" hidden>${L.slice(LS).map(logRow).join('')}</tbody></table></div>
       ${L.length > LS ? `<button class="btn ghost dc-more" type="button" aria-expanded="false">Show all ${L.length} days</button>` : ''}
