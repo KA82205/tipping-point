@@ -7,7 +7,12 @@ on:
     # not run again, nothing is saved and the site is not deployed. The first run of each day always goes through.
     # GitHub starts scheduled runs late, sometimes by hours, so the minute is only a rough one.
     - cron: "17 * * * *"
-  workflow_dispatch: {}      # "Run workflow" button in the Actions tab
+  workflow_dispatch:         # "Run workflow" button in the Actions tab
+    inputs:
+      check:
+        description: "Run as the hourly check does: stop if nothing is new"
+        type: boolean
+        default: false
   push:
     branches: [main]
 
@@ -55,8 +60,9 @@ jobs:
         continue-on-error: true
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          CHECK: ${{ inputs.check }}
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "$CHECK" = "true" ]; then
             python pipeline/update.py
           else
             python pipeline/update.py --force
@@ -82,7 +88,7 @@ jobs:
       # The site is deployed when there is something new to show: a new Nowcast, or a run started by hand or by a push.
       - name: Is there anything to deploy?
         id: decide
-        run: echo "deploy=${{ steps.update.outputs.changed == 'true' || github.event_name != 'schedule' }}" >> "$GITHUB_OUTPUT"
+        run: echo "deploy=${{ steps.update.outputs.changed == 'true' || (github.event_name != 'schedule' && inputs.check != true) }}" >> "$GITHUB_OUTPUT"
       - uses: actions/configure-pages@v5
         if: steps.decide.outputs.deploy == 'true'
       - uses: actions/upload-pages-artifact@v3
