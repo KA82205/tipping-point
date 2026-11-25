@@ -122,6 +122,12 @@ part of the fingerprint.
 A failed scheduled run is tried again the next hour. It is marked as failed at 7 a.m., 1 p.m. and
 7 p.m. Eastern only, so a fault that lasts is reported three times a day and a passing one not at all.
 
+**"Every hour" is what is asked of GitHub, not what GitHub promises.** GitHub starts scheduled runs when it has
+room. From November 20 to 25, 2026 the two daily starts asked for here began 6 to 11 hours late. A late run loses
+nothing but time, since every run is complete in itself, but how often the checks really happen is GitHub's doing.
+A run started from outside (the "Run workflow" button, or a call to GitHub's API by a clock somewhere else) starts
+at once; "Run workflow" has a box to make the run as the hourly check does.
+
 The Margin reads the Nowcast. If this repository has a secret named `DISPATCH_TOKEN` (a token allowed
 to start workflows in the `the-margin` repository), The Margin is told as soon as a new Nowcast is
 live; without it The Margin finds the change at its own next hourly check.
@@ -208,6 +214,7 @@ two finished trackers; neither is kept in this repository.
 ```
 python pipeline/tests/test_economy.py           # reproduces the paper's Table A-2
 python pipeline/tests/test_candidates.py        # nominee detection and head-to-head counting
+python pipeline/tests/test_runs.py              # when a run is made: the script run three times in a scratch copy
 node pipeline/tests/test_uncertainty.js         # reproduces the paper's 2024 odds (Harris about 27 in 100)
 python pipeline/tests/make_fixtures.py          # fake data for an offline run...
 python pipeline/update.py --fixtures pipeline/tests/fixtures   # ...shown with a TEST DATA flag
