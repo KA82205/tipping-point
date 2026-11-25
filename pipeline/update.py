@@ -328,11 +328,6 @@ def fingerprint(payload, cfg):
     return out
 
 
-def fx_given(args):
-    """A test run: every source read from a folder."""
-    return bool(args.fixtures)
-
-
 def note(key, value):
     """A result for the workflow that started the run."""
     if os.environ.get("GITHUB_OUTPUT"):
@@ -348,6 +343,8 @@ def main():
     ap.add_argument("--log-dir", help="write the daily record here (a test run writes none unless this is given)")
     ap.add_argument("--freeze-in-test", action="store_true",
                     help="let a test run fix and post the forecast on its days, to try those days in a scratch copy")
+    ap.add_argument("--gate-in-test", action="store_true",
+                    help="let a test run stop when nothing is new, as a live run does, to try that in a scratch copy")
     args = ap.parse_args()
 
     cfg = json.load(open(os.path.join(HERE, "config.json")))
@@ -374,7 +371,8 @@ def main():
     waiting = live and (
         (today >= dt.date.fromisoformat(cfg["election"]["desart_freeze_day"]) and not os.path.exists(os.path.join(HERE, "frozen", "desart_2028.json")))
         or today >= dt.date.fromisoformat(cfg["election"]["publish_day"]))
-    full = bool(args.force or new_day or waiting or fx_given(args))
+    gated = not args.fixtures or args.gate_in_test       # a test run is never stopped for having nothing new, unless asked to be
+    whole_run = bool(args.force or new_day or waiting)   # this run goes through whether or not anything is new
     registry = json.load(open(os.path.join(HERE, "candidates.json")))["candidates"]
     cache = os.path.join(HERE, "cache")
     pres_stale = False   # True when the 2028 polls come from the last good copy, not today's read
@@ -681,9 +679,9 @@ def main():
     # run again and nothing is saved. A feed that could not be read this hour is not a change either: the published
     # Nowcast stands and the feed is tried again next hour, so a passing fault never moves the numbers. (The first run
     # of a day, a run asked for, and a day on which something is to be fixed for good all go through regardless.)
-    fp_path = os.path.join(cache, "fingerprint.json") if cache else None
+    fp_path = os.path.join(HERE, "cache", "fingerprint.json")
     fp = fingerprint(payload, cfg)
-    if not fx and not full:
+    if gated and not whole_run:
         unread = sorted({d for d in degraded if d != "Wikipedia"})
         if unread:
             print(f"Not read this hour: {', '.join(unread)}. The published Nowcast stands; the next run tries again.")
@@ -777,6 +775,8 @@ def main():
             print("Kept as docs/record/" + kept if kept else "The Nowcast is the same as the last one kept: nothing added to the record.")
         except Exception as e:  # noqa: BLE001
             print(f"WARNING: this run was not added to the record of runs ({e})")
+    if gated:
+        os.makedirs(os.path.dirname(fp_path), exist_ok=True)
         json.dump({"inputs": fp, "made": payload["generated_at"]}, open(fp_path, "w"))
         note("changed", "true")
 

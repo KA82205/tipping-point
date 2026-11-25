@@ -85,8 +85,46 @@ def test_every_different_nowcast_is_kept_once():
     assert len(kept["states"]) == len(n["states"]) and kept["dem_win"] == round(n["summary"]["pDemWin"], 4)
 
 
+def test_a_whole_run_stops_when_nothing_is_new():
+    """The script itself, run three times in a scratch copy on the feeds saved in pipeline/cache: the first run goes
+    through, the second finds nothing new and stops before the models, and after a poll is taken out of the feed the
+    third goes through again and says what was new."""
+    import shutil
+    import subprocess
+    scratch = tempfile.mkdtemp()
+    for part in ("pipeline", "docs"):
+        shutil.copytree(os.path.join(ROOT, part), os.path.join(scratch, part), ignore=shutil.ignore_patterns("node_modules", "__pycache__", "log", "record"))
+    feeds = os.path.join(scratch, "feeds"); os.makedirs(feeds)
+    for name in os.listdir(os.path.join(scratch, "pipeline", "cache")):
+        if name != "fingerprint.json":
+            shutil.copy(os.path.join(scratch, "pipeline", "cache", name), feeds)
+    os.remove(os.path.join(scratch, "pipeline", "cache", "fingerprint.json")) if os.path.exists(os.path.join(scratch, "pipeline", "cache", "fingerprint.json")) else None
+    day = max(h["date"] for h in json.load(open(os.path.join(scratch, "pipeline", "history.json"))))
+    def run():
+        r = subprocess.run([sys.executable, os.path.join(scratch, "pipeline", "update.py"), "--fixtures", feeds, "--gate-in-test", "--today", day],
+                           cwd=scratch, capture_output=True, text=True)
+        assert r.returncode == 0, r.stderr[-800:]
+        return r.stdout
+    made = lambda: open(os.path.join(scratch, "docs", "nowcast.js")).read()
+    first = run(); after_first = made()
+    assert "Nothing new" not in first and "Dem win" in first
+    second = run()
+    assert "Nothing new since the published Nowcast was made" in second and "Dem win" not in second and made() == after_first
+    feed = os.path.join(feeds, "votehub.json"); polls = json.load(open(feed))
+    old = min(polls["polls"], key=lambda p: p["end_date"])
+    json.dump({"polls": [p for p in polls["polls"] if p is not old]}, open(feed, "w"))
+    assert "Nothing new" in run()                                                  # a poll from long before the window is not an input: taking it out changes nothing
+    newest = max((p for p in polls["polls"] if p.get("population") == "a"), key=lambda p: p["end_date"])
+    json.dump({"polls": [p for p in polls["polls"] if p is not newest]}, open(feed, "w"))      # the newest poll of all adults is gone from the feed
+    third = run()
+    assert "New since the published Nowcast: " in third and "approval polls" in third.split("New since the published Nowcast: ")[1].splitlines()[0] and "Dem win" in third, third[-600:]
+    assert "Nothing new" in run()                                                  # and once that is published, nothing is new again
+    shutil.rmtree(scratch, ignore_errors=True)
+
+
 if __name__ == "__main__":
     test_fred_is_read_when_a_release_could_be_out()
     test_the_same_inputs_are_not_run_twice()
     test_every_different_nowcast_is_kept_once()
+    test_a_whole_run_stops_when_nothing_is_new()
     print("ok (when a run is made, and what is kept)")
