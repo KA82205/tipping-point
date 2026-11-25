@@ -123,7 +123,7 @@ A failed scheduled run is tried again the next hour. It is marked as failed at 7
 7 p.m. Eastern only, so a fault that lasts is reported three times a day and a passing one not at all.
 
 **"Every hour" is what is asked of GitHub, not what GitHub promises.** GitHub starts scheduled runs when it has
-room. From November 20 to 25, 2026 the two daily starts asked for here began 6 to 11 hours late. A late run loses
+room. From November 20 to 25, 2026 the two daily starts asked for here began 6 to 12 hours late. A late run loses
 nothing but time, since every run is complete in itself, but how often the checks really happen is GitHub's doing.
 A run started from outside (the "Run workflow" button, or a call to GitHub's API by a clock somewhere else) starts
 at once; "Run workflow" has a box to make the run as the hourly check does.
