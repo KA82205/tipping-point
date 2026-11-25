@@ -7,6 +7,8 @@ on:
     # not run again, nothing is saved and the site is not deployed. The first run of each day always goes through.
     # GitHub starts scheduled runs late, sometimes by hours, so the minute is only a rough one.
     - cron: "17 * * * *"
+  repository_dispatch:       # "check now", from an outside scheduler (see The Margin's RUNBOOK.md): treated exactly as a scheduled run
+    types: [heartbeat]
   workflow_dispatch:         # "Run workflow" button in the Actions tab
     inputs:
       check:
@@ -66,7 +68,7 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           CHECK: ${{ inputs.check }}
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] || [ "$CHECK" = "true" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "repository_dispatch" ] || [ "$CHECK" = "true" ]; then
             python pipeline/update.py
           else
             python pipeline/update.py --force
@@ -97,13 +99,32 @@ jobs:
       # The site is deployed when there is something new to show: a new Nowcast, or a run started by hand or by a push.
       - name: Is there anything to deploy?
         id: decide
-        run: echo "deploy=${{ steps.save.outputs.pushed == 'true' || (github.event_name != 'schedule' && inputs.check != true) }}" >> "$GITHUB_OUTPUT"
+        run: echo "deploy=${{ steps.save.outputs.pushed == 'true' || (github.event_name != 'schedule' && github.event_name != 'repository_dispatch' && inputs.check != true) }}" >> "$GITHUB_OUTPUT"
       - uses: actions/configure-pages@v5
         if: steps.decide.outputs.deploy == 'true'
       - uses: actions/upload-pages-artifact@v3
         if: steps.decide.outputs.deploy == 'true'
         with:
           path: docs
+
+      # The Margin also runs on its own schedule, but GitHub starts scheduled runs when it pleases. Every run here that finds
+      # The Margin has not checked for most of an hour wakes it. The Margin never wakes this site back, so there is no loop.
+      - name: Wake The Margin if it has not checked lately
+        if: always()
+        env:
+          DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -z "$DISPATCH_TOKEN" ]; then exit 0; fi
+          mins=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/KA82205/the-margin/actions/workflows/update.yml/runs?per_page=1" \
+            | python3 -c "import sys,json,datetime as d; r=json.load(sys.stdin)['workflow_runs']; print(int((d.datetime.now(d.timezone.utc)-d.datetime.fromisoformat(r[0]['created_at'].replace('Z','+00:00'))).total_seconds()//60) if r else 9999)" || echo 0)
+          echo "The Margin last started a run $mins minutes ago."
+          if [ "$mins" -ge 50 ]; then
+            curl -fsS -X POST -H "Authorization: Bearer $DISPATCH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/repos/KA82205/the-margin/dispatches -d '{"event_type":"heartbeat","client_payload":{"from":"tipping-point"}}' \
+              && echo "Woke The Margin." || echo "::warning::The Margin could not be woken."
+          fi
 
       # A source that is down for an hour should not send an e-mail every hour. A failed scheduled run is marked as
       # failed at 7 a.m., 1 p.m. and 7 p.m. Eastern only, so a fault that lasts is reported three times a day and a
