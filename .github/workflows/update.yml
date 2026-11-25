@@ -1,4 +1,6 @@
 name: Update data and deploy site
+# The name each run is listed under, so the record shows what started it.
+run-name: "${{ inputs.source == 'clock' && 'Check: outside clock' || github.event.action == 'heartbeat' && 'Check: heartbeat' || github.event.action == 'upstream-updated' && 'Told by another site' || github.event_name == 'schedule' && 'Check: schedule' || github.event_name == 'push' && 'After a push' || inputs.check == true && 'Check: by hand' || 'Run by hand' }}"
 
 on:
   schedule:
@@ -15,6 +17,10 @@ on:
         description: "Run as the hourly check does: stop if nothing is new"
         type: boolean
         default: false
+      source:
+        description: "Who asked for this run (the outside clock sends: clock)"
+        required: false
+        default: "hand"
   push:
     branches: [main]
 
