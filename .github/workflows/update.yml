@@ -33,7 +33,11 @@ jobs:
       deploy: ${{ steps.decide.outputs.deploy }}
       pushed: ${{ steps.save.outputs.pushed }}
     steps:
+      # The branch as it stands when the run starts, not as it stood when the run was asked for: a run that waited
+      # behind another one must start from what that one saved.
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -81,14 +85,19 @@ jobs:
             echo "No changes"
           else
             git commit -m "Data update $(TZ=America/New_York date '+%Y-%m-%d %H:%M')"
-            git push || { git pull --rebase && git push; }
-            echo "pushed=true" >> "$GITHUB_OUTPUT"
+            # Runs are made one at a time, so a push is refused only if somebody else pushed meanwhile. Generated
+            # files cannot be merged: this run's result is dropped, and the next run starts from the new state.
+            if git push; then
+              echo "pushed=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::The repository changed while this run was working. Its result was not saved; the next run starts from the new state."
+            fi
           fi
 
       # The site is deployed when there is something new to show: a new Nowcast, or a run started by hand or by a push.
       - name: Is there anything to deploy?
         id: decide
-        run: echo "deploy=${{ steps.update.outputs.changed == 'true' || (github.event_name != 'schedule' && inputs.check != true) }}" >> "$GITHUB_OUTPUT"
+        run: echo "deploy=${{ steps.save.outputs.pushed == 'true' || (github.event_name != 'schedule' && inputs.check != true) }}" >> "$GITHUB_OUTPUT"
       - uses: actions/configure-pages@v5
         if: steps.decide.outputs.deploy == 'true'
       - uses: actions/upload-pages-artifact@v3

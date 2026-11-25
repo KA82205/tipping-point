@@ -311,13 +311,21 @@ def economy_due(now, new_day, force=False):
 
 
 def fingerprint(payload, cfg):
-    """One hash of everything the models read: the inputs built for them (without the time they were built), the
-    settings, and the code and data files that decide the numbers. Two runs with the same fingerprint give the same
-    Nowcast, so the second need not be made."""
-    body = {k: v for k, v in payload.items() if k != "generated_at"}
-    text = json.dumps({"inputs": body, "settings": daily_log.settings(cfg), "files": daily_log.file_ids()},
-                      sort_keys=True, separators=(",", ":"), default=str)
-    return hashlib.sha256(text.encode()).hexdigest()
+    """A short hash of each thing the models read: the inputs built for them, part by part (without the time they were
+    built), the settings, and the code and data files that decide the numbers. Two runs with the same fingerprint give
+    the same Nowcast, so the second need not be made. Kept in parts so that a run can say what was new."""
+    h = lambda x: hashlib.sha256(json.dumps(x, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()[:16]
+    named = {"the day": ["as_of", "mode"], "approval polls": ["approval"], "state economies": ["economy"], "nominees": ["tickets", "sitting_vp"],
+             "the vice-president adjustment": ["vp"], "head-to-head polls": ["h2h", "desart_final"], "published forecasts": ["published", "model_sources"]}
+    out = {name: h([payload.get(k) for k in keys]) for name, keys in named.items()}
+    sc = payload.get("scenario") or {}
+    out["candidates and primary polls"] = h(sc.get("candidates"))
+    out["model inputs"] = h({k: v for k, v in sc.items() if k != "candidates"})
+    used = {k for keys in named.values() for k in keys} | {"scenario", "generated_at"}
+    out["other inputs"] = h({k: v for k, v in payload.items() if k not in used})
+    out["settings"] = h(daily_log.settings(cfg))
+    out["code and data files"] = h(daily_log.file_ids())
+    return out
 
 
 def fx_given(args):
@@ -681,10 +689,13 @@ def main():
             print(f"Not read this hour: {', '.join(unread)}. The published Nowcast stands; the next run tries again.")
             note("changed", "false")
             return
-        if os.path.exists(fp_path) and json.load(open(fp_path)).get("inputs") == fp:
+        was = (json.load(open(fp_path)).get("inputs") if os.path.exists(fp_path) else None) or {}
+        what = [k for k in fp if not isinstance(was, dict) or fp[k] != was.get(k)]
+        if not what:
             print("Nothing new since the published Nowcast was made: the models are not run again.")
             note("changed", "false")
             return
+        print("New since the published Nowcast: " + ", ".join(what))
 
     # Run both models on the payload with the same code the site uses, so the numbers agree.
     def pick(role, side, key):

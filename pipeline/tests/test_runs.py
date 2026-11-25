@@ -41,17 +41,21 @@ def test_the_same_inputs_are_not_run_twice():
     base = update.fingerprint(n, cfg)
     again = copy.deepcopy(n); again["generated_at"] = "2031-01-01T00:00:00Z"
     assert update.fingerprint(again, cfg) == base                                 # built at another time, nothing in it new
-    def changed(edit, c=cfg):
+    def new(edit, c=cfg):
         other = copy.deepcopy(n); edit(other)
-        return update.fingerprint(other, c) != base
-    assert changed(lambda p: p["h2h"]["polls"].append(dict(p["h2h"]["polls"][0], pollster="A new pollster")))      # a new head-to-head poll
-    assert changed(lambda p: p["approval"].update(approve=p["approval"]["approve"] + 0.1))                          # the approval average moved
-    assert changed(lambda p: p["scenario"]["states"][0].update(approve=p["scenario"]["states"][0]["approve"] + 0.1))
-    assert changed(lambda p: p["scenario"]["econVariants"][0].update(AL=p["scenario"]["econVariants"][0]["AL"] + 0.001))   # a new month of a state economy
-    assert changed(lambda p: p.update(as_of="2031-01-02"))                                                           # the day
-    assert changed(lambda p: p["tickets"]["dem"].update(president={"name": "Somebody"}))                            # a nominee
+        f = update.fingerprint(other, c)
+        return [k for k in f if f[k] != base[k]]
+    assert new(lambda p: p["h2h"]["polls"].append(dict(p["h2h"]["polls"][0], pollster="A new pollster"))) == ["head-to-head polls"]
+    assert new(lambda p: p["approval"].update(approve=p["approval"]["approve"] + 0.1)) == ["approval polls"]
+    assert new(lambda p: p["scenario"]["states"][0].update(approve=p["scenario"]["states"][0]["approve"] + 0.1)) == ["model inputs"]
+    assert new(lambda p: p["scenario"]["econVariants"][0].update(AL=p["scenario"]["econVariants"][0]["AL"] + 0.001)) == ["model inputs"]   # a new month of a state economy
+    assert new(lambda p: p["economy"].update(through="2031-01")) == ["state economies"]
+    assert new(lambda p: p.update(as_of="2031-01-02")) == ["the day"]
+    assert new(lambda p: p["tickets"]["dem"].update(president={"name": "Somebody"})) == ["nominees"]
+    assert new(lambda p: p["scenario"]["candidates"][0].update(primary=1.0)) == ["candidates and primary polls"]
+    assert new(lambda p: p.update(something_added_later=1)) == ["other inputs"]                                      # nothing the models read can change unseen
     other_cfg = copy.deepcopy(cfg); other_cfg["simulation"]["seed"] = cfg["simulation"]["seed"] + 1
-    assert update.fingerprint(n, other_cfg) != base                                                                  # a setting
+    assert new(lambda p: None, other_cfg) == ["settings"]
 
 
 def test_every_different_nowcast_is_kept_once():
