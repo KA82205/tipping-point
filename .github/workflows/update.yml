@@ -64,14 +64,16 @@ jobs:
           python pipeline/tests/test_economy.py
           python pipeline/tests/test_candidates.py
           python pipeline/tests/test_civiqs.py
+          node pipeline/tests/test_converter.js
           python pipeline/tests/test_runs.py
           python pipeline/tests/test_watch.py
           node pipeline/tests/test_uncertainty.js
 
-      # State approval comes from Civiqs, whose site does not allow automatic reads. A copy of its page saved by hand and
-      # uploaded to pipeline/inbox is read here (pipeline/inbox/README.md). The upload is a push, so the models run and the
-      # site is published in this same run. A page that fails a check changes nothing and is reported at the end.
-      - name: Take in a Civiqs page left in the inbox
+      # State approval comes from Civiqs, whose site does not allow automatic reads. Its figures are brought over by hand:
+      # the converter page (docs/civiqs.html) makes a data file inside a browser, and that file, committed to pipeline/inbox,
+      # is read here (pipeline/inbox/README.md). The commit is a push, so the models run and the site is published in this
+      # same run. A file that fails a check changes nothing and is reported at the end. A saved page is removed unread.
+      - name: Take in the Civiqs figures left in the inbox
         id: inbox
         run: python pipeline/civiqs.py --inbox
 
@@ -160,10 +162,10 @@ jobs:
           fi
           echo "::warning::The data update step failed on this run; the site keeps the previous data. The next hourly run tries again."
 
-      - name: Flag a Civiqs page that was not used
+      - name: Flag Civiqs figures that were not used
         if: steps.inbox.outputs.state == 'refused'
         run: |
-          echo "::error::The page left in pipeline/inbox was not used; the copy held stays. pipeline/inbox/LAST.md has the reason."
+          echo "::error::What was left in pipeline/inbox was not used; the copy held stays. pipeline/inbox/LAST.md has the reason."
           exit 1
 
   deploy:

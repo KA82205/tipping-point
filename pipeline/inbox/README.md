@@ -1,18 +1,30 @@
-# Inbox for the Civiqs page
+# Inbox for the Civiqs figures
 
 State-by-state approval comes from Civiqs's tracker, whose site does not allow automatic reads. So every few weeks the
-page is saved by hand and left here, and the site does the rest.
+figures are brought over by hand. It takes about two minutes and nothing but a browser.
 
-1. Open <https://civiqs.com/results/approve_president_trump_2025> in a browser. Press Ctrl+U (Cmd+Option+U on a Mac) to
-   see the page's source, then Ctrl+S (Cmd+S) to save it. Any file name will do.
-2. On this page, choose **Add file**, then **Upload files**, drop the saved file in, and press **Commit changes**.
+1. Open <https://civiqs.com/results/approve_president_trump_2025>. Press Ctrl+U (Cmd+Option+U on a Mac) to see the
+   page's source, then Ctrl+S (Cmd+S) to save it anywhere on your computer.
+2. Open the converter, <https://ka82205.github.io/tipping-point/civiqs.html>, and give it the saved file. It reads the
+   file inside your browser, sends it nowhere, and shows the fifty figures and their date.
+3. Press **Open GitHub with the file filled in**, then **Commit changes** on GitHub.
 
-The commit starts a run within a minute. It reads the page, checks it, updates `pipeline/state_approval.csv` and the
-date of the copy, empties this folder, runs the models again, publishes the site and tells The Margin. Nothing else is
-needed. `LAST.md` in this folder says what happened to the last page left here.
+The commit starts a run within a minute. It checks the figures, updates `pipeline/state_approval.csv` and the date of
+the copy, empties this folder, runs the models again, publishes the site and tells The Margin. Nothing else is needed.
+`LAST.md` in this folder says what happened to the last file left here.
 
-A page that fails a check changes nothing: the run is marked failed, GitHub sends its usual e-mail, and `LAST.md` gives
-the reason. The checks are listed at the top of `pipeline/civiqs.py`.
+## Do not upload the saved page itself
 
-Why the source: it carries Civiqs's own figures to two decimals. The page saved as shown (Ctrl+S without Ctrl+U) is read
-too, but may give whole percentages only; the run says so when that happens.
+Only the data file is taken in: `state,approve,as_of,source`, one line a state. A saved page is removed unread.
+
+A saved page carries everything Civiqs's site sends a browser: its scripts, its settings, and the keys of the outside
+services its own site uses (maps, analytics, error reports). They are Civiqs's, they are public in the sense that every
+visitor's browser receives them, and they still do not belong here: GitHub's scanner reports them as leaked secrets, and
+a file once committed stays in this repository's history after it is deleted. The converter exists so that only fifty
+figures and a date ever leave your computer.
+
+## If something is wrong
+
+A file that fails a check changes nothing: the run is marked failed, GitHub sends its usual e-mail, and `LAST.md` gives
+the reason. The checks are listed at the top of `pipeline/civiqs.py`: the file's exact form, all fifty states, one date
+that is not earlier than the copy held and not in the future, and no state more than 15 points from the copy held.

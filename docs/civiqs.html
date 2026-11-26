@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- This page may not send anything anywhere: the browser itself refuses any request it tries to make. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Tipping Point: the Civiqs data file</title>
+<style>
+:root { --bg: #070c15; --panel: #0e1623; --line: #1c283b; --ink: #eef2f8; --muted: #94a1b5; --accent: #f2a65e; --ok: #6fcf9a; --bad: #f59186; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+h1 { font: 500 34px/1.15 "Newsreader", "Iowan Old Style", Georgia, serif; margin: 0 0 10px; letter-spacing: -0.012em; }
+h2 { font: 500 21px/1.25 "Newsreader", "Iowan Old Style", Georgia, serif; margin: 0 0 8px; }
+p { margin: 0 0 12px; } .muted { color: var(--muted); } small, .small { font-size: 14px; }
+a { color: var(--accent); } a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+ol.steps { list-style: none; padding: 0; margin: 28px 0 0; counter-reset: s; }
+ol.steps > li { counter-increment: s; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px 14px 58px; margin: 0 0 14px; position: relative; }
+ol.steps > li::before { content: counter(s); position: absolute; left: 18px; top: 17px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--accent); color: var(--accent); font-weight: 600; font-size: 14px; display: grid; place-items: center; }
+kbd { font: 13px/1 "IBM Plex Mono", ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 3px 6px; background: #121c2e; white-space: nowrap; }
+.drop { border: 1.5px dashed #33435e; border-radius: 10px; padding: 18px; text-align: center; margin: 10px 0; }
+.drop.over { border-color: var(--accent); background: #121c2e; }
+input[type=file] { color: var(--muted); max-width: 100%; }
+textarea { width: 100%; height: 76px; background: #0a111c; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font: 12px/1.4 ui-monospace, monospace; resize: vertical; }
+.btn { display: inline-block; font: 600 15px/1 inherit; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #1a1206; text-decoration: none; cursor: pointer; margin: 4px 8px 4px 0; }
+.btn.second { background: transparent; color: var(--accent); }
+#result[hidden], #problem[hidden] { display: none; }
+#problem { border: 1px solid var(--bad); border-radius: 8px; padding: 12px 14px; color: var(--bad); margin: 10px 0 0; }
+.good { color: var(--ok); }
+table { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 2px 14px; margin: 10px 0 14px; }
+.grid div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding: 2px 0; } .grid b { font-weight: 500; color: var(--muted); }
+pre { background: #0a111c; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font: 12px/1.45 ui-monospace, monospace; max-height: 170px; overflow: auto; margin: 0 0 12px; }
+details { margin: 8px 0 0; } summary { cursor: pointer; color: var(--muted); }
+.why { border-left: 3px solid var(--accent); padding: 2px 0 2px 14px; margin: 22px 0 0; }
+</style>
+</head>
+<body>
+<main>
+<p class="small muted"><a href="./">Tipping Point</a> · for whoever keeps the site</p>
+<h1>The Civiqs data file</h1>
+<p>Tipping Point takes the gaps in approval between states from <a href="https://civiqs.com/results/approve_president_trump_2025" target="_blank" rel="noopener noreferrer">Civiqs's tracker</a>, which is refreshed by hand every few weeks. This page turns a saved copy of that tracker into a small file of figures and nothing else: one date, fifty states, fifty percentages.</p>
+<p class="muted">It works inside this browser. The saved page is read here and is not sent anywhere; this page is not allowed to make a request at all, and it works with the network off.</p>
+
+<ol class="steps">
+<li>
+  <h2>Get the tracker's source</h2>
+  <p>Open <a href="https://civiqs.com/results/approve_president_trump_2025" target="_blank" rel="noopener noreferrer">the tracker</a>. Press <kbd>Ctrl</kbd>+<kbd>U</kbd> (on a Mac, <kbd>Cmd</kbd>+<kbd>Option</kbd>+<kbd>U</kbd>) to see its source, then <kbd>Ctrl</kbd>+<kbd>S</kbd> (<kbd>Cmd</kbd>+<kbd>S</kbd>) to save it anywhere on this computer.</p>
+</li>
+<li>
+  <h2>Give it to this page</h2>
+  <div class="drop" id="drop">
+    <label for="file">Choose the saved file, or drop it here</label><br><br>
+    <input type="file" id="file" accept=".html,.htm,.txt,text/html,text/plain">
+  </div>
+  <details><summary>Or paste the source instead of saving it</summary>
+    <p class="small muted" style="margin-top:8px">In the source tab: <kbd>Ctrl</kbd>+<kbd>A</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd>. Then click in the box and press <kbd>Ctrl</kbd>+<kbd>V</kbd>.</p>
+    <label for="paste" class="small muted">The tracker's source</label>
+    <textarea id="paste" spellcheck="false" autocomplete="off"></textarea>
+  </details>
+  <div id="problem" role="alert" hidden></div>
+</li>
+<li>
+  <h2>Send the data file to the inbox</h2>
+  <p class="muted" id="waiting">The file appears here once a saved page has been read.</p>
+  <div id="result" hidden>
+    <p><span class="good">Read.</span> <span id="summary"></span></p>
+    <div class="grid" id="grid" aria-label="Approval by state, percent"></div>
+    <p><a class="btn" id="to-github" target="_blank" rel="noopener noreferrer" href="#">Open GitHub with the file filled in</a>
+       <a class="btn second" id="download" href="#">Download the file instead</a></p>
+    <p class="small">On GitHub, press <b>Commit changes</b> twice. That is all: the site checks the figures, runs its models again, publishes, and tells The Margin, in about three minutes. <span class="muted">If you downloaded the file instead, drop it on the <a href="https://github.com/KA82205/tipping-point/upload/main/pipeline/inbox" target="_blank" rel="noopener noreferrer">inbox's upload page</a> and commit.</span></p>
+    <details><summary>The whole file, as it will be sent</summary><pre id="out" tabindex="0"></pre></details>
+  </div>
+</li>
+</ol>
+
+<div class="why small">
+<p><b>Why not upload the saved page itself?</b> A saved page carries everything Civiqs's site sends a browser: its scripts, its settings, and keys for the outside services its own site uses. None of that belongs in a public repository. GitHub's scanner reports such keys, and a file once committed stays in the repository's history even after it is deleted. The inbox no longer reads saved pages; it takes this data file only.</p>
+<p class="muted">Figures: Civiqs, "Donald Trump: Job Approval, Second Term", registered voters, used with credit and a link, under Creative Commons BY-NC-SA 3.0.</p>
+</div>
+</main>
+
+<script>
+/* ---- the reading: plain functions, no page, no network (pipeline/tests/test_converter.js runs exactly these) ---- */
+const SOURCE = 'https://civiqs.com/results/approve_president_trump_2025';
+const SLUG = 'approve_president_trump_2025';
+const QUESTION = 'Donald Trump is handling his job as president';
+const MARK = 'window.__remixContext = ';
+const ROUTE = 'routes/_app.results_.$question';
+const STATES = {Alabama:'AL',Alaska:'AK',Arizona:'AZ',Arkansas:'AR',California:'CA',Colorado:'CO',Connecticut:'CT',Delaware:'DE',Florida:'FL',Georgia:'GA',Hawaii:'HI',Idaho:'ID',Illinois:'IL',Indiana:'IN',Iowa:'IA',Kansas:'KS',Kentucky:'KY',Louisiana:'LA',Maine:'ME',Maryland:'MD',Massachusetts:'MA',Michigan:'MI',Minnesota:'MN',Mississippi:'MS',Missouri:'MO',Montana:'MT',Nebraska:'NE',Nevada:'NV','New Hampshire':'NH','New Jersey':'NJ','New Mexico':'NM','New York':'NY','North Carolina':'NC','North Dakota':'ND',Ohio:'OH',Oklahoma:'OK',Oregon:'OR',Pennsylvania:'PA','Rhode Island':'RI','South Carolina':'SC','South Dakota':'SD',Tennessee:'TN',Texas:'TX',Utah:'UT',Vermont:'VT',Virginia:'VA',Washington:'WA','West Virginia':'WV',Wisconsin:'WI',Wyoming:'WY'};
+
+function endOfJson(t, i) {            // where the object that opens at t[i] closes, or -1
+  if (t[i] !== '{') return -1;
+  let depth = 0, inString = false;
+  for (let j = i; j < t.length; j++) {
+    const c = t[j];
+    if (inString) { if (c === '\\') j++; else if (c === '"') inString = false; }
+    else if (c === '"') inString = true;
+    else if (c === '{' || c === '[') depth++;
+    else if (c === '}' || c === ']') { if (--depth === 0) return j + 1; }
+  }
+  return -1;
+}
+function untag(t) {                   // a "view source" tab saved as a page wraps the source in markup of its own
+  return t.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+}
+function block(t) {                   // the tracker's own data block, or null
+  const i = t.indexOf(MARK); if (i < 0) return null;
+  const a = i + MARK.length, b = endOfJson(t, a); if (b < 0) return null;
+  try { return JSON.parse(t.slice(a, b)); } catch (e) { return null; }
+}
+function extract(text) {              // {as_of, states: {AL: '45.68', ...}} or an Error that says what is wrong, in plain words
+  const ctx = block(text) || block(untag(text));
+  if (!ctx) {
+    if (/float-right">\d+%<\/span>/.test(text)) throw new Error('This is the page as shown, which has whole percentages only. Save the page\'s source instead: on the tracker press Ctrl+U (Cmd+Option+U on a Mac), then Ctrl+S.');
+    throw new Error('The tracker\'s figures were not found in this file. It should be the source of the Civiqs tracker page: press Ctrl+U on the tracker, then Ctrl+S.');
+  }
+  let q; try { q = ctx.state.loaderData[ROUTE]; } catch (e) { q = null; }
+  if (!q || !q.crosstabs || !q.crosstabs.map) throw new Error('The page has a data block, but not in the shape this reader knows. Civiqs may have changed its page; the copy already held stays in use.');
+  if (text.indexOf(SLUG) < 0 || String(q.question_body || '').indexOf(QUESTION) < 0) throw new Error('This is a Civiqs page, but not the tracker of Trump\'s job approval.');
+  const as_of = String(q.end_date || '');
+  if (!/^\d{4}-\d\d-\d\d$/.test(as_of) || isNaN(Date.parse(as_of + 'T00:00:00Z'))) throw new Error('The day the figures run through was not found in the page.');
+  const states = {};
+  for (const name of Object.keys(STATES)) {
+    const row = q.crosstabs.map[name];
+    if (!row || typeof row.Approve !== 'number' || typeof row.Disapprove !== 'number') throw new Error('No figures for ' + name + ' in this page.');
+    if (!(row.Approve > 0.05 && row.Approve < 0.95 && row.Disapprove > 0.05 && row.Disapprove < 0.95)) throw new Error('The figures for ' + name + ' are not believable.');
+    states[STATES[name]] = (100 * row.Approve).toFixed(2);      // Civiqs's own figure, to two decimals
+  }
+  return {as_of, states};
+}
+function toCsv(d) {                   // the data file: a date, fifty states, fifty percentages, and where they are from
+  return 'state,approve,as_of,source\n' + Object.keys(d.states).sort().map(s => [s, d.states[s], d.as_of, SOURCE].join(',')).join('\n') + '\n';
+}
+/* ---- end of the reading ---- */
+
+if (typeof document !== 'undefined') (function () {
+  const $ = id => document.getElementById(id);
+  function show(text) {
+    $('problem').hidden = true; $('result').hidden = true; $('waiting').hidden = false;
+    let d; try { d = extract(text); } catch (e) { $('problem').textContent = e.message; $('problem').hidden = false; return; }
+    const csv = toCsv(d), name = 'civiqs-' + d.as_of + '.csv', codes = Object.keys(d.states).sort();
+    const day = new Date(d.as_of + 'T12:00:00Z').toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC'});
+    const vals = codes.map(s => +d.states[s]), mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+    $('summary').textContent = 'Fifty states, through ' + day + '. The plain average of the fifty is ' + mean.toFixed(1) + '%. The file is ' + csv.length.toLocaleString('en-US') + ' characters: only what is listed below.';
+    $('grid').replaceChildren(...codes.map(s => { const e = document.createElement('div'), b = document.createElement('b'); b.textContent = s; e.append(b, document.createTextNode(d.states[s])); return e; }));
+    $('out').textContent = csv;
+    $('to-github').href = 'https://github.com/KA82205/tipping-point/new/main/pipeline/inbox?filename=' + encodeURIComponent(name) + '&value=' + encodeURIComponent(csv);
+    $('download').href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv); $('download').download = name;
+    $('result').hidden = false; $('waiting').hidden = true;
+  }
+  function take(file) { if (!file) return; const r = new FileReader(); r.onload = () => show(String(r.result)); r.onerror = () => { $('problem').textContent = 'The file could not be read.'; $('problem').hidden = false; }; r.readAsText(file); }
+  $('file').addEventListener('change', e => take(e.target.files[0]));
+  $('paste').addEventListener('input', e => { if (e.target.value.length > 1000) { const t = e.target.value; e.target.value = ''; e.target.placeholder = 'Pasted: ' + t.length.toLocaleString('en-US') + ' characters, read above and not kept.'; show(t); } });
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach(n => drop.addEventListener(n, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(n => drop.addEventListener(n, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => take(e.dataTransfer.files[0]));
+  window.addEventListener('dragover', e => e.preventDefault()); window.addEventListener('drop', e => e.preventDefault());
+})();
+</script>
+</body>
+</html>

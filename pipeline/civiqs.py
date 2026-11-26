@@ -8,24 +8,26 @@ nor disapprove" as shares of 1. This module reads that page and keeps the approv
 Civiqs's site turns automatic reads away (HTTP 403) and offers no data service, so the daily run does not ask it. The
 copy in pipeline/state_approval.csv is refreshed by hand, every few weeks, from a copy of the page saved from a browser.
 
-The easy way, with nothing but a browser:
+The way it is done, with nothing but a browser (docs/civiqs.html, https://ka82205.github.io/tipping-point/civiqs.html):
     1. open the tracker page (the address above), open its source (Ctrl+U; Cmd+Option+U on a Mac) and save that
        (Ctrl+S; any name)
-    2. on GitHub, open pipeline/inbox in this repository, choose "Add file", then "Upload files", drop the saved file
-       in and commit
-That is all. The commit starts a run, which reads the page (take_in below), checks it, rewrites the copy and its date,
-empties the inbox, runs the models again, publishes, and tells The Margin. A page that fails a check changes nothing:
-the run is marked failed and pipeline/inbox/LAST.md says why.
+    2. give the saved file to the converter page. It reads the file inside the browser, sends it nowhere, and makes a
+       data file: state,approve,as_of,source, fifty lines
+    3. the converter's button opens GitHub with that file filled in under pipeline/inbox; commit it
+That is all. The commit starts a run, which reads the data file (take_in below), checks it, rewrites the copy and its
+date, empties the inbox, runs the models again, publishes, and tells The Margin. A file that fails a check changes
+nothing: the run is marked failed and pipeline/inbox/LAST.md says why.
 
-From a command line the same thing is:
+A saved page itself is not taken in, and should not be uploaded. It carries everything Civiqs's site sends a browser,
+scripts and settings and the keys for outside services its site uses, and a file committed to a public repository stays
+in its history after it is deleted. The inbox removes one unread and says so.
+
+On your own computer, where nothing is uploaded, a saved page can still be read directly:
 
     python pipeline/civiqs.py "saved page.html"
 
-Either kind of saved copy is read. The page's source (Ctrl+U, then save) carries the data block, with the figures to
-two decimals. A copy of the page as shown has no data block, only whole percentages.
-
-What a saved page must pass before it replaces the copy: all 50 states present with believable figures; it is this
-tracker and no other Civiqs question; its date is not earlier than the copy's and not in the future; and no state has
+What the figures must pass before they replace the copy: the data file exactly in its form (read_clean below); all 50
+states present with believable figures; it is this tracker and no other Civiqs question; its date is not earlier than the copy's and not in the future; and no state has
 moved more than MOVE points from the copy, nor the typical state more than TYPICAL (a different question, or a page
 from another presidency, fails these at once).
 
@@ -146,6 +148,55 @@ def read_saved(path):
         return parse_shown(html)
 
 
+CLEAN_HEAD = ["state", "approve", "as_of", "source"]
+CLEAN_MAX = 8000   # bytes; the real file is about 3,400
+CONVERTER = "https://ka82205.github.io/tipping-point/civiqs.html"
+
+
+def read_clean(path):
+    """The data file the converter page makes: state,approve,as_of,source and one line for each of the 50 states, nothing
+    else. Everything about it is checked, because it is the only thing the inbox takes: its size, that it is plain text,
+    its heading, each state once, a percentage with at most two decimals, one date, and this tracker as the source.
+    Raises ValueError with the reason."""
+    with open(path, "rb") as f:
+        raw = f.read(CLEAN_MAX + 1)
+    if len(raw) > CLEAN_MAX:
+        raise ValueError("too large to be the data file")
+    try:
+        text = raw.decode("ascii")
+    except UnicodeDecodeError:
+        raise ValueError("not the data file: it has characters a file of codes and figures cannot have")
+    if not re.fullmatch(r"[A-Za-z0-9_.,:/\-\r\n]*", text):
+        raise ValueError("not the data file: it has characters a file of codes and figures cannot have")
+    lines = text.replace("\r\n", "\n").strip("\n").split("\n")
+    if lines[0].split(",") != CLEAN_HEAD:
+        raise ValueError("not the data file: the first line should be " + ",".join(CLEAN_HEAD))
+    out, days = {}, set()
+    for line in lines[1:]:
+        cells = line.split(",")
+        if len(cells) != 4:
+            raise ValueError(f"a line does not have four parts: {line[:40]}")
+        st, a, day, src = cells
+        if st not in STATES.values():
+            raise ValueError(f"{st[:12]} is not one of the 50 states")
+        if st in out:
+            raise ValueError(f"{st} is there twice")
+        if not re.fullmatch(r"\d{1,2}(\.\d{1,2})?", a) or not 5 < float(a) < 95:
+            raise ValueError(f"the figure for {st} is not a believable percentage with at most two decimals")
+        if not re.fullmatch(r"\d{4}-\d\d-\d\d", day):
+            raise ValueError(f"the date on the line for {st} is not a date")
+        if src != URL:
+            raise ValueError("the source named is not the tracker of Trump's job approval")
+        out[st] = {"approve": float(a)}
+        days.add(day)
+    missing = sorted(set(STATES.values()) - set(out))
+    if missing:
+        raise ValueError(f"{len(missing)} of the 50 states are missing ({', '.join(missing[:5])})")
+    if len(days) != 1:
+        raise ValueError("the lines do not all carry the same date")
+    return {"as_of": days.pop(), "states": out}
+
+
 def write_csv(data, csv_path):
     """state,approve for the 50 states and DC. DC is not in the tracker: it is assumed to sit 24 points below
     the average of the 50 states."""
@@ -165,9 +216,10 @@ def held_copy(csv_path):
 
 
 def vet(data, html, held, held_as_of, today):
-    """Is this saved page fit to replace the copy? Raises ValueError with the reason if not."""
-    others = set(re.findall(r"civiqs\.com/results/([a-z0-9_]+)", html)) - {SLUG}
-    if SLUG not in html and others:
+    """Are these figures fit to replace the copy? Raises ValueError with the reason if not. html is the saved page they
+    were read from, or None for the data file, whose source line read_clean has already checked."""
+    others = set(re.findall(r"civiqs\.com/results/([a-z0-9_]+)", html or "")) - {SLUG}
+    if html is not None and SLUG not in html and others:
         raise ValueError(f"this is another Civiqs page ({sorted(others)[0]}), not the tracker of Trump's job approval ({SLUG})")
     try:
         day = datetime.date.fromisoformat(data["as_of"])
@@ -180,7 +232,7 @@ def vet(data, html, held, held_as_of, today):
     moves = sorted(abs(v["approve"] - held[st]) for st, v in data["states"].items() if st in held)
     if moves and (moves[-1] > MOVE or moves[len(moves) // 2] > TYPICAL):
         raise ValueError(f"the figures are too far from the copy held to be the same tracker (largest move {moves[-1]:.1f} points, "
-                         f"typical {moves[len(moves) // 2]:.1f}); if they are right, use the command line: python pipeline/civiqs.py page.html")
+                         f"typical {moves[len(moves) // 2]:.1f}); if they are right, a person has to put them in: python pipeline/civiqs.py page.html, on a computer")
     return moves
 
 
@@ -197,8 +249,11 @@ def put(data, here):
 
 
 def take_in(here, today=None):
-    """Read whatever page has been left in pipeline/inbox. Returns (state, words): 'empty', 'taken' or 'refused'. The inbox
-    is emptied either way, and LAST.md keeps what happened, so a bad page cannot fail every later run."""
+    """Read the data file left in pipeline/inbox. Returns (state, words): 'empty', 'taken' or 'refused'. Only the
+    converter's data file (.csv) is read. Anything else, a saved page above all, is removed unread: it should not be in
+    a public repository. The inbox is emptied either way and LAST.md keeps what happened, so a bad file cannot fail
+    every later run."""
+    import shutil
     box = os.path.join(here, "inbox")
     names = sorted(n for n in (os.listdir(box) if os.path.isdir(box) else []) if n not in ("README.md", "LAST.md") and not n.startswith("."))
     if not names:
@@ -207,49 +262,47 @@ def take_in(here, today=None):
     with open(os.path.join(here, "config.json"), encoding="utf-8") as f:
         held_as_of = json.load(f)["approval"].get("state_csv_as_of")
     held = held_copy(os.path.join(here, "state_approval.csv"))
-    best, why = None, []
-    for n in names:   # usually one file; a browser's "complete" save adds a folder of images and scripts, which is passed over
+    best, why, unread = None, [], 0
+    for n in names:
         path = os.path.join(box, n)
-        if os.path.isdir(path):
+        if os.path.isdir(path) or not n.lower().endswith(".csv"):
+            unread += 1
             continue
         try:
-            with open(path, encoding="utf-8", errors="replace") as f:
-                html = f.read()
-            data = read_saved(path)
-            moves = vet(data, html, held, held_as_of, today)
+            data = read_clean(path)
+            moves = vet(data, None, held, held_as_of, today)
             if best is None or data["as_of"] > best[0]["as_of"]:
                 best = (data, n, moves)
         except ValueError as e:
-            why.append(f"{n}: {e}")
+            why.append(f"{n[:60]}: {e}.")
     for n in names:
         path = os.path.join(box, n)
-        if os.path.isdir(path):
-            import shutil
-            shutil.rmtree(path)
-        else:
-            os.remove(path)
+        shutil.rmtree(path) if os.path.isdir(path) else os.remove(path)
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    raw = ((f"{unread} other file{'s' if unread != 1 else ''} left here {'were' if unread != 1 else 'was'} removed without being read. "
+            f"Only the data file is taken in: a saved page carries the site's own scripts and the keys of services it uses, which do "
+            f"not belong in a public repository, and deleting it here does not take it out of the repository's history. "
+            f"Make the data file at {CONVERTER} and upload that.") if unread else "")
     if best:
         data, n, moves = best
         put(data, here)
-        words = (f"Civiqs state approval taken in from {n}: 50 states through {data['as_of']}"
-                 + (", whole percentages" if data.get("rounded") else ", two decimals")
-                 + (f"; the typical state moved {moves[len(moves) // 2]:.1f} points from the copy of {held_as_of}, the most {moves[-1]:.1f}" if moves else ""))
+        words = (f"Civiqs state approval taken in from {n}: 50 states through {data['as_of']}, two decimals"
+                 + (f"; the typical state moved {moves[len(moves) // 2]:.1f} points from the copy of {held_as_of}, the most {moves[-1]:.1f}" if moves else "")
+                 + (". " + raw if raw else ""))
         state = "taken"
     else:
-        words = "The page left in the inbox was not used, and the copy held stays as it was. " + " ".join(why)
+        words = ("Nothing left in the inbox was used, and the copy held stays as it was. " + " ".join(why) + (" " if why and raw else "") + raw).strip()
         state = "refused"
     with open(os.path.join(box, "LAST.md"), "w", encoding="utf-8") as f:
-        f.write(f"# The last page left here\n\n{stamp}: {'taken in' if state == 'taken' else 'refused'}.\n\n{words}\n")
+        f.write(f"# The last file left here\n\n{stamp}: {'taken in' if state == 'taken' else 'refused'}.\n\n{words}\n")
     return state, words
 
 
 if __name__ == "__main__":
-    # Refreshing the copy from a command line:
-    #   1. open the tracker page (URL above) in a browser, open its source (Ctrl+U) and save that (Ctrl+S)
-    #   2. python pipeline/civiqs.py "path/to/saved page.html"
+    # python pipeline/civiqs.py --inbox is what the workflow runs: it takes in the data file uploaded to pipeline/inbox.
+    # On a computer, with nothing uploaded, a saved page or a data file can be put in directly:
+    #   python pipeline/civiqs.py "path/to/saved page.html"      (or the converter's .csv)
     # This rewrites pipeline/state_approval.csv and the date of the copy in pipeline/config.json.
-    # python pipeline/civiqs.py --inbox is what the workflow runs: it takes in a page uploaded to pipeline/inbox.
     here = os.path.dirname(os.path.abspath(__file__))
     if sys.argv[1:] == ["--inbox"]:
         state, words = take_in(here)
@@ -260,13 +313,12 @@ if __name__ == "__main__":
                 f.write(f"state={state}\n")
         if state == "refused":
             print(f"::error::{words}")
-        elif state == "taken" and "whole percentages" in words:
-            print("::warning::The page was saved as shown, which gives whole percentages. For Civiqs's figures to two decimals, "
-                  "save the page's source next time (Ctrl+U, then Ctrl+S).")
+        elif state == "taken" and "removed without being read" in words:
+            print("::warning::A file other than the data file was left in the inbox and removed unread. " + CONVERTER + " makes the data file.")
         sys.exit(0)
     if len(sys.argv) != 2:
-        sys.exit('usage: python pipeline/civiqs.py "saved page.html"   (or --inbox)')
-    data = read_saved(sys.argv[1])
+        sys.exit('usage: python pipeline/civiqs.py "saved page.html"   (or the data file .csv, or --inbox)')
+    data = read_clean(sys.argv[1]) if sys.argv[1].lower().endswith(".csv") else read_saved(sys.argv[1])
     put(data, here)
     print(f"Civiqs state approval: 50 states through {data['as_of']}"
           + (", whole percentages" if data.get("rounded") else ""))

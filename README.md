@@ -191,14 +191,19 @@ each forecast: the value that best fits the earlier elections. Their file uses 4
 free feed publishes that, so `config.json → approval.state_source` is set to `csv`: a dated copy of
 Civiqs's public state tracker. Civiqs's site turns away automatic reads and offers no data service, so
 the copy is not refreshed daily. It is refreshed by hand every few weeks, with nothing but a browser: open
-the tracker page, open its source (Ctrl+U), save it (Ctrl+S), and upload the saved file to [`pipeline/inbox`](pipeline/inbox) on GitHub
-("Add file", "Upload files", commit). The commit starts a run that reads the page, checks it (all 50
-states, the right tracker, a date not earlier than the copy held, no state more than 15 points from
+the tracker page, open its source (Ctrl+U), save it (Ctrl+S), and give the saved file to the
+[converter page](https://ka82205.github.io/tipping-point/civiqs.html) (`docs/civiqs.html`). The converter reads the
+file inside the browser, sends it nowhere, and makes a data file with nothing in it but the fifty figures to two
+decimals, their date and the tracker's address; its button opens GitHub with that file filled in under
+[`pipeline/inbox`](pipeline/inbox), ready to commit. The commit starts a run that checks the file (its exact form, all
+50 states, the right tracker, a date not earlier than the copy held, no state more than 15 points from
 it), rewrites the copy and its date, empties the inbox, runs the models, publishes, and tells The
-Margin. A page that fails a check changes nothing and the run is marked failed, with the reason in
-`pipeline/inbox/LAST.md`. From a command line the same is `python pipeline/civiqs.py "saved page.html"`.
-The page's source (Ctrl+U, then save) carries Civiqs's own
-figures to two decimals; a copy of the page as shown gives whole percentages. No other public source
+Margin. A file that fails a check changes nothing and the run is marked failed, with the reason in
+`pipeline/inbox/LAST.md`. The saved page itself is not taken in and should not be uploaded: it carries the
+scripts, settings and service keys Civiqs's site sends every browser, which GitHub's scanner reports and which
+stay in a public repository's history after the file is deleted (one such page was uploaded on November 26, 2026,
+before the converter existed; see `pipeline/inbox/README.md`). On a computer, with nothing uploaded, the same is
+`python pipeline/civiqs.py "saved page.html"`. No other public source
 was found to stand in: Morning Consult's state tracker is monthly, pools three months of interviews and
 puts its data behind a paid plan, and YouGov publishes no regular state-by-state series. Civiqs licenses
 what it publishes under Creative Commons BY-NC-SA 3.0. G. Elliott Morris's Trump Approval Explorer has state MRP estimates, but its page
