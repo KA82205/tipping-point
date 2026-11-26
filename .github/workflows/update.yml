@@ -64,6 +64,7 @@ jobs:
           python pipeline/tests/test_economy.py
           python pipeline/tests/test_candidates.py
           python pipeline/tests/test_runs.py
+          python pipeline/tests/test_watch.py
           node pipeline/tests/test_uncertainty.js
 
       # A run started by hand or by a push always runs the models (the code or the site may have changed).
@@ -80,13 +81,18 @@ jobs:
             python pipeline/update.py --force
           fi
 
+      # Once a day: has either model's author published a forecast for 2028? Found or not, the run goes on.
+      - name: Look for a new publication by the models' authors
+        continue-on-error: true
+        run: python pipeline/watch.py
+
       - name: Save new data to the repository
         id: save
         if: steps.update.outputs.changed == 'true'
         run: |
           git config user.name "forecast-bot"
           git config user.email "forecast-bot@users.noreply.github.com"
-          for p in docs/nowcast.js docs/history.js docs/forecast.js docs/record pipeline/history.json pipeline/frozen pipeline/cache pipeline/log docs/data.js docs/us-states.js pipeline/results_2024.json; do
+          for p in docs/watch.json docs/nowcast.js docs/history.js docs/forecast.js docs/record pipeline/history.json pipeline/frozen pipeline/cache pipeline/log docs/data.js docs/us-states.js pipeline/results_2024.json; do
             if [ -e "$p" ]; then git add -f "$p"; fi
           done
           if git diff --cached --quiet; then
