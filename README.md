@@ -165,7 +165,7 @@ runs on the last day (decided November 20, 2026).
 |---|---|---|
 | State economies | Philadelphia Fed State Coincident Indexes via FRED (`{ST}PHCI`) | When a release could be out (see "When it runs") |
 | National Trump approval | VoteHub and PollResults.org (both CC BY 4.0), merged and averaged; polls of all adults only | Every hour |
-| State-by-state approval | A copy of Civiqs's state tracker in `pipeline/state_approval.csv`; only the gaps between states are used, counted at half (`approval.state_gap_scale`) and re-centred on the national average with each state weighted by its adult population (`pipeline/adult_population.json`) | By hand, from a saved copy of the page (see below) |
+| State-by-state approval | A copy of Civiqs's state tracker in `pipeline/state_approval.csv`; only the gaps between states are used, counted at half (`approval.state_gap_scale`) and re-centred on the national average with each state weighted by its adult population (`pipeline/adult_population.json`) | By hand every few weeks: a saved copy of the page uploaded to `pipeline/inbox` (see below) |
 | Head-to-head polls, primary polls | PollResults.org 2028 feed | Every hour |
 | Nominees, running mates, home states, sitting VP | Wikipedia infoboxes, with `pipeline/candidates.json` as the curated list | Every hour |
 | Vice-president adjustment | VoteHub job approval of the sitting VP and the president (favorability as fallback), compared in surveys that asked about both among the same group of people | Every hour |
@@ -189,10 +189,18 @@ each forecast: the value that best fits the earlier elections. Their file uses 4
 
 **State approval.** The paper estimates approval in each state with MRP on survey microdata. No
 free feed publishes that, so `config.json → approval.state_source` is set to `csv`: a dated copy of
-Civiqs's public state tracker. Civiqs's site turns away automatic reads, so the copy is not
-refreshed daily. It is refreshed by hand: open the tracker page in a browser, open its source (Ctrl+U), save
-that, and run `python pipeline/civiqs.py "saved page.html"`. The page's source carries Civiqs's own
-figures to two decimals; a copy of the page as shown gives whole percentages. Civiqs licenses
+Civiqs's public state tracker. Civiqs's site turns away automatic reads and offers no data service, so
+the copy is not refreshed daily. It is refreshed by hand every few weeks, with nothing but a browser: save
+the tracker page (Ctrl+S) and upload the saved file to [`pipeline/inbox`](pipeline/inbox) on GitHub
+("Add file", "Upload files", commit). The commit starts a run that reads the page, checks it (all 50
+states, the right tracker, a date not earlier than the copy held, no state more than 15 points from
+it), rewrites the copy and its date, empties the inbox, runs the models, publishes, and tells The
+Margin. A page that fails a check changes nothing and the run is marked failed, with the reason in
+`pipeline/inbox/LAST.md`. From a command line the same is `python pipeline/civiqs.py "saved page.html"`.
+The page's source (Ctrl+U, then save) carries Civiqs's own
+figures to two decimals; a copy of the page as shown gives whole percentages. No other public source
+was found to stand in: Morning Consult's state tracker is monthly, pools three months of interviews and
+puts its data behind a paid plan, and YouGov publishes no regular state-by-state series. Civiqs licenses
 what it publishes under Creative Commons BY-NC-SA 3.0. G. Elliott Morris's Trump Approval Explorer has state MRP estimates, but its page
 says the data may not be republished without written permission. Neither is read automatically
 unless its owner agrees. To run the Nowcast with no state source at all, set `approval.state_source`

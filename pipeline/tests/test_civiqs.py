@@ -90,10 +90,87 @@ def test_read_saved_and_write_csv(tmp_path=None):
     assert len(rows) == 51 and abs(rows["DC"] - (sum(fifty) / 50 - 24)) < 0.006   # DC: 24 below the average state
 
 
+def _folder():
+    """A stand-in for pipeline/: the copy held (the fixture's figures, dated November 10), its date, and an empty inbox."""
+    import tempfile
+    d = tempfile.mkdtemp()
+    fx = json.load(open(os.path.join(HERE, "fixtures", "civiqs_state_approval.json")))
+    civiqs.write_csv({"states": fx["states"]}, os.path.join(d, "state_approval.csv"))
+    json.dump({"approval": {"state_source": "csv", "state_csv_as_of": "2026-11-10"}}, open(os.path.join(d, "config.json"), "w"), indent=2)
+    os.mkdir(os.path.join(d, "inbox"))
+    open(os.path.join(d, "inbox", "README.md"), "w").write("how to use the inbox")
+    return d
+
+
+def _moved(by=1.0, only=None):
+    out = _states()
+    for i, (name, row) in enumerate(out.items()):
+        if only is None or name == only:
+            row["Approve"] = round(row["Approve"] + (by if i % 2 else -by) / 100, 4)
+    return out
+
+
+def test_a_page_left_in_the_inbox_is_taken_in():
+    import csv
+    import datetime
+    day = datetime.date(2026, 12, 12)
+    d = _folder()
+    assert civiqs.take_in(d, day) == ("empty", "")
+    before = open(os.path.join(d, "state_approval.csv")).read()
+    # a newer page of the tracker: read, the copy and its date rewritten, the inbox emptied, what happened written down
+    open(os.path.join(d, "inbox", "Donald Trump Job Approval.html"), "w", encoding="utf-8").write(
+        "<!-- saved from url=(0058)https://civiqs.com/results/approve_president_trump_2025 -->" + _page(_moved(1.0), end="2026-12-11"))
+    os.mkdir(os.path.join(d, "inbox", "Donald Trump Job Approval_files"))          # what a browser's "complete" save leaves beside the page
+    open(os.path.join(d, "inbox", "Donald Trump Job Approval_files", "app.js"), "w").write("x")
+    state, words = civiqs.take_in(d, day)
+    assert state == "taken" and "through 2026-12-11" in words and "two decimals" in words and "moved 1.0 points" in words
+    rows = {r["state"]: float(r["approve"]) for r in csv.DictReader(open(os.path.join(d, "state_approval.csv")))}
+    assert len(rows) == 51 and open(os.path.join(d, "state_approval.csv")).read() != before
+    assert json.load(open(os.path.join(d, "config.json")))["approval"]["state_csv_as_of"] == "2026-12-11"
+    assert sorted(os.listdir(os.path.join(d, "inbox"))) == ["LAST.md", "README.md"] and "taken in" in open(os.path.join(d, "inbox", "LAST.md")).read()
+    assert civiqs.take_in(d, day) == ("empty", "")
+    # a copy of the page as shown is taken in too, in whole percentages (its figures here are far from the copy held, so the
+    # copy held is first set to them)
+    d = _folder()
+    civiqs.write_csv(civiqs.parse_shown(_saved(_rows())), os.path.join(d, "state_approval.csv"))
+    open(os.path.join(d, "inbox", "page.html"), "w", encoding="utf-8").write(_saved(_rows(), day="December 11, 2026"))
+    state, words = civiqs.take_in(d, day)
+    assert state == "taken" and "whole percentages" in words
+
+
+def test_a_page_that_fails_a_check_changes_nothing():
+    import datetime
+    day = datetime.date(2026, 12, 12)
+    cases = {
+        "older than the copy held": _page(_states(), end="2026-11-01"),
+        "dated in the future": _page(_states(), end="2027-03-01"),
+        "another Civiqs question": '<link rel="canonical" href="https://civiqs.com/results/favorable_donald_trump">' + _page(_states(), end="2026-12-11"),
+        "figures far from the copy held": _page(_moved(9.0), end="2026-12-11"),
+        "one state far out": _page(_moved(20.0, only="Ohio"), end="2026-12-11"),
+        "not the page at all": "<html>404</html>",
+    }
+    for what, page in cases.items():
+        d = _folder()
+        before = open(os.path.join(d, "state_approval.csv")).read()
+        open(os.path.join(d, "inbox", "page.html"), "w", encoding="utf-8").write(page)
+        state, words = civiqs.take_in(d, day)
+        assert state == "refused" and "was not used" in words, what
+        assert open(os.path.join(d, "state_approval.csv")).read() == before, what
+        assert json.load(open(os.path.join(d, "config.json")))["approval"]["state_csv_as_of"] == "2026-11-10", what
+        assert sorted(os.listdir(os.path.join(d, "inbox"))) == ["LAST.md", "README.md"] and "refused" in open(os.path.join(d, "inbox", "LAST.md")).read(), what
+    # two pages left at once, one of them bad: the good one is used
+    d = _folder()
+    open(os.path.join(d, "inbox", "a.html"), "w").write("<html>404</html>")
+    open(os.path.join(d, "inbox", "b.html"), "w", encoding="utf-8").write(_page(_moved(0.5), end="2026-12-11"))
+    assert civiqs.take_in(d, day)[0] == "taken"
+
+
 if __name__ == "__main__":
     test_parse_reads_all_fifty_states()
     test_parse_refuses_a_changed_page()
     test_parse_shown_reads_a_saved_copy()
     test_parse_shown_refuses_a_changed_copy()
     test_read_saved_and_write_csv()
+    test_a_page_left_in_the_inbox_is_taken_in()
+    test_a_page_that_fails_a_check_changes_nothing()
     print("ok")
