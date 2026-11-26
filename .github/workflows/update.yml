@@ -67,6 +67,7 @@ jobs:
           node pipeline/tests/test_converter.js
           python pipeline/tests/test_runs.py
           python pipeline/tests/test_watch.py
+          python pipeline/tests/test_freeze.py
           node pipeline/tests/test_uncertainty.js
 
       # State approval comes from Civiqs, whose site does not allow automatic reads. Its figures are brought over by hand:
@@ -103,13 +104,13 @@ jobs:
           git config user.name "forecast-bot"
           git config user.email "forecast-bot@users.noreply.github.com"
           git add -A pipeline/inbox pipeline/state_approval.csv pipeline/config.json
-          for p in docs/watch.json docs/nowcast.js docs/history.js docs/forecast.js docs/record pipeline/history.json pipeline/frozen pipeline/cache pipeline/log docs/data.js docs/us-states.js pipeline/results_2024.json; do
+          for p in docs/watch.json docs/nowcast.js docs/live.js docs/history.js docs/forecast.js docs/record pipeline/history.json pipeline/frozen pipeline/cache pipeline/log docs/data.js docs/us-states.js pipeline/results_2024.json; do
             if [ -e "$p" ]; then git add -f "$p"; fi
           done
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "Data update $(TZ=America/New_York date '+%Y-%m-%d %H:%M')${{ steps.inbox.outputs.state == 'taken' && ': state approval from a new Civiqs page' || '' }}"
+            git commit -m "Data update $(TZ=America/New_York date '+%Y-%m-%d %H:%M')${{ steps.inbox.outputs.state == 'taken' && ': state approval from new Civiqs figures' || '' }}"
             # Runs are made one at a time, so a push is refused only if somebody else pushed meanwhile. Generated
             # files cannot be merged: this run's result is dropped, and the next run starts from the new state.
             if git push; then

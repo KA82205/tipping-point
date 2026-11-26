@@ -305,6 +305,201 @@ RELEASE_HOURS = (8, 9, 10, 11)     # Monday to Friday
 FALLBACK_HOURS = (14, 20)          # every day
 
 
+def read_poll_feeds(cfg, fx, cache, degraded):
+    """The poll feeds and the Wikipedia reader, live or from a folder of fixtures (fx). Returns (approval polls from
+    VoteHub, approval polls from PollResults, the 2028 primary and head-to-head polls, whether those came from the last
+    good copy, the Wikipedia reader or None for the live one, the favorability reader, the approval reader for another
+    subject). A feed that could not be read is named in `degraded`. Used by the whole run and by the live feed alike."""
+    pres_stale = False
+    if fx:
+        def fx_json(name, default=None):
+            p = os.path.join(fx, name)
+            return json.load(open(p)) if os.path.exists(p) else default
+        vh = fx_json("votehub.json", [])
+        polls = vh["polls"] if isinstance(vh, dict) else vh
+        pr_raw = (fx_json("pollresults.json", {}) or {}).get("results", [])
+
+        def wiki(title):
+            p = os.path.join(fx, "wiki_" + slug(title) + ".txt")
+            return open(p).read() if os.path.exists(p) else ""
+
+        def fav(subject_slug):
+            return fx_json(f"fav_{subject_slug}.json", [])
+
+        def appr(subject_slug):
+            return fx_json(f"appr_{subject_slug}.json", [])
+        pres_raw = (fx_json("pollresults_president.json", {}) or {}).get("results", [])
+        return polls, pr_raw, pres_raw, pres_stale, wiki, fav, appr
+    polls = approval.fetch_votehub(cfg["approval"]["votehub_url"])
+    try:
+        pr_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_url"])
+    except Exception as e:  # second source is optional
+        print(f"WARNING: PollResults fetch failed ({e}); continuing with VoteHub only")
+        pr_raw = []
+        degraded.append("PollResults approval polls")
+    wiki = None
+
+    def _subject(kind, key):
+        def get(subject_slug):
+            try:
+                return approval.fetch_votehub(cfg["approval"][key].format(slug=subject_slug))
+            except Exception as e:
+                print(f"WARNING: {kind} fetch for {subject_slug} failed ({e})")
+                degraded.append(f"VoteHub {kind} polls")
+                return []
+        return get
+    fav = _subject("favorability", "votehub_fav_url")
+    appr = _subject("approval", "votehub_subject_approval_url")
+    # 2028 primary and head-to-head polls. Up to 3,000 records are read (the feed holds about 200 today).
+    # If today's read fails or comes back empty, yesterday's copy is used, so the polls model does not
+    # drop out of the Nowcast for a day; polls still age out of the window as usual.
+    pres_cache = os.path.join(cache, "pollresults_president.json")
+    try:
+        pres_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_president_url"], max_pages=30)
+        if len(pres_raw) >= 3000:
+            print("WARNING: the PollResults 2028 feed filled all 30 pages; older polls may be missing")
+    except Exception as e:
+        print(f"WARNING: PollResults 2028 polls fetch failed ({e})")
+        pres_raw = []
+    if not pres_raw and os.path.exists(pres_cache):
+        pres_raw = (json.load(open(pres_cache)) or {}).get("results", [])
+        pres_stale = bool(pres_raw)
+        print(f"WARNING: using the last good copy of the PollResults 2028 polls ({len(pres_raw)} records)")
+    if pres_stale or not pres_raw:
+        degraded.append("PollResults 2028 polls")
+    os.makedirs(cache, exist_ok=True)
+    json.dump({"polls": polls}, open(os.path.join(cache, "votehub.json"), "w"))
+    json.dump({"results": pr_raw}, open(os.path.join(cache, "pollresults.json"), "w"))
+    json.dump({"results": pres_raw}, open(os.path.join(cache, "pollresults_president.json"), "w"))
+    return polls, pr_raw, pres_raw, pres_stale, wiki, fav, appr
+
+
+def off_list(rows, listed, hh, wiki):
+    """People in matchups who are off the candidate list, with home states for the home-state effect."""
+    out = []
+    for party, key in (("D", "d"), ("R", "r")):
+        for name in sorted({m[key] for m in rows} - {n for p, n in listed if p == party}):
+            st = hh.get("home_states", {}).get(name)   # set by hand where Wikipedia's infobox misleads
+            if not st:
+                st, _src = candidates.home_state_of(name, [], wiki)
+            out.append({"name": name, "party": party, "state": st})
+    return out
+
+
+# --------------------------------------------------------------------------------------------- the live feed
+# docs/live.js: the national head-to-head polls, approval and the nominees as last read. The Margin reads these from
+# here, not from the Nowcast, because the Nowcast is fixed for good on its publish day (August 6, 2028) and its polls
+# stop a week before that, while The Margin goes on reading polls until the election. The feed is written by every run
+# that reads the sources, before that day and after it. Nothing in it enters this site's own models.
+LIVE_WHAT = ("The national head-to-head polls, presidential approval and the nominees as last read. Written on every run, "
+             "and still written after the academic forecast is fixed, so that a reader never goes without new polls.")
+
+
+def june_series(cfg, national_polls, today, pops):
+    """Approval as the Nowcast averages it, on each day of June of the election year: the trailing average ending that
+    day, worked out from the polls known now, so a poll published late is in it. [] before June begins."""
+    year, trailing, out = int(cfg["election"]["year"]), cfg["approval"]["nowcast_window_days"], []
+    d = dt.date(year, 6, 1)
+    while d <= min(today, dt.date(year, 6, 30)):
+        try:
+            a = approval.national_average(national_polls, d - dt.timedelta(days=trailing), d, populations=pops)
+            out.append({"d": d.isoformat(), "a": round(a["approve"], 1), "dis": round(a["disapprove"], 1)})
+        except RuntimeError:
+            pass
+        d += dt.timedelta(days=1)
+    return out
+
+
+def live_feed(cfg, today, national_polls, pops, nat, window, mode, pooled, pres_raw, pres_stale, registry, tickets, sitting_vp, wiki, academic):
+    """What docs/live.js holds. The head-to-head polls are chosen exactly as the Nowcast chooses them
+    (candidates.general_matchups, the same list of people, the same exclusions, the same number of days), except that the
+    window ends today whatever the day: it does not stop at the forecast day."""
+    hh = cfg.get("head_to_head", {})
+    lo = today - dt.timedelta(days=hh.get("window_days", 180))
+    barred = [cfg["election"]["incumbent_president"]] + hh.get("cannot_run", [])
+    rows, skipped = candidates.general_matchups(pres_raw, lo, today, approval._iso, registry, exclude=barred)
+    listed = {(c["party"], c["name"]) for c in registry}
+    return {
+        "generated_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "as_of": today.isoformat(),
+        "what": LIVE_WHAT,
+        "academic": academic,
+        "approval": {"approve": round(nat["approve"], 1), "disapprove": round(nat["disapprove"], 1),
+                     "window": [window[0].isoformat(), window[1].isoformat()], "pollsters": nat["pollsters"],
+                     "mode": mode, "pooled": pooled, "populations": pops,
+                     "june": june_series(cfg, national_polls, today, pops)},
+        "tickets": tickets,
+        "sitting_vp": sitting_vp,
+        "h2h": {"window": [lo.isoformat(), today.isoformat()], "days": hh.get("window_days", 180), "polls": rows, "skipped": skipped,
+                "people": off_list(rows, listed, hh, wiki), "stale": pres_stale},
+    }
+
+
+def read_live():
+    path = os.path.join(ROOT, "docs", "live.js")
+    if not os.path.exists(path):
+        return None
+    try:
+        t = open(path, encoding="utf-8").read()
+        return json.loads(t[t.index("{"):t.rindex("}") + 1])
+    except ValueError:
+        return None
+
+
+def write_live(feed, degraded=()):
+    """Write docs/live.js if what it holds has changed (the time it was built is not a change). What could not be read
+    this hour keeps its last good value: the polls if the poll feed was not read, the nominees if Wikipedia was not.
+    Returns True when the file was written."""
+    was = read_live()
+    if was:
+        if "PollResults 2028 polls" in degraded:
+            feed["h2h"] = was["h2h"]
+        if "Wikipedia" in degraded:
+            feed["tickets"], feed["sitting_vp"] = was.get("tickets"), was.get("sitting_vp")
+    same = lambda d: {k: v for k, v in d.items() if k != "generated_at"}
+    if was and same(was) == same(feed):
+        return False
+    write_js("live.js", "The live feed: polls, approval and nominees as last read. Generated by pipeline/update.py. Do not edit.", "LIVE", feed)
+    return True
+
+
+def live_only(cfg, results, today, fx, final):
+    """After the forecast is posted the models are not run again, but the sources are still read and the live feed still
+    written. Returns True when the feed changed."""
+    degraded = []
+    cache = None if fx else os.path.join(HERE, "cache")
+    polls, pr_raw, pres_raw, pres_stale, wiki, _fav, _appr = read_poll_feeds(cfg, fx, cache, degraded)
+    national_polls, _state_polls = approval.merge_polls(polls, pr_raw)
+    pops = cfg["approval"].get("national_populations") or None
+    w_lo, w_hi = today - dt.timedelta(days=cfg["approval"]["nowcast_window_days"]), today
+    was = read_live()
+    try:
+        nat = approval.national_average(national_polls, w_lo, w_hi, populations=pops)
+    except RuntimeError as e:          # no approval poll in the last month: the last average read stands
+        if not was:
+            print(f"WARNING: the live feed was not written ({e})")
+            return False
+        nat = {"approve": was["approval"]["approve"], "disapprove": was["approval"]["disapprove"], "pollsters": was["approval"]["pollsters"]}
+        w_lo, w_hi = (dt.date.fromisoformat(d) for d in was["approval"]["window"])
+    detected = candidates.detect(cfg, fetch=wiki)
+    _codes, tickets, _vp_is_nominee = candidates.resolve(cfg, detected)
+    for n in detected["notes"]:
+        print("WARNING:", n)
+    if detected["notes"]:
+        degraded.append("Wikipedia")
+    cc = cfg["candidates"]
+    registry = json.load(open(os.path.join(HERE, "candidates.json")))["candidates"]
+    standing = candidates.primary_standing(pres_raw, today - dt.timedelta(days=cc.get("primary_window_days", 120)), today, approval._iso)
+    registry = candidates.merge_registry(registry, standing, fetch=wiki, min_pct=cc.get("primary_min_pct", 3), exclude=[cfg["election"]["incumbent_president"]])
+    academic = {"fixed": True, "since": final.get("published"), "updated": final.get("updated"), "sources": final.get("sources")}
+    feed = live_feed(cfg, today, national_polls, pops, nat, (w_lo, w_hi), "nowcast", False, pres_raw, pres_stale, registry, tickets,
+                     detected.get("sitting_vp") or (was or {}).get("sitting_vp"), wiki, academic)
+    changed = write_live(feed, degraded)
+    print(f"The live feed: {len(feed['h2h']['polls'])} head-to-head polls through {today}, approval {feed['approval']['approve']:.1f}%, "
+          f"nominees {[(feed['tickets'][s].get('president') or {}).get('name') for s in ('dem', 'rep')]}: " + ("written" if changed else "nothing new"))
+    return changed
+
+
 def economy_due(now, new_day, force=False):
     """Is FRED read on this run? `now` is the time in the East; new_day: the first run of the day."""
     return bool(force or new_day or (now.weekday() < 5 and now.hour in RELEASE_HOURS) or now.hour in FALLBACK_HOURS)
@@ -356,12 +551,18 @@ def main():
     today = dt.date.fromisoformat(args.today) if args.today else now.date()
     # Once the final forecast is posted (Aug 6, 2028), nothing updates again: the last Nowcast is the forecast.
     # The one exception is an author's forecast that comes out after that day (late_put_in).
-    if live and os.path.exists(os.path.join(HERE, "frozen", "forecast_2028.json")):
-        if late_put_in(cfg, results, today, args.log_dir):
-            note("changed", "true")
-        else:
-            print("The final 2028 forecast is published; the Nowcast is frozen with it. Nothing to update.")
-            note("changed", "false")
+    fc_posted = os.path.join(HERE, "frozen", "forecast_2028.json")
+    if live and os.path.exists(fc_posted):
+        redone = late_put_in(cfg, results, today, args.log_dir)
+        if not redone:
+            print("The final 2028 forecast is published; the Nowcast is frozen with it and the models are not run again.")
+        # The polls, approval and the nominees are still read, for the live feed (docs/live.js) that The Margin reads.
+        try:
+            fed = live_only(cfg, results, today, args.fixtures, json.load(open(fc_posted)))
+        except Exception as e:  # noqa: BLE001  the posted forecast is never at risk from the feed
+            print(f"WARNING: the live feed was not written this hour ({type(e).__name__}: {e}); the last one stands")
+            fed = False
+        note("changed", "true" if (redone or fed) else "false")
         return
     # Is this the first run of the day? Is something waiting to be fixed for good (the long-range model's polls on
     # their freeze day, the final forecast on its publish day)? Either way the run goes through in full.
@@ -385,20 +586,6 @@ def main():
 
     if fx:
         fred = lambda sid, key, start: json.load(open(os.path.join(fx, f"{sid}.json")))  # noqa: E731
-        vh = fx_json("votehub.json", [])
-        polls = vh["polls"] if isinstance(vh, dict) else vh
-        pr_raw = (fx_json("pollresults.json", {}) or {}).get("results", [])
-
-        def wiki(title):
-            p = os.path.join(fx, "wiki_" + slug(title) + ".txt")
-            return open(p).read() if os.path.exists(p) else ""
-
-        def fav(subject_slug):
-            return fx_json(f"fav_{subject_slug}.json", [])
-
-        def appr(subject_slug):
-            return fx_json(f"appr_{subject_slug}.json", [])
-        pres_raw = (fx_json("pollresults_president.json", {}) or {}).get("results", [])
         cache = None
     else:
         key = os.environ.get("FRED_API_KEY")
@@ -409,47 +596,7 @@ def main():
         if have_all and not economy_due(now, new_day, args.force or waiting):
             fred = lambda sid, key, start: [tuple(x) for x in json.load(open(os.path.join(cache, f"{sid}.json")))]  # noqa: E731
             print(f"The state economic indexes are not read from FRED at this hour ({now:%A %H:%M} Eastern); the last good read is used.")
-        polls = approval.fetch_votehub(cfg["approval"]["votehub_url"])
-        try:
-            pr_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_url"])
-        except Exception as e:  # second source is optional
-            print(f"WARNING: PollResults fetch failed ({e}); continuing with VoteHub only")
-            pr_raw = []
-            degraded.append("PollResults approval polls")
-        wiki = None
-
-        def _subject(kind, key):
-            def get(subject_slug):
-                try:
-                    return approval.fetch_votehub(cfg["approval"][key].format(slug=subject_slug))
-                except Exception as e:
-                    print(f"WARNING: {kind} fetch for {subject_slug} failed ({e})")
-                    degraded.append(f"VoteHub {kind} polls")
-                    return []
-            return get
-        fav = _subject("favorability", "votehub_fav_url")
-        appr = _subject("approval", "votehub_subject_approval_url")
-        # 2028 primary and head-to-head polls. Up to 3,000 records are read (the feed holds about 200 today).
-        # If today's read fails or comes back empty, yesterday's copy is used, so the polls model does not
-        # drop out of the Nowcast for a day; polls still age out of the window as usual.
-        pres_cache = os.path.join(cache, "pollresults_president.json")
-        try:
-            pres_raw = approval.fetch_pollresults(cfg["approval"]["pollresults_president_url"], max_pages=30)
-            if len(pres_raw) >= 3000:
-                print("WARNING: the PollResults 2028 feed filled all 30 pages; older polls may be missing")
-        except Exception as e:
-            print(f"WARNING: PollResults 2028 polls fetch failed ({e})")
-            pres_raw = []
-        if not pres_raw and os.path.exists(pres_cache):
-            pres_raw = (json.load(open(pres_cache)) or {}).get("results", [])
-            pres_stale = bool(pres_raw)
-            print(f"WARNING: using the last good copy of the PollResults 2028 polls ({len(pres_raw)} records)")
-        if pres_stale or not pres_raw:
-            degraded.append("PollResults 2028 polls")
-        os.makedirs(cache, exist_ok=True)
-        json.dump({"polls": polls}, open(os.path.join(cache, "votehub.json"), "w"))
-        json.dump({"results": pr_raw}, open(os.path.join(cache, "pollresults.json"), "w"))
-        json.dump({"results": pres_raw}, open(os.path.join(cache, "pollresults_president.json"), "w"))
+    polls, pr_raw, pres_raw, pres_stale, wiki, fav, appr = read_poll_feeds(cfg, fx, cache, degraded)
 
     # State-by-state approval from Civiqs's public tracker (CSV source)
     state_info = None
@@ -593,17 +740,7 @@ def main():
     h2h_people = None   # filled in below, once off_list is defined
     terms = (1 if cfg["election"]["incumbent_party"] == "D" else -1) * cfg["election"].get("incumbent_party_terms", 1)
 
-    # People in matchups who are off the candidate list, with home states for the home-state effect.
-    def off_list(rows):
-        out = []
-        for party, key in (("D", "d"), ("R", "r")):
-            for name in sorted({m[key] for m in rows} - {n for p, n in listed if p == party}):
-                st = hh.get("home_states", {}).get(name)   # set by hand where Wikipedia's infobox misleads
-                if not st:
-                    st, _src = candidates.home_state_of(name, [], wiki)
-                out.append({"name": name, "party": party, "state": st})
-        return out
-    h2h_people = off_list(matchups)
+    h2h_people = off_list(matchups, listed, hh, wiki)
 
     # The polls model's half of the final forecast, as DeSart publishes it: head-to-head polls conducted in
     # October 2027, frozen a week later (Nov 7, 2027). Until then it is provisional; after, it never changes.
@@ -617,7 +754,7 @@ def main():
     elif today >= ds_lo:
         ds_rows, ds_skipped = candidates.general_matchups(pres_raw, ds_lo, ds_hi, approval._iso, registry, exclude=barred)
         desart_final = {"window": [ds_lo.isoformat(), ds_hi.isoformat()], "polls": ds_rows, "skipped": ds_skipped,
-                        "people": off_list(ds_rows), "terms": terms, "as_of": today.isoformat(), "frozen": False}
+                        "people": off_list(ds_rows, listed, hh, wiki), "terms": terms, "as_of": today.isoformat(), "frozen": False}
         if live and today >= dt.date.fromisoformat(el["desart_freeze_day"]):
             # Not frozen from a stale copy of the polls, unless the feed has been unreadable for a week.
             late = (today - dt.date.fromisoformat(el["desart_freeze_day"])).days >= el.get("freeze_retry_days", 7)
@@ -675,6 +812,15 @@ def main():
         print("Published forecasts in use: " + "; ".join(f"{m} ({p.get('short') or p.get('authors')}, published {p['published']})"
                                                            for m, p in published.items()))
 
+    # The live feed (docs/live.js) is written from what this run has read, whether or not the models run below.
+    fed = False
+    if live or fx:
+        try:
+            fed = write_live(live_feed(cfg, today, national_polls, pops, nat, (w_lo, w_hi), mode, pooled, pres_raw, pres_stale, registry, tickets, sitting_vp, wiki,
+                                       {"fixed": False, "since": None, "updated": None, "sources": sources_of(published)}), degraded)
+        except Exception as e:  # noqa: BLE001  the Nowcast is never at risk from the feed
+            print(f"WARNING: the live feed was not written ({type(e).__name__}: {e}); the last one stands")
+
     # Has anything the models read changed since the published Nowcast was made? If not, stop here: the models are not
     # run again and nothing is saved. A feed that could not be read this hour is not a change either: the published
     # Nowcast stands and the feed is tried again next hour, so a passing fault never moves the numbers. (The first run
@@ -685,13 +831,14 @@ def main():
         unread = sorted({d for d in degraded if d != "Wikipedia"})
         if unread:
             print(f"Not read this hour: {', '.join(unread)}. The published Nowcast stands; the next run tries again.")
-            note("changed", "false")
+            note("changed", "true" if fed else "false")
             return
         was = (json.load(open(fp_path)).get("inputs") if os.path.exists(fp_path) else None) or {}
         what = [k for k in fp if not isinstance(was, dict) or fp[k] != was.get(k)]
         if not what:
-            print("Nothing new since the published Nowcast was made: the models are not run again.")
-            note("changed", "false")
+            print("Nothing new since the published Nowcast was made: the models are not run again."
+                  + (" The live feed has new polls and was written." if fed else ""))
+            note("changed", "true" if fed else "false")
             return
         print("New since the published Nowcast: " + ", ".join(what))
 
