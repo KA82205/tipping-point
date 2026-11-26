@@ -1,0 +1,6 @@
+{
+ "looked": "2026-11-26",
+ "what": "publications by the models' authors with 2028 in the title, from Crossref",
+ "found": [],
+ "note": "A forecast published by the authors replaces the site's own reading of their method once it has been put in (pipeline/put_in.py)."
+}
