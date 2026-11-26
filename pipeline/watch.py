@@ -25,8 +25,16 @@ YEAR = "2028"
 
 
 def get(url, timeout=40):
-    with urllib.request.urlopen(urllib.request.Request(url, headers=AGENT), timeout=timeout) as r:
-        return json.loads(r.read().decode("utf-8"))
+    """Crossref asks callers to say who they are and to go gently: one request at a time, and again after a pause if told to wait."""
+    import time, urllib.error
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url + "&mailto=KA82205%40users.noreply.github.com", headers=AGENT), timeout=timeout) as r:
+                time.sleep(1.5); return json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as err:
+            if err.code != 429 or attempt == 2:
+                raise
+            time.sleep(8 * (attempt + 1))
 
 
 def found(read=get):
