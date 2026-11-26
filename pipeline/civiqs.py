@@ -9,7 +9,8 @@ Civiqs's site turns automatic reads away (HTTP 403) and offers no data service, 
 copy in pipeline/state_approval.csv is refreshed by hand, every few weeks, from a copy of the page saved from a browser.
 
 The easy way, with nothing but a browser:
-    1. open the tracker page (the address above) and save it (Ctrl+S, or Cmd+S on a Mac; any name)
+    1. open the tracker page (the address above), open its source (Ctrl+U; Cmd+Option+U on a Mac) and save that
+       (Ctrl+S; any name)
     2. on GitHub, open pipeline/inbox in this repository, choose "Add file", then "Upload files", drop the saved file
        in and commit
 That is all. The commit starts a run, which reads the page (take_in below), checks it, rewrites the copy and its date,
@@ -259,6 +260,9 @@ if __name__ == "__main__":
                 f.write(f"state={state}\n")
         if state == "refused":
             print(f"::error::{words}")
+        elif state == "taken" and "whole percentages" in words:
+            print("::warning::The page was saved as shown, which gives whole percentages. For Civiqs's figures to two decimals, "
+                  "save the page's source next time (Ctrl+U, then Ctrl+S).")
         sys.exit(0)
     if len(sys.argv) != 2:
         sys.exit('usage: python pipeline/civiqs.py "saved page.html"   (or --inbox)')

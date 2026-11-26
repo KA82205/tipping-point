@@ -190,8 +190,8 @@ each forecast: the value that best fits the earlier elections. Their file uses 4
 **State approval.** The paper estimates approval in each state with MRP on survey microdata. No
 free feed publishes that, so `config.json → approval.state_source` is set to `csv`: a dated copy of
 Civiqs's public state tracker. Civiqs's site turns away automatic reads and offers no data service, so
-the copy is not refreshed daily. It is refreshed by hand every few weeks, with nothing but a browser: save
-the tracker page (Ctrl+S) and upload the saved file to [`pipeline/inbox`](pipeline/inbox) on GitHub
+the copy is not refreshed daily. It is refreshed by hand every few weeks, with nothing but a browser: open
+the tracker page, open its source (Ctrl+U), save it (Ctrl+S), and upload the saved file to [`pipeline/inbox`](pipeline/inbox) on GitHub
 ("Add file", "Upload files", commit). The commit starts a run that reads the page, checks it (all 50
 states, the right tracker, a date not earlier than the copy held, no state more than 15 points from
 it), rewrites the copy and its date, empties the inbox, runs the models, publishes, and tells The
