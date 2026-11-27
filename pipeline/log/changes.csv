@@ -13,3 +13,4 @@ time_utc,date,dem_win_before,dem_win_after,what_changed
 2026-11-26T05:12:44Z,2026-11-26,0.583,0.5843,Vice-president adjustment: +2.3 points (was +2.5); 6 polls that asked about both from the last 240 days; counted at 30% of +7.7 until there are 20 polls.
 2026-11-26T16:45:47Z,2026-11-26,0.5843,0.586,"State approval figures refreshed: Civiqs copy of November 25, 2026 (was November 21, 2026). Settings changed: approval.state_csv_as_of ""2026-11-21"" to ""2026-11-25""."
 2026-11-26T18:43:23Z,2026-11-26,0.586,0.586,Code changed: pipeline/update.py.
+2026-11-27T05:13:20Z,2026-11-27,0.586,0.5892,Approval average: 32.6% approve (was 32.8%); out: Tufts to Oct 27.
