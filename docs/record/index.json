@@ -30,5 +30,13 @@
 "dem_popular_vote": 50.98,
 "dem_electoral_votes": 302,
 "file": "2026-11-27T051320Z.json"
+},
+{
+"made": "2026-11-27T20:01:48Z",
+"date": "2026-11-27",
+"dem_win": 0.589,
+"dem_popular_vote": 50.98,
+"dem_electoral_votes": 292,
+"file": "2026-11-27T200148Z.json"
 }
 ]
